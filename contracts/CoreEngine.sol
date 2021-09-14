@@ -416,7 +416,7 @@ contract CoreEngine {
   }
 
   // --- Settlement ---
-  function wipeDebt(uint256 rad) external {
+  function settleDebt(uint256 rad) external {
     address user = msg.sender;
     unbackedDebt[user] = unbackedDebt[user] - rad;
     debt[user] = debt[user] - rad;
@@ -424,7 +424,7 @@ contract CoreEngine {
     totalDebt = totalDebt - rad;
   }
 
-  function drawDebt(
+  function createUnbackedDebt(
     address unbackedDebtAccount,
     address debtAccount,
     uint256 rad

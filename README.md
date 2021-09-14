@@ -41,8 +41,8 @@
 | wish     | allowedToModifyDebtOrCollateral |
 | hope     | grantAllowance                  |
 | nope     | revokeAllowance                 |
-| heal     | wipeDebt                        |
-| suck     | drawDebt                        |
+| heal     | settleDebt                      |
+| suck     | createUnbackedDebt              |
 | fold     | updateAccumulatedRate           |
 | grab     | confiscateCollateralAndDebt     |
 | file     | updateTotalDebtCeiling          |
@@ -112,3 +112,29 @@
 | file (oracle) | updateOracle                 |
 | file (par)    | updateRedemptionPrice        |
 | file (mat)    | updateCollateralizationRatio |
+
+
+
+| Pot        | SavingsAccount         |
+| ---------- | ---------------------- |
+| VatLike    | CoreEngineLike         |
+| vat        | coreEngine             |
+| wards      | authorizedAccounts     |
+| rely       | grantAuthorization     |
+| deny       | revokeAuthorization    |
+| auth       | isAuthorized           |
+| now        | block.timestamp        |
+| suck       | createUnbackedDebt     |
+| move       | transferDebt           |
+| pie        | savings                |
+| Pie        | totalSavings           |
+| dsr        | savingsRate            |
+| chi        | accumulatedRates       |
+| vow        | accountingEngine       |
+| rho        | lastUpdated            |
+| file (dsr) | updateSavingsRate      |
+| file (vow) | updateAccountingEngine |
+| cage       | shutdown               |
+| drip       | updateAccumulatedRate  |
+
+- Added `updateAccumulatedRate` to `updateSavingsRate`& `join`

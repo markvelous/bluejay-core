@@ -18,6 +18,14 @@ export const mineBlocks = async (
   }
 };
 
+export const incrementTime = async (
+  ttl: number,
+  provider: typeof ethers.provider
+) => {
+  await provider.send("evm_increaseTime", [ttl]);
+  await mineBlocks(1, provider);
+};
+
 export const increaseTime = async (
   timeToIncrease: number,
   provider: typeof ethers.provider
