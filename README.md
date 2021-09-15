@@ -164,3 +164,18 @@
 | drip        | updateAccumulatedRate    |
 
 - Move `updateAccumulatedRate` into `updateStabilityFee`
+
+
+
+| ExponentialDecrease | ExponentialDecreaseCalculator |
+| ------------------- | ----------------------------- |
+| Abacus              | DiscountCalculator            |
+| rely                | grantAuthorization            |
+| deny                | revokeAuthorization           |
+| auth                | isAuthorized                  |
+| cut                 | factorPerStep                 |
+| file (cut)          | updateFactorPerStep           |
+| file (step)         | updateStep                    |
+| top                 | initialPrice                  |
+| dur                 | timeElapsed                   |
+| price               | discountPrice                 |
