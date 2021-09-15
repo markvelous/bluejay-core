@@ -9,8 +9,8 @@ enableAllLog();
 
 const MINTER_ROLE =
   "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
-const TEMP_ACCOUNTING_ENGINE_ADDR =
-  "0x6A646C9Da20391dAD50ce58D06bf35040D3aF4fb";
+const TEMP_SURPLUS_AUCTION_ADDR = "0x6A646C9Da20391dAD50ce58D06bf35040D3aF4fb";
+const TEMP_DEBT_AUCTION_ADDR = "0x6A646C9Da20391dAD50ce58D06bf35040D3aF4fb";
 const DEFAULT_SAVINGS_RATE = BigNumber.from("1000000003022265980097387651"); // 10% per year, root(1.1, 365*24*60*60) * exp(27)
 const DEFAULT_STABILITY_FEE = BigNumber.from("1000000004431822129783699001"); // 15% per year, root(1.15, 365*24*60*60) * exp(27)
 const normalizeByRate = (amount: BigNumber, rate: BigNumber) => {
@@ -36,6 +36,7 @@ const whenCoreDeployed = async ({
   const CoreEngine = await ethers.getContractFactory("CoreEngine");
   const SavingsAccount = await ethers.getContractFactory("SavingsAccount");
   const FeesEngine = await ethers.getContractFactory("FeesEngine");
+  const AccountingEngine = await ethers.getContractFactory("AccountingEngine");
 
   const collateral = await SimpleCollateral.deploy();
   const oracle = await SimpleOracle.deploy();
@@ -55,6 +56,11 @@ const whenCoreDeployed = async ({
   const oracleRelayer = await OracleRelayer.deploy(coreEngine.address);
   const savingsAccount = await SavingsAccount.deploy(coreEngine.address);
   const feesEngine = await FeesEngine.deploy(coreEngine.address);
+  const accountingEngine = await AccountingEngine.deploy(
+    coreEngine.address,
+    TEMP_SURPLUS_AUCTION_ADDR,
+    TEMP_DEBT_AUCTION_ADDR
+  );
 
   // Permissions
   coreEngine.grantAuthorization(oracleRelayer.address);
@@ -62,6 +68,7 @@ const whenCoreDeployed = async ({
   coreEngine.grantAuthorization(stablecoinJoin.address);
   coreEngine.grantAuthorization(savingsAccount.address);
   coreEngine.grantAuthorization(feesEngine.address);
+  coreEngine.grantAuthorization(accountingEngine.address);
 
   // Initializations
   await coreEngine.initializeCollateralType(collateralType);
@@ -84,11 +91,18 @@ const whenCoreDeployed = async ({
   await oracleRelayer.updateCollateralPrice(collateralType);
 
   await savingsAccount.updateSavingsRate(DEFAULT_SAVINGS_RATE);
-  await savingsAccount.updateAccountingEngine(TEMP_ACCOUNTING_ENGINE_ADDR);
+  await savingsAccount.updateAccountingEngine(accountingEngine.address);
 
   await feesEngine.init(collateralType);
   await feesEngine.updateStabilityFee(collateralType, stabilityFee);
   await feesEngine.updateGlobalStabilityFee(globalStabilityFee);
+
+  // Reference https://etherscan.io/address/0xA950524441892A31ebddF91d3cEEFa04Bf454466#readContract
+  await accountingEngine.updatePopDebtDelay(561600);
+  await accountingEngine.updateSurplusLotSize(exp(45).mul(30000));
+  await accountingEngine.updateSurplusBuffer(exp(45).mul(60000000));
+  await accountingEngine.updateDebtBidSize(exp(45).mul(50000));
+  await accountingEngine.updateDebtLotSize(exp(18).mul(250));
 
   // Account Initializations
   const [, account1, account2] = accounts;
@@ -97,6 +111,7 @@ const whenCoreDeployed = async ({
 
   return {
     accounts,
+    accountingEngine,
     collateral,
     collateralType,
     collateralJoin,
@@ -206,7 +221,8 @@ describe("E2E", () => {
   });
 
   it("should allow user to save (assuming zero stability fee)", async () => {
-    const { savingsAccount, accounts, coreEngine } = await whenDebtDrawn();
+    const { savingsAccount, accounts, coreEngine, accountingEngine } =
+      await whenDebtDrawn();
     const [, account1] = accounts;
 
     // Start saving in the SavingsAccount module
@@ -237,7 +253,7 @@ describe("E2E", () => {
     expect(accountBalance).to.be.lt(exp(45).mul(11000000));
 
     const unbackedDebt = await coreEngine.unbackedDebt(
-      TEMP_ACCOUNTING_ENGINE_ADDR
+      accountingEngine.address
     );
     expect(unbackedDebt).to.be.gt(exp(45).mul(900000));
     expect(unbackedDebt).to.be.lt(exp(45).mul(1000000));

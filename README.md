@@ -26,6 +26,7 @@
 | urns     | positions                       |
 | file     | updateParameter                 |
 | what     | parameterName                   |
+| dai      | debt                            |
 | sin      | unbackedStablecoin              |
 | debt     | totalDebt                       |
 | vice     | totalUnbackdeDebt               |
@@ -54,7 +55,7 @@
 - Refactored `isLive`
 - Split `file` into multiple function
 - `allowedToModifyDebtOrCollateral` given additional admin permission
-
+- Removed `isLive` requirement on `grantAuthorization` & `revokeAuthorization`
 
 
 | DaiJoin     | StablecoinJoin      |
@@ -179,3 +180,42 @@
 | top                 | initialPrice                  |
 | dur                 | timeElapsed                   |
 | price               | discountPrice                 |
+
+
+
+| Vow            | AccountingEngine          |
+| -------------- | ------------------------- |
+| FlopLike       | DebtAuctionHouseLike      |
+| flopper        | debtAuctionHouse          |
+| FlapLike       | SurplusAuctionHouseLike   |
+| flapper        | surplusAuctionHouse       |
+| VatLike        | CoreEngineLike            |
+| vat            | coreEngine                |
+| rely           | grantAuthorization        |
+| deny           | revokeAuthorization       |
+| auth           | isAuthorized              |
+| sin            | debtQueue                 |
+| Sin            | totalQueuedDebt           |
+| Ash            | totalOnAuctionDebt        |
+| wait           | popDebtDelay              |
+| dump           | debtLotSize               |
+| sump           | debtBidSize               |
+| bump           | surplusLotSize            |
+| hump           | surplusBuffer             |
+| fess           | pushDebtToQueue           |
+| flog           | popDebtFromQueue          |
+| heal           | settleDebt                |
+| kiss           | netDebtWithSurplus        |
+| flap           | auctionSurplus            |
+| flop           | auctionDebt               |
+| kick           | startAuction              |
+| file (wait)    | updatePopDebtDelay        |
+| file (bump)    | updateSurplusLotSize      |
+| file (hump)    | updateSurplusBuffer       |
+| file (sump)    | updateDebtBidSize         |
+| file (dump)    | updateDebtLotSize         |
+| file (flapper) | updateSurplusAuctionHouse |
+| file (flopper) | updateDebtAuctionHouse    |
+
+- remove `add` and `sub`
+

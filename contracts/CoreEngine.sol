@@ -5,11 +5,11 @@ contract CoreEngine {
   // --- Auth ---
   mapping(address => uint256) public authorizedAccounts;
 
-  function grantAuthorization(address user) external isAuthorized isLive {
+  function grantAuthorization(address user) external isAuthorized {
     authorizedAccounts[user] = 1;
   }
 
-  function revokeAuthorization(address user) external isAuthorized isLive {
+  function revokeAuthorization(address user) external isAuthorized {
     authorizedAccounts[user] = 0;
   }
 
