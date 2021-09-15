@@ -138,3 +138,29 @@
 | drip       | updateAccumulatedRate  |
 
 - Added `updateAccumulatedRate` to `updateSavingsRate`& `join`
+
+
+
+| Jug         | FeesEngine               |
+| ----------- | ------------------------ |
+| VatLike     | CoreEngineLike           |
+| var         | coreEngine               |
+| vow         | accountingEngine         |
+| ilks        | collateralTypes          |
+| ilk         | collateralType           |
+| Ilk         | CollateralType           |
+| fold        | updateAccumulatedRate    |
+| wards       | authorizedAccounts       |
+| rely        | grantAuthorization       |
+| deny        | revokeAuthorization      |
+| auth        | isAuthorized             |
+| now         | block.timestamp          |
+| base        | globalStabilityFee       |
+| rho         | lastUpdated              |
+| duty        | stabilityFee             |
+| file (duty) | updateStabilityFee       |
+| file (base) | updateGlobalStabilityFee |
+| file (vow)  | updateAccountingEngine   |
+| drip        | updateAccumulatedRate    |
+
+- Move `updateAccumulatedRate` into `updateStabilityFee`
