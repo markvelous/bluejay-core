@@ -219,3 +219,47 @@
 
 - remove `add` and `sub`
 
+
+
+| Dog         | LiquidationEngine                    |
+| ----------- | ------------------------------------ |
+| VatLike     | CoreEngineLike                       |
+| ClipperLike | LiquidatorLike                       |
+| ilks        | collateralTypes                      |
+| Ilk.Art     | normalizedDebt                       |
+| Ilk.rate    | accumulatedRate                      |
+| Ilk.spot    | safetyPrice                          |
+| Ilk.line    | debtCeiling                          |
+| Ilk.dust    | debtFloor                            |
+| urns        | positions                            |
+| Urn.ink     | lockedCollateral                     |
+| Urn.art     | normalizedDebt                       |
+| grab        | confiscateCollateralAndDebt          |
+| hope        | grantAllowance                       |
+| nope        | revokeAllowance                      |
+| vat         | coreEngine                           |
+| VowLike     | AccountingEngineLike                 |
+| fess        | pushDebtToQueue                      |
+| rely        | grantAuthorization                   |
+| deny        | revokeAuthorization                  |
+| auth        | isAuthorized                         |
+| cage        | shutdown                             |
+| clip        | liquidator                           |
+| hole        | maxDebtRequiredForActiveAuctions     |
+| hole        | maxDebtForActiveAuctions             |
+| dirt        | debtRequiredForActiveAuctions        |
+| Hole        | globalMaxDebtForActiveAuctions       |
+| Dirt        | globalDebtRequiredForActiveAuctions  |
+| file(vow)   | updateAccountingEngine               |
+| file(Hole)  | updateGlobalMaxDebtForActiveAuctions |
+| file(chop)  | updateLiquidatonPenalty              |
+| file(hole)  | updateMaxDebtForActiveAuctions       |
+| file(clip)  | updateLiquidator                     |
+| dig         | removeDebtFromLiquidation            |
+| Dig         | DebtRemoved                          |
+| kick        | startAuction                         |
+| urn         | position                             |
+| kpr         | keeper                               |
+| due         | debtConfiscated                      |
+
+- removed math
