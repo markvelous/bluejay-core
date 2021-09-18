@@ -255,11 +255,84 @@
 | file(chop)  | updateLiquidatonPenalty              |
 | file(hole)  | updateMaxDebtForActiveAuctions       |
 | file(clip)  | updateLiquidator                     |
-| dig         | removeDebtFromLiquidation            |
+| digs        | removeDebtFromLiquidation            |
 | Dig         | DebtRemoved                          |
 | kick        | startAuction                         |
+| Kick        | StartAuction                         |
 | urn         | position                             |
 | kpr         | keeper                               |
 | due         | debtConfiscated                      |
+| bark        | liquidatePosition                    |
+| yank        | cancelAuction                        |
+| Yank        | CancelAuction                        |
+| chost       | minDebtForReward                     |
+| upchost     | updateMinDebtForReward               |
+| take        | bidOnAuction                         |
+| Take        | BidOnAuction                         |
+| _remove     | removeAuction                        |
+| count       | countActiveAuctions                  |
+| list        | listActiveAuctions                   |
+| status      | auctionStatus                        |
+| getStatus   | getAuctionStatus                     |
 
 - removed math
+
+
+
+
+| Clipper       | Liquidator                |
+| ------------- | ------------------------- |
+| VatLike       | CoreEngineLike            |
+| flux          | transferCollateral        |
+| PipLike       | OracleLike                |
+| SpotterLike   | OracleRelayerLike         |
+| peek          | getPrice                  |
+| par           | redemptionPrice           |
+| ilks          | collateralTypes           |
+| DogLike       | LiquidationEngineLike     |
+| chop          | liquidatonPenalty         |
+| clipperCall   | liquidationCallback       |
+| AbacusLike    | DiscountCalculatorLike    |
+| price         | discountPrice             |
+| rely          | grantAuthorization        |
+| deny          | revokeAuthorization       |
+| auth          | isAuthorized              |
+| ilk           | collateralType            |
+| vow           | accountingEngine          |
+| spotter       | oracleRelayer             |
+| tail          | maxAuctionDuration        |
+| cusp          | maxPriceDiscount          |
+| ilk           | collateralType            |
+| tip           | keeperIncentive           |
+| kicks         | auctionCount              |
+| active        | activeAuctions            |
+| Sale.pos      | index                     |
+| Sale.tab      | debtToRaise               |
+| Sale.usr      | position                  |
+| Sale.lot      | collateralToSell          |
+| Sale.tic      | startTime                 |
+| Sale.top      | startingPrice             |
+| lock          | reentrancyGuard           |
+| kick          | startAuction              |
+| buf           | startingPriceFactor       |
+| chip          | keeperRewardFactor        |
+| redo          | restartAuction            |
+| Redo          | RestartAuction            |
+| id            | auctionId                 |
+| who           | liquidatorAddress         |
+| amt           | maxCollateralToBuy        |
+| mac           | maxPrice                  |
+| file(buf)     | updateStartingPriceFactor |
+| file(tail)    | updateMaxAuctionDuration  |
+| file(cusp)    | updateMaxPriceDiscount    |
+| file(chip)    | updateKeeperRewardFactor  |
+| file(tip)     | updateKeeperIncentive     |
+| file(stopped) | updateStopped             |
+| file(spotter) | updateOracleRelayer       |
+| file(dog)     | updateLiquidationEngine   |
+| file(vow)     | updateAccountingEngine    |
+| file(calc)    | updateDiscountCalculator  |
+| File          | UpdateParameter           |
+
+- removed math
+- remove overflow guard for auction id

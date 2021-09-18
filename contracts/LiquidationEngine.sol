@@ -157,7 +157,7 @@ contract LiquidationEngine {
     return collateralTypes[ilk].liquidatonPenalty;
   }
 
-  // --- CDP Liquidation: all bark and no bite ---
+  // --- CDP Liquidation ---
   //
   // Liquidate a Vault and start a Dutch auction to sell its collateral for debt.
   //
@@ -171,7 +171,7 @@ contract LiquidationEngine {
   // have too little collateral to be interesting to Keepers (debt taken from Vault < ilk.debtFloor),
   // in which case the function reverts. Please refer to the code and comments within if
   // more detail is desired.
-  function bark(
+  function liquidatePosition(
     bytes32 collateralType,
     address position,
     address keeper
