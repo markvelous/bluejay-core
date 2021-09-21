@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-interface LiquidatorLike {
+interface LiquidationAuctionLike {
   function collateralType() external view returns (bytes32);
 
   function startAuction(
-    uint256 tab,
-    uint256 lot,
-    address usr,
+    uint256 debtToRaise,
+    uint256 collateralToSell,
+    address position,
     address keeper
   ) external returns (uint256);
 }
@@ -69,7 +69,7 @@ contract LiquidationEngine {
 
   // --- Data ---
   struct CollateralTypes {
-    address liquidator; // Liquidator
+    address liquidationAuction; // LiquidationAuction
     uint256 liquidatonPenalty; // Liquidation Penalty [wad]                                          [wad]
     uint256 maxDebtForActiveAuctions; // Max debt needed to cover debt+fees of active auctions per ilk [rad]
     uint256 debtRequiredForActiveAuctions; // Amt debt needed to cover debt+fees of active auctions per ilk [rad]
@@ -88,17 +88,17 @@ contract LiquidationEngine {
   event Rely(address indexed usr);
   event Deny(address indexed usr);
 
-  event Bark(
-    bytes32 indexed ilk,
-    address indexed urn,
-    uint256 ink,
-    uint256 art,
-    uint256 due,
-    address liquidator,
-    uint256 indexed id
+  event LiquidatePosition(
+    bytes32 indexed collateralType,
+    address indexed position,
+    uint256 lockedCollateralToConfiscate,
+    uint256 normalizedDebtToConfiscate,
+    uint256 debtConfiscated,
+    address liquidationAuction,
+    uint256 indexed auctionId
   );
   event DebtRemoved(bytes32 indexed ilk, uint256 rad);
-  event Cage();
+  event Shutdown();
 
   // --- Init ---
   constructor(address coreEngine_) {
@@ -142,15 +142,16 @@ contract LiquidationEngine {
     collateralTypes[collateralType].maxDebtForActiveAuctions = data;
   }
 
-  function updateLiquidator(bytes32 collateralType, address liquidator)
-    external
-    isAuthorized
-  {
+  function updateLiquidationAuction(
+    bytes32 collateralType,
+    address liquidationAuction
+  ) external isAuthorized {
     require(
-      collateralType == LiquidatorLike(liquidator).collateralType(),
-      "LiquidationEngine/file-collateralType-neq-liquidator.collateralType"
+      collateralType ==
+        LiquidationAuctionLike(liquidationAuction).collateralType(),
+      "LiquidationEngine/file-collateralType-neq-liquidationAuction.collateralType"
     );
-    collateralTypes[collateralType].liquidator = liquidator;
+    collateralTypes[collateralType].liquidationAuction = liquidationAuction;
   }
 
   function liquidatonPenalty(bytes32 ilk) external view returns (uint256) {
@@ -254,7 +255,7 @@ contract LiquidationEngine {
     coreEngine.confiscateCollateralAndDebt(
       collateralType,
       position,
-      collateralTypeData.liquidator,
+      collateralTypeData.liquidationAuction,
       address(accountingEngine),
       -int256(lockedCollateralToConfiscate),
       -int256(normalizedDebtToConfiscate)
@@ -275,21 +276,22 @@ contract LiquidationEngine {
         collateralTypeData.debtRequiredForActiveAuctions +
         debtWithPenalty;
 
-      auctionId = LiquidatorLike(collateralTypeData.liquidator).startAuction({
-        tab: debtWithPenalty,
-        lot: lockedCollateralToConfiscate,
-        usr: position,
-        keeper: keeper
-      });
+      auctionId = LiquidationAuctionLike(collateralTypeData.liquidationAuction)
+        .startAuction({
+          debtToRaise: debtWithPenalty,
+          collateralToSell: lockedCollateralToConfiscate,
+          position: position,
+          keeper: keeper
+        });
     }
 
-    emit Bark(
+    emit LiquidatePosition(
       collateralType,
       position,
       lockedCollateralToConfiscate,
       normalizedDebtToConfiscate,
       debtConfiscated,
-      collateralTypeData.liquidator,
+      collateralTypeData.liquidationAuction,
       auctionId
     );
   }
@@ -309,6 +311,6 @@ contract LiquidationEngine {
 
   function shutdown() external isAuthorized {
     live = 0;
-    emit Cage();
+    emit Shutdown();
   }
 }

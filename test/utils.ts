@@ -90,3 +90,31 @@ export const printCoreEngineGlobals = async (coreEngine: Contract) => {
   info(`Total Unbacked Debt: ${formatRad(totalUnbackedDebt)} RAD`);
   info(`Total Debt Ceiling: ${formatRad(totalDebtCeiling)} RAD`);
 };
+
+export const printCoreEnginePosition = async (
+  coreEngine: Contract,
+  collateralType: string,
+  address: string
+) => {
+  const { safetyPrice } = await coreEngine.collateralTypes(collateralType);
+  const collateral = await coreEngine.collateral(collateralType, address);
+  const debt = await coreEngine.debt(address);
+  const position = await coreEngine.positions(collateralType, address);
+  const {
+    lockedCollateral,
+    normalizedDebt,
+  }: {
+    lockedCollateral: BigNumber;
+    normalizedDebt: BigNumber;
+  } = position;
+  info(`==== POSITION (${address}) ====`);
+  info(`Free Collateral: ${formatWad(collateral)} WAD`);
+  info(`Locked Collateral: ${formatWad(lockedCollateral)} WAD`);
+  info(`Normalized Debt: ${formatWad(normalizedDebt)} WAD`);
+  info(`Drawn Debt (stablecoin balance): ${formatRad(debt)} RAD`);
+  info(
+    `Max Debt Before Liquidation: ${formatRad(
+      lockedCollateral.mul(safetyPrice)
+    )} RAD`
+  );
+};

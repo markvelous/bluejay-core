@@ -218,13 +218,14 @@
 | file (flopper) | updateDebtAuctionHouse    |
 
 - remove `add` and `sub`
-
+- TODO easier way to pop debt
+- TODO events 
 
 
 | Dog         | LiquidationEngine                    |
 | ----------- | ------------------------------------ |
 | VatLike     | CoreEngineLike                       |
-| ClipperLike | LiquidatorLike                       |
+| ClipperLike | LiquidationAuctionLike               |
 | ilks        | collateralTypes                      |
 | Ilk.Art     | normalizedDebt                       |
 | Ilk.rate    | accumulatedRate                      |
@@ -254,7 +255,7 @@
 | file(Hole)  | updateGlobalMaxDebtForActiveAuctions |
 | file(chop)  | updateLiquidatonPenalty              |
 | file(hole)  | updateMaxDebtForActiveAuctions       |
-| file(clip)  | updateLiquidator                     |
+| file(clip)  | updateLiquidationAuction             |
 | digs        | removeDebtFromLiquidation            |
 | Dig         | DebtRemoved                          |
 | kick        | startAuction                         |
@@ -274,13 +275,15 @@
 | list        | listActiveAuctions                   |
 | status      | auctionStatus                        |
 | getStatus   | getAuctionStatus                     |
+| Bark        | LiquidatePosition                    |
+| Cage        | Shutdown                             |
 
 - removed math
 
 
 
 
-| Clipper       | Liquidator                |
+| Clipper       | LiquidationAuction        |
 | ------------- | ------------------------- |
 | VatLike       | CoreEngineLike            |
 | flux          | transferCollateral        |
@@ -333,6 +336,8 @@
 | file(vow)     | updateAccountingEngine    |
 | file(calc)    | updateDiscountCalculator  |
 | File          | UpdateParameter           |
+| Sale          | Auction                   |
+| sale          | auction                   |
 
 - removed math
 - remove overflow guard for auction id

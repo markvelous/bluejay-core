@@ -37,6 +37,15 @@ const whenCoreDeployed = async ({
   const SavingsAccount = await ethers.getContractFactory("SavingsAccount");
   const FeesEngine = await ethers.getContractFactory("FeesEngine");
   const AccountingEngine = await ethers.getContractFactory("AccountingEngine");
+  const DiscountCalculator = await ethers.getContractFactory(
+    "StairstepExponentialDecrease"
+  );
+  const LiquidationAuction = await ethers.getContractFactory(
+    "LiquidationAuction"
+  );
+  const LiquidationEngine = await ethers.getContractFactory(
+    "LiquidationEngine"
+  );
 
   const collateral = await SimpleCollateral.deploy();
   const oracle = await SimpleOracle.deploy();
@@ -61,6 +70,14 @@ const whenCoreDeployed = async ({
     TEMP_SURPLUS_AUCTION_ADDR,
     TEMP_DEBT_AUCTION_ADDR
   );
+  const discountCalculator = await DiscountCalculator.deploy();
+  const liquidationEngine = await LiquidationEngine.deploy(coreEngine.address);
+  const liquidationAuction = await LiquidationAuction.deploy(
+    coreEngine.address,
+    oracleRelayer.address,
+    liquidationEngine.address,
+    collateralType
+  );
 
   // Permissions
   coreEngine.grantAuthorization(oracleRelayer.address);
@@ -69,6 +86,13 @@ const whenCoreDeployed = async ({
   coreEngine.grantAuthorization(savingsAccount.address);
   coreEngine.grantAuthorization(feesEngine.address);
   coreEngine.grantAuthorization(accountingEngine.address);
+  coreEngine.grantAuthorization(liquidationEngine.address);
+  coreEngine.grantAuthorization(liquidationAuction.address);
+
+  accountingEngine.grantAuthorization(liquidationEngine.address);
+
+  liquidationAuction.grantAuthorization(liquidationEngine.address);
+  liquidationEngine.grantAuthorization(liquidationAuction.address);
 
   // Initializations
   await coreEngine.initializeCollateralType(collateralType);
@@ -104,6 +128,38 @@ const whenCoreDeployed = async ({
   await accountingEngine.updateDebtBidSize(exp(45).mul(50000));
   await accountingEngine.updateDebtLotSize(exp(18).mul(250));
 
+  // Reference https://etherscan.io/address/0x135954d155898D42C90D2a57824C690e0c7BEf1B#readContract
+  // Ilk: 0x4554482d43000000000000000000000000000000000000000000000000000000
+  await liquidationEngine.updateAccountingEngine(accountingEngine.address);
+  await liquidationEngine.updateGlobalMaxDebtForActiveAuctions(
+    exp(45).mul(100000000)
+  );
+  await liquidationEngine.updateLiquidatonPenalty(
+    collateralType,
+    exp(18).mul(113).div(100)
+  );
+  await liquidationEngine.updateMaxDebtForActiveAuctions(
+    collateralType,
+    exp(45).mul(20000000)
+  );
+  await liquidationEngine.updateLiquidationAuction(
+    collateralType,
+    liquidationAuction.address
+  );
+
+  // Reference https://etherscan.io/address/0xc2b12567523e3f3CBd9931492b91fe65b240bc47
+  await liquidationAuction.updateStartingPriceFactor(exp(27).mul(130).div(100));
+  await liquidationAuction.updateMaxAuctionDuration(8400);
+  await liquidationAuction.updateMaxPriceDiscount(exp(27).mul(40).div(100)); // TODO CHECK VALUE
+  await liquidationAuction.updateKeeperRewardFactor(exp(18).div(1000));
+  await liquidationAuction.updateKeeperIncentive(exp(45).mul(300));
+  await liquidationAuction.updateAccountingEngine(accountingEngine.address);
+  await liquidationAuction.updateDiscountCalculator(discountCalculator.address);
+
+  // Reference https://etherscan.io/address/0x1c4fc274d12b2e1bbdf97795193d3148fcda6108
+  await discountCalculator.updateStep(60); // 60 sec
+  await discountCalculator.updateFactorPerStep(exp(27).mul(99).div(100)); // 0.99 per step
+
   // Account Initializations
   const [, account1, account2] = accounts;
   await collateral.mint(account1.address, exp(18).mul(10000));
@@ -122,6 +178,9 @@ const whenCoreDeployed = async ({
     oracle,
     savingsAccount,
     feesEngine,
+    discountCalculator,
+    liquidationEngine,
+    liquidationAuction,
   };
 };
 
@@ -164,7 +223,7 @@ const depositCollateralAndDrawDebt = async ({
       account.address,
       account.address,
       account.address,
-      exp(18).mul(10000),
+      collateralDeposit,
       normalizeByRate(
         debtDrawn,
         (
@@ -330,5 +389,174 @@ describe("E2E", () => {
     expect(collateralData.normalizedDebt).to.gt(
       exp(18).mul(normalizedDebtFloor)
     );
+  });
+
+  it("should allow unsafe positions to be liquidated", async () => {
+    const status = await whenDebtDrawn();
+    const {
+      accounts,
+      oracle,
+      collateral,
+      collateralJoin,
+      oracleRelayer,
+      liquidationEngine,
+      liquidationAuction,
+      accountingEngine,
+      collateralType,
+      coreEngine,
+    } = status;
+    const [, account1, account2] = accounts;
+
+    await oracle.setPrice(exp(18).mul(1250));
+    await oracleRelayer.updateCollateralPrice(collateralType);
+
+    await liquidationEngine
+      .connect(account2)
+      .liquidatePosition(collateralType, account1.address, account2.address);
+
+    // All drawn debt & locked collateral to be confiscated from the liquidated account
+    const {
+      lockedCollateral: lockedCollateralAcc1,
+      normalizedDebt: normalizedDebtAcc1,
+    } = await coreEngine.positions(collateralType, account1.address);
+    expect(lockedCollateralAcc1).to.equal(0);
+    expect(normalizedDebtAcc1).to.equal(0);
+    // Debt is not touched for liquidated position
+    expect(await coreEngine.debt(account1.address)).to.equal(
+      exp(45).mul(10000 * 1000)
+    );
+
+    // Collateral goes to liquidation auction (unlocked)
+    expect(
+      await coreEngine.collateral(collateralType, liquidationAuction.address)
+    ).to.equal(exp(18).mul(10000));
+
+    // Reward credited for starting auction
+    const reward = await coreEngine.debt(account2.address);
+    expect(reward).to.equal(
+      exp(45)
+        .mul(10000 * 1000)
+        .mul(113)
+        .div(100) // x 1.13 for liquidation penalty
+        .div(1000)
+        .add(exp(45).mul(300))
+    ); // Keeper incentive plus debtToRaise * keeperRewardFactor
+
+    // Debt plus reward goes to accounting engine as unbacked debt
+    expect(await coreEngine.unbackedDebt(accountingEngine.address)).to.equal(
+      exp(45)
+        .mul(10000 * 1000)
+        .add(reward)
+    );
+
+    // Debt is pushed into accounting engine queue
+    expect(await accountingEngine.totalQueuedDebt()).to.equal(
+      exp(45).mul(10000 * 1000)
+    );
+
+    // Auction started
+    const { debtToRaise, collateralToSell, position, startingPrice } =
+      await liquidationAuction.auction(1);
+    expect(debtToRaise).to.equal(
+      exp(45)
+        .mul(10000 * 1000)
+        .mul(113)
+        .div(100)
+    );
+    expect(collateralToSell).to.equal(exp(18).mul(10000));
+    expect(position).to.equal(account1.address);
+    expect(startingPrice).to.equal(exp(27).mul(1250).mul(130).div(100));
+
+    // Draw some debt for account 2
+    const debtDrawnOnAcc2 = exp(45).mul(10000 * 1500);
+    await collateral.mint(account2.address, exp(18).mul(100000));
+    await depositCollateralAndDrawDebt({
+      collateral,
+      coreEngine,
+      collateralJoin,
+      collateralType,
+      account: account2,
+      debtDrawn: debtDrawnOnAcc2,
+      collateralDeposit: exp(18).mul(100000),
+    });
+
+    // Wait for liquidation price to drop
+    await incrementTime(1600, ethers.provider);
+
+    const {
+      price: discountedPrice,
+      debtToRaise: debtRequired,
+      collateralToSell: collateralLeft,
+    } = await liquidationAuction.getAuctionStatus(1);
+    expect(discountedPrice).to.be.closeTo(
+      exp(27)
+        .mul(1250)
+        .mul(130)
+        .div(100)
+        .mul(BigNumber.from(99).pow(26)) // 26 periods have passed
+        .div(BigNumber.from(100).pow(26)),
+      1000
+    );
+
+    // Partial liquidation
+    await liquidationAuction
+      .connect(account2)
+      .bidOnAuction(
+        1,
+        collateralLeft.div(2),
+        discountedPrice,
+        account2.address,
+        "0x"
+      );
+
+    // Auction has not closed
+    const {
+      debtToRaise: debtRequiredAfterPartial,
+      collateralToSell: collateralToSellAfterPartial,
+    } = await liquidationAuction.getAuctionStatus(1);
+
+    expect(collateralToSellAfterPartial).to.equal(collateralLeft.div(2));
+    expect(debtRequiredAfterPartial).to.equal(
+      debtRequired.sub(collateralLeft.div(2).mul(discountedPrice))
+    );
+    const {
+      lockedCollateral: lockedCollateralBeforeClose,
+      normalizedDebt: normalizedDebtBeforeClose,
+    } = await coreEngine.positions(collateralType, account1.address);
+
+    expect(lockedCollateralBeforeClose).to.equal(0);
+    expect(normalizedDebtBeforeClose).to.equal(0);
+
+    // Liquidator has paid debt and collected collateral
+    expect(await coreEngine.debt(account2.address)).to.equal(
+      exp(45).mul(15011600).sub(collateralLeft.div(2).mul(discountedPrice))
+    );
+    expect(
+      await coreEngine.collateral(collateralType, account2.address)
+    ).to.equal(collateralLeft.div(2));
+
+    // // Full liquidation
+    await liquidationAuction
+      .connect(account2)
+      .bidOnAuction(
+        1,
+        collateralLeft.div(2),
+        discountedPrice,
+        account2.address,
+        "0x"
+      );
+
+    // Liquidator paid all debt and received all collaterals
+    expect(await coreEngine.debt(account2.address)).to.equal(
+      exp(45).mul(15011600).sub(debtRequired)
+    );
+    expect(
+      await coreEngine.collateral(collateralType, account2.address)
+    ).to.equal(debtRequired.div(discountedPrice));
+
+    // Liquidated position received remaining collateral as refunds
+    expect(
+      await coreEngine.collateral(collateralType, account1.address)
+    ).to.equal(collateralLeft.sub(debtRequired.div(discountedPrice)));
   });
 });
