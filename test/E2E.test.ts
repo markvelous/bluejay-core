@@ -9,7 +9,6 @@ enableAllLog();
 
 const MINTER_ROLE =
   "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
-const TEMP_SURPLUS_AUCTION_ADDR = "0x6A646C9Da20391dAD50ce58D06bf35040D3aF4fb";
 const TEMP_DEBT_AUCTION_ADDR = "0x6A646C9Da20391dAD50ce58D06bf35040D3aF4fb";
 const DEFAULT_SAVINGS_RATE = BigNumber.from("1000000003022265980097387651"); // 10% per year, root(1.1, 365*24*60*60) * exp(27)
 const DEFAULT_STABILITY_FEE = BigNumber.from("1000000004431822129783699001"); // 15% per year, root(1.15, 365*24*60*60) * exp(27)
@@ -46,11 +45,15 @@ const whenCoreDeployed = async ({
   const LiquidationEngine = await ethers.getContractFactory(
     "LiquidationEngine"
   );
+  const SimpleGovernanceToken = await ethers.getContractFactory(
+    "SimpleGovernanceToken"
+  );
+  const SurplusAuction = await ethers.getContractFactory("SurplusAuction");
 
   const collateral = await SimpleCollateral.deploy();
   const oracle = await SimpleOracle.deploy();
   const stablecoin = await Stablecoin.deploy("Myanmar Kyat Tracker", "MMKT");
-
+  const governanceToken = await SimpleGovernanceToken.deploy();
   const collateralType = keccak256(collateral.address);
   const coreEngine = await CoreEngine.deploy();
   const collateralJoin = await CollateralJoin.deploy(
@@ -65,9 +68,13 @@ const whenCoreDeployed = async ({
   const oracleRelayer = await OracleRelayer.deploy(coreEngine.address);
   const savingsAccount = await SavingsAccount.deploy(coreEngine.address);
   const feesEngine = await FeesEngine.deploy(coreEngine.address);
+  const surplusAuction = await SurplusAuction.deploy(
+    coreEngine.address,
+    governanceToken.address
+  );
   const accountingEngine = await AccountingEngine.deploy(
     coreEngine.address,
-    TEMP_SURPLUS_AUCTION_ADDR,
+    surplusAuction.address,
     TEMP_DEBT_AUCTION_ADDR
   );
   const discountCalculator = await DiscountCalculator.deploy();
@@ -94,7 +101,12 @@ const whenCoreDeployed = async ({
   liquidationAuction.grantAuthorization(liquidationEngine.address);
   liquidationEngine.grantAuthorization(liquidationAuction.address);
 
+  surplusAuction.grantAuthorization(accountingEngine.address);
+
   // Initializations
+  await governanceToken.initialize();
+  await governanceToken.grantRole(MINTER_ROLE, accounts[0].address);
+
   await coreEngine.initializeCollateralType(collateralType);
   await coreEngine.updateDebtCeiling(
     collateralType,
@@ -118,13 +130,14 @@ const whenCoreDeployed = async ({
   await savingsAccount.updateAccountingEngine(accountingEngine.address);
 
   await feesEngine.init(collateralType);
+  await feesEngine.updateAccountingEngine(accountingEngine.address);
   await feesEngine.updateStabilityFee(collateralType, stabilityFee);
   await feesEngine.updateGlobalStabilityFee(globalStabilityFee);
 
   // Reference https://etherscan.io/address/0xA950524441892A31ebddF91d3cEEFa04Bf454466#readContract
   await accountingEngine.updatePopDebtDelay(561600);
-  await accountingEngine.updateSurplusLotSize(exp(45).mul(30000));
-  await accountingEngine.updateSurplusBuffer(exp(45).mul(60000000));
+  await accountingEngine.updateSurplusLotSize(exp(45).mul(100000));
+  await accountingEngine.updateSurplusBuffer(exp(45).mul(500000));
   await accountingEngine.updateDebtBidSize(exp(45).mul(50000));
   await accountingEngine.updateDebtLotSize(exp(18).mul(250));
 
@@ -174,10 +187,12 @@ const whenCoreDeployed = async ({
     stablecoin,
     stablecoinJoin,
     coreEngine,
+    surplusAuction,
     oracleRelayer,
     oracle,
     savingsAccount,
     feesEngine,
+    governanceToken,
     discountCalculator,
     liquidationEngine,
     liquidationAuction,
@@ -318,7 +333,7 @@ describe("E2E", () => {
     expect(unbackedDebt).to.be.lt(exp(45).mul(1000000));
   });
 
-  it("should allow stability fees to be collected", async () => {
+  it.only("should allow stability fees to be collected", async () => {
     const status = await whenDebtDrawn();
     const {
       coreEngine,
@@ -327,6 +342,7 @@ describe("E2E", () => {
       collateral,
       collateralType,
       collateralJoin,
+      accountingEngine,
     } = status;
     const [, account1, account2] = accounts;
 
@@ -334,6 +350,9 @@ describe("E2E", () => {
     await incrementTime(60 * 60 * 24 * 365, ethers.provider);
     await feesEngine.updateAccumulatedRate(collateralType);
 
+    expect(await coreEngine.debt(accountingEngine.address)).to.gt(
+      exp(45).mul(1500000)
+    );
     // Transfer from debt from another account (simulating buy from ext account)
     await depositCollateralAndDrawDebt({
       ...status,
@@ -558,5 +577,71 @@ describe("E2E", () => {
     expect(
       await coreEngine.collateral(collateralType, account1.address)
     ).to.equal(collateralLeft.sub(debtRequired.div(discountedPrice)));
+  });
+
+  it("should allow users to bid on surplus of debt collected from stability fee", async () => {
+    const status = await whenDebtDrawn();
+    const {
+      accounts,
+      feesEngine,
+      collateralType,
+      coreEngine,
+      accountingEngine,
+      surplusAuction,
+      governanceToken,
+    } = status;
+    const [, account1, account2] = accounts;
+
+    await governanceToken.mint(account1.address, exp(18).mul(150));
+    await governanceToken
+      .connect(account1)
+      .approve(surplusAuction.address, constants.MaxUint256);
+    await governanceToken.mint(account2.address, exp(18).mul(300));
+    await governanceToken
+      .connect(account2)
+      .approve(surplusAuction.address, constants.MaxUint256);
+    await incrementTime(60 * 60 * 24 * 365, ethers.provider);
+    await feesEngine.updateAccumulatedRate(collateralType);
+
+    await accountingEngine.auctionSurplus();
+
+    const { debtToSell } = await surplusAuction.bids(1);
+    expect(debtToSell).to.equal(exp(45).mul(100000));
+
+    await surplusAuction
+      .connect(account1)
+      .placeBid(1, debtToSell, exp(18).mul(150));
+
+    expect(await governanceToken.balanceOf(account1.address)).to.equal(0);
+    expect(await governanceToken.balanceOf(surplusAuction.address)).to.equal(
+      exp(18).mul(150)
+    );
+
+    const firstBid = await surplusAuction.bids(1);
+    expect(firstBid.bidAmount).to.equal(exp(18).mul(150));
+    expect(firstBid.bidExpiry).to.not.equal(0);
+    expect(firstBid.highestBidder).to.equal(account1.address);
+
+    await incrementTime(640, ethers.provider);
+
+    await surplusAuction
+      .connect(account2)
+      .placeBid(1, debtToSell, exp(18).mul(300));
+
+    expect(await governanceToken.balanceOf(account1.address)).to.equal(
+      exp(18).mul(150)
+    );
+    expect(await governanceToken.balanceOf(account2.address)).to.equal(0);
+    expect(await governanceToken.balanceOf(surplusAuction.address)).to.equal(
+      exp(18).mul(300)
+    );
+
+    await incrementTime(3 * 60 * 60 + 1, ethers.provider);
+
+    await surplusAuction.connect(account2).settleAuction(1);
+    expect(await governanceToken.balanceOf(surplusAuction.address)).to.equal(0);
+    expect(await governanceToken.totalSupply()).to.equal(exp(18).mul(150));
+
+    expect(await coreEngine.debt(account2.address)).to.equal(debtToSell);
   });
 });

@@ -1,0 +1,5 @@
+- Events
+- Upgradeable smart contract
+- Multi-stablecoin infrastructure
+- Individual component tests
+- Property testing
