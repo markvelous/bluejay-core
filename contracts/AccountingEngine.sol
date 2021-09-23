@@ -3,10 +3,10 @@ pragma solidity ^0.8.2;
 
 interface DebtAuctionLike {
   function startAuction(
-    address gal,
-    uint256 lot,
-    uint256 bid
-  ) external returns (uint256);
+    address stablecoinReceiver,
+    uint256 initialGovernanceTokenBid,
+    uint256 debtLotSize
+  ) external returns (uint256 auctionId);
 
   function shutdown() external;
 
@@ -16,7 +16,7 @@ interface DebtAuctionLike {
 interface SurplusAuctionLike {
   function startAuction(uint256 debtToSell, uint256 bidAmount)
     external
-    returns (uint256);
+    returns (uint256 auctionId);
 
   function shutdown(uint256) external;
 
@@ -28,7 +28,7 @@ interface CoreEngineLike {
 
   function unbackedDebt(address) external view returns (uint256);
 
-  function settleDebt(uint256) external;
+  function settleUnbackedDebt(uint256) external;
 
   function grantAllowance(address) external;
 
@@ -58,14 +58,14 @@ contract AccountingEngine {
   DebtAuctionLike public debtAuction; // Debt Auction
 
   mapping(uint256 => uint256) public debtQueue; // debt queue
-  uint256 public totalQueuedDebt; // Queued debt            [rad]
-  uint256 public totalOnAuctionDebt; // On-auction debt        [rad]
+  uint256 public totalQueuedDebt; // Debt waiting for delay            [rad]
+  uint256 public totalDebtOnAuction; // On-auction debt        [rad]
 
   uint256 public popDebtDelay; // Debt auction delay             [seconds]
-  uint256 public debtLotSize; // Debt auction initial lot size  [wad]
-  uint256 public debtBidSize; // Debt auction fixed bid size    [rad]
+  uint256 public intialDebtAuctionBid; // Debt auction initial lot size  [wad]
+  uint256 public debtAuctionLotSize; // Debt auction fixed bid size    [rad]
 
-  uint256 public surplusLotSize; // Flap fixed lot size    [rad]
+  uint256 public surplusAuctionLotSize; // Flap fixed lot size    [rad]
   uint256 public surplusBuffer; // Surplus buffer         [rad]
 
   uint256 public live; // Active Flag
@@ -90,12 +90,12 @@ contract AccountingEngine {
   }
 
   // --- Administration ---
-  function updateDebtLotSize(uint256 data) external isAuthorized {
-    debtLotSize = data;
+  function updateIntialDebtAuctionBid(uint256 data) external isAuthorized {
+    intialDebtAuctionBid = data;
   }
 
-  function updateDebtBidSize(uint256 data) external isAuthorized {
-    debtBidSize = data;
+  function updateDebtAuctionLotSize(uint256 data) external isAuthorized {
+    debtAuctionLotSize = data;
   }
 
   function updateSurplusBuffer(uint256 data) external isAuthorized {
@@ -106,8 +106,8 @@ contract AccountingEngine {
     popDebtDelay = data;
   }
 
-  function updateSurplusLotSize(uint256 data) external isAuthorized {
-    surplusLotSize = data;
+  function updateSurplusAuctionLotSize(uint256 data) external isAuthorized {
+    surplusAuctionLotSize = data;
   }
 
   function updateSurplusAuction(address data) external isAuthorized {
@@ -137,7 +137,7 @@ contract AccountingEngine {
   }
 
   // Debt settlement
-  function settleDebt(uint256 rad) external {
+  function settleUnbackedDebt(uint256 rad) external {
     require(
       rad <= coreEngine.debt(address(this)),
       "AccountingEngine/insufficient-surplus"
@@ -146,37 +146,44 @@ contract AccountingEngine {
       rad <=
         coreEngine.unbackedDebt(address(this)) -
           totalQueuedDebt -
-          totalOnAuctionDebt,
+          totalDebtOnAuction,
       "AccountingEngine/insufficient-debt"
     );
-    coreEngine.settleDebt(rad);
+    coreEngine.settleUnbackedDebt(rad);
   }
 
-  function netDebtWithSurplus(uint256 rad) external {
-    require(rad <= totalOnAuctionDebt, "AccountingEngine/not-enough-ash");
+  function settleUnbackedDebtFromAuction(uint256 rad) external {
+    require(
+      rad <= totalDebtOnAuction,
+      "AccountingEngine/not-enough-totalDebtOnAuction"
+    );
     require(
       rad <= coreEngine.debt(address(this)),
       "AccountingEngine/insufficient-surplus"
     );
-    totalOnAuctionDebt = totalOnAuctionDebt - rad;
-    coreEngine.settleDebt(rad);
+    totalDebtOnAuction = totalDebtOnAuction - rad;
+    coreEngine.settleUnbackedDebt(rad);
   }
 
   // Debt auction
   function auctionDebt() external returns (uint256 id) {
     require(
-      debtBidSize <=
+      debtAuctionLotSize <=
         coreEngine.unbackedDebt(address(this)) -
           totalQueuedDebt -
-          totalOnAuctionDebt,
+          totalDebtOnAuction,
       "AccountingEngine/insufficient-debt"
     );
     require(
       coreEngine.debt(address(this)) == 0,
       "AccountingEngine/surplus-not-zero"
     );
-    totalOnAuctionDebt = totalOnAuctionDebt + debtBidSize;
-    id = debtAuction.startAuction(address(this), debtLotSize, debtBidSize);
+    totalDebtOnAuction = totalDebtOnAuction + debtAuctionLotSize;
+    id = debtAuction.startAuction(
+      address(this),
+      intialDebtAuctionBid,
+      debtAuctionLotSize
+    );
   }
 
   // Surplus auction
@@ -184,28 +191,28 @@ contract AccountingEngine {
     require(
       coreEngine.debt(address(this)) >=
         coreEngine.unbackedDebt(address(this)) +
-          surplusLotSize +
+          surplusAuctionLotSize +
           surplusBuffer,
       "AccountingEngine/insufficient-surplus"
     );
     require(
       coreEngine.unbackedDebt(address(this)) -
         totalQueuedDebt -
-        totalOnAuctionDebt ==
+        totalDebtOnAuction ==
         0,
       "AccountingEngine/debt-not-zero"
     );
-    id = surplusAuction.startAuction(surplusLotSize, 0);
+    id = surplusAuction.startAuction(surplusAuctionLotSize, 0);
   }
 
   function shutdown() external isAuthorized {
     require(live == 1, "AccountingEngine/not-live");
     live = 0;
     totalQueuedDebt = 0;
-    totalOnAuctionDebt = 0;
+    totalDebtOnAuction = 0;
     surplusAuction.shutdown(coreEngine.debt(address(surplusAuction)));
     debtAuction.shutdown();
-    coreEngine.settleDebt(
+    coreEngine.settleUnbackedDebt(
       min(
         coreEngine.debt(address(this)),
         coreEngine.unbackedDebt(address(this))

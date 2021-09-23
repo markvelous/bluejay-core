@@ -416,7 +416,7 @@ contract CoreEngine {
   }
 
   // --- Settlement ---
-  function settleDebt(uint256 rad) external {
+  function settleUnbackedDebt(uint256 rad) external {
     address user = msg.sender;
     unbackedDebt[user] = unbackedDebt[user] - rad;
     debt[user] = debt[user] - rad;

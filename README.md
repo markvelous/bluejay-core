@@ -42,7 +42,7 @@
 | wish     | allowedToModifyDebtOrCollateral |
 | hope     | grantAllowance                  |
 | nope     | revokeAllowance                 |
-| heal     | settleDebt                      |
+| heal     | settleUnbackedDebt              |
 | suck     | createUnbackedDebt              |
 | fold     | updateAccumulatedRate           |
 | grab     | confiscateCollateralAndDebt     |
@@ -183,39 +183,39 @@
 
 
 
-| Vow            | AccountingEngine     |
-| -------------- | -------------------- |
-| FlopLike       | DebtAuctionLike      |
-| flopper        | debtAuction          |
-| FlapLike       | SurplusAuctionLike   |
-| flapper        | surplusAuction       |
-| VatLike        | CoreEngineLike       |
-| vat            | coreEngine           |
-| rely           | grantAuthorization   |
-| deny           | revokeAuthorization  |
-| auth           | isAuthorized         |
-| sin            | debtQueue            |
-| Sin            | totalQueuedDebt      |
-| Ash            | totalOnAuctionDebt   |
-| wait           | popDebtDelay         |
-| dump           | debtLotSize          |
-| sump           | debtBidSize          |
-| bump           | surplusLotSize       |
-| hump           | surplusBuffer        |
-| fess           | pushDebtToQueue      |
-| flog           | popDebtFromQueue     |
-| heal           | settleDebt           |
-| kiss           | netDebtWithSurplus   |
-| flap           | auctionSurplus       |
-| flop           | auctionDebt          |
-| kick           | startAuction         |
-| file (wait)    | updatePopDebtDelay   |
-| file (bump)    | updateSurplusLotSize |
-| file (hump)    | updateSurplusBuffer  |
-| file (sump)    | updateDebtBidSize    |
-| file (dump)    | updateDebtLotSize    |
-| file (flapper) | updateSurplusAuction |
-| file (flopper) | updateDebtAuction    |
+| Vow            | AccountingEngine              |
+| -------------- | ----------------------------- |
+| FlopLike       | DebtAuctionLike               |
+| flopper        | debtAuction                   |
+| FlapLike       | SurplusAuctionLike            |
+| flapper        | surplusAuction                |
+| VatLike        | CoreEngineLike                |
+| vat            | coreEngine                    |
+| rely           | grantAuthorization            |
+| deny           | revokeAuthorization           |
+| auth           | isAuthorized                  |
+| sin            | debtQueue                     |
+| Sin            | totalQueuedDebt               |
+| Ash            | totalDebtOnAuction            |
+| wait           | popDebtDelay                  |
+| dump           | intialDebtAuctionBid          |
+| sump           | debtAuctionLotSize            |
+| bump           | surplusLotSize                |
+| hump           | surplusBuffer                 |
+| fess           | pushDebtToQueue               |
+| flog           | popDebtFromQueue              |
+| heal           | settleUnbackedDebt            |
+| kiss           | settleUnbackedDebtFromAuction |
+| flap           | auctionSurplus                |
+| flop           | auctionDebt                   |
+| kick           | startAuction                  |
+| file (wait)    | updatePopDebtDelay            |
+| file (bump)    | updateSurplusAuctionLotSize   |
+| file (hump)    | updateSurplusBuffer           |
+| file (sump)    | updateDebtAuctionLotSize      |
+| file (dump)    | updateIntialDebtAuctionBid    |
+| file (flapper) | updateSurplusAuction          |
+| file (flopper) | updateDebtAuction             |
 
 - remove `add` and `sub`
 - TODO easier way to pop debt
@@ -378,3 +378,43 @@
 - changed `burn(address,uint256)` to `burn(uint256)` 
 - removed overflow protection for kicks
 - removed `add` and `mul`
+
+
+
+| Flopper   | DebtAuction               |
+| --------- | ------------------------- |
+| VatLike   | CoreEngineLike            |
+| VowLike   | AccountingEngineLike      |
+| vat       | coreEngine                |
+| vat.move  | transferDebt              |
+| vat.suck  | createUnbackedDebt        |
+| vow       | accountingEngine          |
+| GemLike   | TokenLike                 |
+| gem       | governanceToken           |
+| rely      | grantAuthorization        |
+| deny      | revokeAuthorization       |
+| auth      | isAuthorized              |
+| now       | block.timestamp           |
+| Bid.bid   | Bid.debtLotSize           |
+| Bid.lot   | Bid.governanceTokenToMint |
+| Bid.guy   | Bid.highestBidder         |
+| Bid.tic   | Bid.bidExpiry             |
+| Bid.end   | Bid.auctionExpiry         |
+| beg       | minBidIncrement           |
+| ttl       | maxBidDuration            |
+| tau       | maxAuctionDuration        |
+| kicks     | auctionCount              |
+| Kick      | StartAuction              |
+| kick      | startAuction              |
+| tick      | restartAuction            |
+| dent      | placeBid                  |
+| deal      | settleAuction             |
+| yank      | emergencyBidWithdrawal    |
+| cage      | shutdown                  |
+| pad       | restartMultiplier         |
+| file(beg) | updateMinBidIncrement     |
+| file(pad) | updateRestartMultiplier   |
+| file(ttl) | updateMaxBidDuration      |
+| file(tau) | updateMaxAuctionDuration  |
+
+- removed overflow protection for kicks

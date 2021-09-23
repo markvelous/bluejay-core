@@ -9,7 +9,6 @@ enableAllLog();
 
 const MINTER_ROLE =
   "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
-const TEMP_DEBT_AUCTION_ADDR = "0x6A646C9Da20391dAD50ce58D06bf35040D3aF4fb";
 const DEFAULT_SAVINGS_RATE = BigNumber.from("1000000003022265980097387651"); // 10% per year, root(1.1, 365*24*60*60) * exp(27)
 const DEFAULT_STABILITY_FEE = BigNumber.from("1000000004431822129783699001"); // 15% per year, root(1.15, 365*24*60*60) * exp(27)
 const normalizeByRate = (amount: BigNumber, rate: BigNumber) => {
@@ -49,6 +48,7 @@ const whenCoreDeployed = async ({
     "SimpleGovernanceToken"
   );
   const SurplusAuction = await ethers.getContractFactory("SurplusAuction");
+  const DebtAuction = await ethers.getContractFactory("DebtAuction");
 
   const collateral = await SimpleCollateral.deploy();
   const oracle = await SimpleOracle.deploy();
@@ -72,10 +72,14 @@ const whenCoreDeployed = async ({
     coreEngine.address,
     governanceToken.address
   );
+  const debtAuction = await DebtAuction.deploy(
+    coreEngine.address,
+    governanceToken.address
+  );
   const accountingEngine = await AccountingEngine.deploy(
     coreEngine.address,
     surplusAuction.address,
-    TEMP_DEBT_AUCTION_ADDR
+    debtAuction.address
   );
   const discountCalculator = await DiscountCalculator.deploy();
   const liquidationEngine = await LiquidationEngine.deploy(coreEngine.address);
@@ -95,6 +99,7 @@ const whenCoreDeployed = async ({
   coreEngine.grantAuthorization(accountingEngine.address);
   coreEngine.grantAuthorization(liquidationEngine.address);
   coreEngine.grantAuthorization(liquidationAuction.address);
+  coreEngine.grantAuthorization(debtAuction.address);
 
   accountingEngine.grantAuthorization(liquidationEngine.address);
 
@@ -106,6 +111,7 @@ const whenCoreDeployed = async ({
   // Initializations
   await governanceToken.initialize();
   await governanceToken.grantRole(MINTER_ROLE, accounts[0].address);
+  await governanceToken.grantRole(MINTER_ROLE, debtAuction.address);
 
   await coreEngine.initializeCollateralType(collateralType);
   await coreEngine.updateDebtCeiling(
@@ -136,10 +142,10 @@ const whenCoreDeployed = async ({
 
   // Reference https://etherscan.io/address/0xA950524441892A31ebddF91d3cEEFa04Bf454466#readContract
   await accountingEngine.updatePopDebtDelay(561600);
-  await accountingEngine.updateSurplusLotSize(exp(45).mul(100000));
+  await accountingEngine.updateSurplusAuctionLotSize(exp(45).mul(100000));
   await accountingEngine.updateSurplusBuffer(exp(45).mul(500000));
-  await accountingEngine.updateDebtBidSize(exp(45).mul(50000));
-  await accountingEngine.updateDebtLotSize(exp(18).mul(250));
+  await accountingEngine.updateIntialDebtAuctionBid(exp(45).mul(50000));
+  await accountingEngine.updateDebtAuctionLotSize(exp(18).mul(1000));
 
   // Reference https://etherscan.io/address/0x135954d155898D42C90D2a57824C690e0c7BEf1B#readContract
   // Ilk: 0x4554482d43000000000000000000000000000000000000000000000000000000
@@ -196,6 +202,7 @@ const whenCoreDeployed = async ({
     discountCalculator,
     liquidationEngine,
     liquidationAuction,
+    debtAuction,
   };
 };
 
@@ -333,7 +340,7 @@ describe("E2E", () => {
     expect(unbackedDebt).to.be.lt(exp(45).mul(1000000));
   });
 
-  it.only("should allow stability fees to be collected", async () => {
+  it("should allow stability fees to be collected", async () => {
     const status = await whenDebtDrawn();
     const {
       coreEngine,
@@ -643,5 +650,33 @@ describe("E2E", () => {
     expect(await governanceToken.totalSupply()).to.equal(exp(18).mul(150));
 
     expect(await coreEngine.debt(account2.address)).to.equal(debtToSell);
+  });
+
+  it.only("should allow users to bid on bad debt to earn governance token", async () => {
+    const status = await whenDebtDrawn();
+    const {
+      accounts,
+      oracle,
+      oracleRelayer,
+      liquidationEngine,
+      collateralType,
+      coreEngine,
+      accountingEngine,
+    } = status;
+    const [, account1, account2] = accounts;
+
+    await oracle.setPrice(exp(18).mul(1000));
+    await oracleRelayer.updateCollateralPrice(collateralType);
+
+    console.log(
+      (await coreEngine.unbackedDebt(accountingEngine.address)).toString()
+    );
+    await liquidationEngine
+      .connect(account2)
+      .liquidatePosition(collateralType, account1.address, account2.address);
+
+    console.log(
+      (await coreEngine.unbackedDebt(accountingEngine.address)).toString()
+    );
   });
 });
