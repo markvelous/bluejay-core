@@ -377,7 +377,7 @@
 - changed `burn(address,uint256)` to `burn(uint256)` 
 - removed overflow protection for kicks
 - removed `add` and `mul`
-
+- added listing & counting of active auctions
 
 
 | Flopper   | DebtAuction               |
@@ -417,3 +417,4 @@
 | file(tau) | updateMaxAuctionDuration  |
 
 - removed overflow protection for kicks
+- added listing & counting of active auctions

@@ -614,6 +614,11 @@ describe("E2E", () => {
 
     await accountingEngine.auctionSurplus();
 
+    const activeAuctions = await surplusAuction.listActiveAuctions();
+    expect(activeAuctions.length).to.equal(1);
+    expect(activeAuctions[0]).to.equal(1);
+    expect(await surplusAuction.countActiveAuctions()).to.equal(1);
+
     const { debtToSell } = await surplusAuction.bids(1);
     expect(debtToSell).to.equal(exp(45).mul(100000));
 
@@ -652,6 +657,7 @@ describe("E2E", () => {
     expect(await governanceToken.totalSupply()).to.equal(exp(18).mul(150));
 
     expect(await coreEngine.debt(account2.address)).to.equal(debtToSell);
+    expect(await surplusAuction.countActiveAuctions()).to.equal(0);
   });
 
   it("should allow users to bid on bad debt to earn governance token", async () => {
@@ -702,6 +708,12 @@ describe("E2E", () => {
       exp(45).mul(100000)
     );
 
+    // Check that there are two ongoing auctions
+    expect(await debtAuction.countActiveAuctions()).to.equal(2);
+    const activeAuctions = await debtAuction.listActiveAuctions();
+    expect(activeAuctions[0]).to.equal(1);
+    expect(activeAuctions[1]).to.equal(2);
+
     // Bid on the auctions
     expect(await coreEngine.debt(account1.address)).to.equal(
       exp(45).mul(10000 * 1000)
@@ -744,5 +756,6 @@ describe("E2E", () => {
       exp(18).mul(1200)
     );
     expect(await governanceToken.balanceOf(account1.address)).to.equal(0);
+    expect(await debtAuction.countActiveAuctions()).to.equal(0);
   });
 });

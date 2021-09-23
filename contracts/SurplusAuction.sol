@@ -41,12 +41,16 @@ contract SurplusAuction {
   }
 
   modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "SurplusAuction/not-authorized");
+    require(
+      authorizedAccounts[msg.sender] == 1,
+      "SurplusAuction/not-authorized"
+    );
     _;
   }
 
   // --- Data ---
   struct Bid {
+    uint256 index; // Index in active auctions
     uint256 bidAmount; // governanceTokens paid               [wad]
     uint256 debtToSell; // debt in return for bid   [rad]
     address highestBidder; // high bidder
@@ -64,6 +68,7 @@ contract SurplusAuction {
   uint48 public maxBidDuration = 3 hours; // 3 hours bid duration         [seconds]
   uint48 public maxAuctionDuration = 2 days; // 2 days total auction length  [seconds]
   uint256 public auctionCount = 0;
+  uint256[] public activeAuctions; // Array of active auction ids
   uint256 public live; // Active Flag
 
   // --- Events ---
@@ -91,22 +96,39 @@ contract SurplusAuction {
   }
 
   // --- Auction ---
+  function removeAuction(uint256 auctionId) internal {
+    uint256 lastAuctionIdInList = activeAuctions[activeAuctions.length - 1];
+    if (auctionId != lastAuctionIdInList) {
+      // Swap auction to remove to last on the list
+      uint256 _index = bids[auctionId].index;
+      activeAuctions[_index] = lastAuctionIdInList;
+      bids[lastAuctionIdInList].index = _index;
+    }
+    activeAuctions.pop();
+    delete bids[auctionId];
+  }
+
   function startAuction(uint256 debtToSell, uint256 bidAmount)
     external
     isAuthorized
-    returns (uint256 id)
+    returns (uint256 auctionId)
   {
     require(live == 1, "SurplusAuction/not-live");
-    id = ++auctionCount;
+    auctionId = ++auctionCount;
 
-    bids[id].bidAmount = bidAmount;
-    bids[id].debtToSell = debtToSell;
-    bids[id].highestBidder = msg.sender; // configurable??
-    bids[id].auctionExpiry = uint48(block.timestamp) + maxAuctionDuration;
+    activeAuctions.push(auctionId);
+
+    bids[auctionId].index = activeAuctions.length - 1;
+    bids[auctionId].bidAmount = bidAmount;
+    bids[auctionId].debtToSell = debtToSell;
+    bids[auctionId].highestBidder = msg.sender; // configurable??
+    bids[auctionId].auctionExpiry =
+      uint48(block.timestamp) +
+      maxAuctionDuration;
 
     coreEngine.transferDebt(msg.sender, address(this), debtToSell);
 
-    emit StartAuction(id, debtToSell, bidAmount);
+    emit StartAuction(auctionId, debtToSell, bidAmount);
   }
 
   function restartAuction(uint256 auctionId) external {
@@ -174,21 +196,31 @@ contract SurplusAuction {
     bids[auctionId].bidExpiry = uint48(block.timestamp) + maxBidDuration;
   }
 
-  function settleAuction(uint256 id) external {
+  function settleAuction(uint256 auctionId) external {
     require(live == 1, "SurplusAuction/not-live");
     require(
-      bids[id].bidExpiry != 0 &&
-        (bids[id].bidExpiry < block.timestamp ||
-          bids[id].auctionExpiry < block.timestamp),
+      bids[auctionId].bidExpiry != 0 &&
+        (bids[auctionId].bidExpiry < block.timestamp ||
+          bids[auctionId].auctionExpiry < block.timestamp),
       "SurplusAuction/not-finished"
     );
     coreEngine.transferDebt(
       address(this),
-      bids[id].highestBidder,
-      bids[id].debtToSell
+      bids[auctionId].highestBidder,
+      bids[auctionId].debtToSell
     );
-    governanceToken.burn(bids[id].bidAmount);
-    delete bids[id];
+    governanceToken.burn(bids[auctionId].bidAmount);
+    removeAuction(auctionId);
+  }
+
+  // The number of active auctions
+  function countActiveAuctions() external view returns (uint256) {
+    return activeAuctions.length;
+  }
+
+  // Return the entire array of active auctions
+  function listActiveAuctions() external view returns (uint256[] memory) {
+    return activeAuctions;
   }
 
   function shutdown(uint256 rad) external isAuthorized {
@@ -196,17 +228,17 @@ contract SurplusAuction {
     coreEngine.transferDebt(address(this), msg.sender, rad);
   }
 
-  function emergencyBidWithdrawal(uint256 id) external {
+  function emergencyBidWithdrawal(uint256 auctionId) external {
     require(live == 0, "SurplusAuction/still-live");
     require(
-      bids[id].highestBidder != address(0),
+      bids[auctionId].highestBidder != address(0),
       "SurplusAuction/highestBidder-not-set"
     );
     governanceToken.transferFrom(
       address(this),
-      bids[id].highestBidder,
-      bids[id].bidAmount
+      bids[auctionId].highestBidder,
+      bids[auctionId].bidAmount
     );
-    delete bids[id];
+    removeAuction(auctionId);
   }
 }

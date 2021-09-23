@@ -47,6 +47,7 @@ contract DebtAuction {
 
   // --- Data ---
   struct Bid {
+    uint256 index; // Index in active array
     uint256 debtLotSize; // unbacked stablecoin to recover from the auction       [rad]
     uint256 governanceTokenBid; // governanceTokens in return for debtLotSize  [wad]
     address highestBidder; // high bidder
@@ -66,6 +67,7 @@ contract DebtAuction {
   uint48 public maxAuctionDuration = 2 days; // 2 days total auction length  [seconds]
   uint256 public auctionCount = 0;
   uint256 public live; // Active Flag
+  uint256[] public activeAuctions; // Array of active auction ids
   address public accountingEngine; // not used until shutdown
 
   // --- Events ---
@@ -113,6 +115,18 @@ contract DebtAuction {
   }
 
   // --- Auction ---
+  function removeAuction(uint256 auctionId) internal {
+    uint256 lastAuctionIdInList = activeAuctions[activeAuctions.length - 1];
+    if (auctionId != lastAuctionIdInList) {
+      // Swap auction to remove to last on the list
+      uint256 _index = bids[auctionId].index;
+      activeAuctions[_index] = lastAuctionIdInList;
+      bids[lastAuctionIdInList].index = _index;
+    }
+    activeAuctions.pop();
+    delete bids[auctionId];
+  }
+
   function startAuction(
     address stablecoinReceiver,
     uint256 initialGovernanceTokenBid,
@@ -121,6 +135,9 @@ contract DebtAuction {
     require(live == 1, "DebtAuction/not-live");
     auctionId = ++auctionCount;
 
+    activeAuctions.push(auctionId);
+
+    bids[auctionId].index = activeAuctions.length - 1;
     bids[auctionId].debtLotSize = debtLotSize;
     bids[auctionId].governanceTokenBid = initialGovernanceTokenBid;
     bids[auctionId].highestBidder = stablecoinReceiver;
@@ -219,7 +236,17 @@ contract DebtAuction {
       bids[auctionId].highestBidder,
       bids[auctionId].governanceTokenBid
     );
-    delete bids[auctionId];
+    removeAuction(auctionId);
+  }
+
+  // The number of active auctions
+  function countActiveAuctions() external view returns (uint256) {
+    return activeAuctions.length;
+  }
+
+  // Return the entire array of active auctions
+  function listActiveAuctions() external view returns (uint256[] memory) {
+    return activeAuctions;
   }
 
   // --- Shutdown ---
@@ -239,6 +266,6 @@ contract DebtAuction {
       bids[auctionId].highestBidder,
       bids[auctionId].debtLotSize
     );
-    delete bids[auctionId];
+    removeAuction(auctionId);
   }
 }

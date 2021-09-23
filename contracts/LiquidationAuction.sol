@@ -320,7 +320,6 @@ contract LiquidationAuction {
     activeAuctions.push(auctionId);
 
     auction[auctionId].index = activeAuctions.length - 1;
-
     auction[auctionId].debtToRaise = debtToRaise;
     auction[auctionId].collateralToSell = collateralToSell;
     auction[auctionId].position = position;
