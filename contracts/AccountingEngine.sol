@@ -23,7 +23,7 @@ interface SurplusAuctionLike {
   function live() external returns (uint256);
 }
 
-interface CoreEngineLike {
+interface LedgerLike {
   function debt(address) external view returns (uint256);
 
   function unbackedDebt(address) external view returns (uint256);
@@ -53,7 +53,7 @@ contract AccountingEngine {
   }
 
   // --- Data ---
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   SurplusAuctionLike public surplusAuction; // Surplus Auction
   DebtAuctionLike public debtAuction; // Debt Auction
 
@@ -73,15 +73,15 @@ contract AccountingEngine {
 
   // --- Init ---
   constructor(
-    address coreEngine_,
+    address ledger_,
     address surplusAuction_,
     address debtAuction_
   ) {
     authorizedAccounts[msg.sender] = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     surplusAuction = SurplusAuctionLike(surplusAuction_);
     debtAuction = DebtAuctionLike(debtAuction_);
-    coreEngine.grantAllowance(surplusAuction_);
+    ledger.grantAllowance(surplusAuction_);
     live = 1;
   }
 
@@ -112,9 +112,9 @@ contract AccountingEngine {
   }
 
   function updateSurplusAuction(address data) external isAuthorized {
-    coreEngine.revokeAllowance(address(surplusAuction));
+    ledger.revokeAllowance(address(surplusAuction));
     surplusAuction = SurplusAuctionLike(data);
-    coreEngine.grantAllowance(data);
+    ledger.grantAllowance(data);
   }
 
   function updateDebtAuction(address data) external isAuthorized {
@@ -151,17 +151,17 @@ contract AccountingEngine {
   // Debt settlement
   function settleUnbackedDebt(uint256 rad) external {
     require(
-      rad <= coreEngine.debt(address(this)),
+      rad <= ledger.debt(address(this)),
       "AccountingEngine/insufficient-surplus"
     );
     require(
       rad <=
-        coreEngine.unbackedDebt(address(this)) -
+        ledger.unbackedDebt(address(this)) -
           totalQueuedDebt -
           totalDebtOnAuction,
       "AccountingEngine/insufficient-debt"
     );
-    coreEngine.settleUnbackedDebt(rad);
+    ledger.settleUnbackedDebt(rad);
   }
 
   function settleUnbackedDebtFromAuction(uint256 rad) external {
@@ -170,24 +170,24 @@ contract AccountingEngine {
       "AccountingEngine/not-enough-totalDebtOnAuction"
     );
     require(
-      rad <= coreEngine.debt(address(this)),
+      rad <= ledger.debt(address(this)),
       "AccountingEngine/insufficient-surplus"
     );
     totalDebtOnAuction = totalDebtOnAuction - rad;
-    coreEngine.settleUnbackedDebt(rad);
+    ledger.settleUnbackedDebt(rad);
   }
 
   // Debt auction
   function auctionDebt() external returns (uint256 id) {
     require(
       debtAuctionLotSize <=
-        coreEngine.unbackedDebt(address(this)) -
+        ledger.unbackedDebt(address(this)) -
           totalQueuedDebt -
           totalDebtOnAuction,
       "AccountingEngine/insufficient-debt"
     );
     require(
-      coreEngine.debt(address(this)) == 0,
+      ledger.debt(address(this)) == 0,
       "AccountingEngine/surplus-not-zero"
     );
     totalDebtOnAuction = totalDebtOnAuction + debtAuctionLotSize;
@@ -201,14 +201,14 @@ contract AccountingEngine {
   // Surplus auction
   function auctionSurplus() external returns (uint256 id) {
     require(
-      coreEngine.debt(address(this)) >=
-        coreEngine.unbackedDebt(address(this)) +
+      ledger.debt(address(this)) >=
+        ledger.unbackedDebt(address(this)) +
           surplusAuctionLotSize +
           surplusBuffer,
       "AccountingEngine/insufficient-surplus"
     );
     require(
-      coreEngine.unbackedDebt(address(this)) -
+      ledger.unbackedDebt(address(this)) -
         totalQueuedDebt -
         totalDebtOnAuction ==
         0,
@@ -232,13 +232,10 @@ contract AccountingEngine {
     live = 0;
     totalQueuedDebt = 0;
     totalDebtOnAuction = 0;
-    surplusAuction.shutdown(coreEngine.debt(address(surplusAuction)));
+    surplusAuction.shutdown(ledger.debt(address(surplusAuction)));
     debtAuction.shutdown();
-    coreEngine.settleUnbackedDebt(
-      min(
-        coreEngine.debt(address(this)),
-        coreEngine.unbackedDebt(address(this))
-      )
+    ledger.settleUnbackedDebt(
+      min(ledger.debt(address(this)), ledger.unbackedDebt(address(this)))
     );
   }
 }

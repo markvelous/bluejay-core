@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-interface CoreEngineLike {
+interface LedgerLike {
   function updateSafetyPrice(bytes32 collateralType, uint256 data) external;
 }
 
@@ -37,7 +37,7 @@ contract OracleRelayer {
 
   mapping(bytes32 => CollateralType) public collateralTypes;
 
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   uint256 public redemptionPrice; // ref per dai [ray]
 
   uint256 public live;
@@ -50,9 +50,9 @@ contract OracleRelayer {
   );
 
   // --- Init ---
-  constructor(address coreEngine_) {
+  constructor(address ledger_) {
     authorizedAccounts[msg.sender] = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     redemptionPrice = ONE;
     live = 1;
   }
@@ -94,7 +94,7 @@ contract OracleRelayer {
         collateralTypes[collateralType].collateralizationRatio
       )
       : 0;
-    coreEngine.updateSafetyPrice(collateralType, safetyPrice);
+    ledger.updateSafetyPrice(collateralType, safetyPrice);
     emit UpdateCollateralPrice(collateralType, price, safetyPrice);
   }
 

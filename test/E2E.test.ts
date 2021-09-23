@@ -31,7 +31,7 @@ const whenCoreDeployed = async ({
   const StablecoinJoin = await ethers.getContractFactory("StablecoinJoin");
   const CollateralJoin = await ethers.getContractFactory("CollateralJoin");
   const OracleRelayer = await ethers.getContractFactory("OracleRelayer");
-  const CoreEngine = await ethers.getContractFactory("CoreEngine");
+  const Ledger = await ethers.getContractFactory("Ledger");
   const SavingsAccount = await ethers.getContractFactory("SavingsAccount");
   const FeesEngine = await ethers.getContractFactory("FeesEngine");
   const AccountingEngine = await ethers.getContractFactory("AccountingEngine");
@@ -55,51 +55,51 @@ const whenCoreDeployed = async ({
   const stablecoin = await Stablecoin.deploy("Myanmar Kyat Tracker", "MMKT");
   const governanceToken = await SimpleGovernanceToken.deploy();
   const collateralType = keccak256(collateral.address);
-  const coreEngine = await CoreEngine.deploy();
+  const ledger = await Ledger.deploy();
   const collateralJoin = await CollateralJoin.deploy(
-    coreEngine.address,
+    ledger.address,
     collateralType,
     collateral.address
   );
   const stablecoinJoin = await StablecoinJoin.deploy(
-    coreEngine.address,
+    ledger.address,
     stablecoin.address
   );
-  const oracleRelayer = await OracleRelayer.deploy(coreEngine.address);
-  const savingsAccount = await SavingsAccount.deploy(coreEngine.address);
-  const feesEngine = await FeesEngine.deploy(coreEngine.address);
+  const oracleRelayer = await OracleRelayer.deploy(ledger.address);
+  const savingsAccount = await SavingsAccount.deploy(ledger.address);
+  const feesEngine = await FeesEngine.deploy(ledger.address);
   const surplusAuction = await SurplusAuction.deploy(
-    coreEngine.address,
+    ledger.address,
     governanceToken.address
   );
   const debtAuction = await DebtAuction.deploy(
-    coreEngine.address,
+    ledger.address,
     governanceToken.address
   );
   const accountingEngine = await AccountingEngine.deploy(
-    coreEngine.address,
+    ledger.address,
     surplusAuction.address,
     debtAuction.address
   );
   const discountCalculator = await DiscountCalculator.deploy();
-  const liquidationEngine = await LiquidationEngine.deploy(coreEngine.address);
+  const liquidationEngine = await LiquidationEngine.deploy(ledger.address);
   const liquidationAuction = await LiquidationAuction.deploy(
-    coreEngine.address,
+    ledger.address,
     oracleRelayer.address,
     liquidationEngine.address,
     collateralType
   );
 
   // Permissions
-  coreEngine.grantAuthorization(oracleRelayer.address);
-  coreEngine.grantAuthorization(collateralJoin.address);
-  coreEngine.grantAuthorization(stablecoinJoin.address);
-  coreEngine.grantAuthorization(savingsAccount.address);
-  coreEngine.grantAuthorization(feesEngine.address);
-  coreEngine.grantAuthorization(accountingEngine.address);
-  coreEngine.grantAuthorization(liquidationEngine.address);
-  coreEngine.grantAuthorization(liquidationAuction.address);
-  coreEngine.grantAuthorization(debtAuction.address);
+  ledger.grantAuthorization(oracleRelayer.address);
+  ledger.grantAuthorization(collateralJoin.address);
+  ledger.grantAuthorization(stablecoinJoin.address);
+  ledger.grantAuthorization(savingsAccount.address);
+  ledger.grantAuthorization(feesEngine.address);
+  ledger.grantAuthorization(accountingEngine.address);
+  ledger.grantAuthorization(liquidationEngine.address);
+  ledger.grantAuthorization(liquidationAuction.address);
+  ledger.grantAuthorization(debtAuction.address);
 
   accountingEngine.grantAuthorization(liquidationEngine.address);
 
@@ -115,13 +115,10 @@ const whenCoreDeployed = async ({
   await governanceToken.grantRole(MINTER_ROLE, accounts[0].address);
   await governanceToken.grantRole(MINTER_ROLE, debtAuction.address);
 
-  await coreEngine.initializeCollateralType(collateralType);
-  await coreEngine.updateDebtCeiling(
-    collateralType,
-    exp(45).mul(1000000 * 1000)
-  );
-  await coreEngine.updateDebtFloor(collateralType, exp(45).mul(100));
-  await coreEngine.updateTotalDebtCeiling(exp(45).mul(1000000 * 1000));
+  await ledger.initializeCollateralType(collateralType);
+  await ledger.updateDebtCeiling(collateralType, exp(45).mul(1000000 * 1000));
+  await ledger.updateDebtFloor(collateralType, exp(45).mul(100));
+  await ledger.updateTotalDebtCeiling(exp(45).mul(1000000 * 1000));
 
   await stablecoin.grantRole(MINTER_ROLE, stablecoinJoin.address);
 
@@ -194,7 +191,7 @@ const whenCoreDeployed = async ({
     collateralJoin,
     stablecoin,
     stablecoinJoin,
-    coreEngine,
+    ledger,
     surplusAuction,
     oracleRelayer,
     oracle,
@@ -215,7 +212,7 @@ interface WhenDebtDrawn extends WhenCoreDeployed {
 const depositCollateralAndDrawDebt = async ({
   collateral,
   collateralJoin,
-  coreEngine,
+  ledger,
   account,
   collateralType,
   debtDrawn,
@@ -223,7 +220,7 @@ const depositCollateralAndDrawDebt = async ({
 }: {
   collateral: Contract;
   collateralJoin: Contract;
-  coreEngine: Contract;
+  ledger: Contract;
   collateralType: string;
   debtDrawn: BigNumber;
   collateralDeposit: BigNumber;
@@ -240,7 +237,7 @@ const depositCollateralAndDrawDebt = async ({
     .join(account.address, collateralDeposit);
 
   // Draw 10,000,000 max debt (10000 * 1500 / 150%)
-  await coreEngine
+  await ledger
     .connect(account)
     .modifyPositionCollateralization(
       collateralType,
@@ -251,7 +248,7 @@ const depositCollateralAndDrawDebt = async ({
       normalizeByRate(
         debtDrawn,
         (
-          await coreEngine.collateralTypes(collateralType)
+          await ledger.collateralTypes(collateralType)
         ).accumulatedRate
       )
     );
@@ -280,7 +277,7 @@ const whenDebtDrawn = async ({
 
 describe("E2E", () => {
   it("should allow user to mint and withdraw stablecoin", async () => {
-    const { collateralType, coreEngine, stablecoinJoin, accounts, stablecoin } =
+    const { collateralType, ledger, stablecoinJoin, accounts, stablecoin } =
       await whenDebtDrawn();
     const [, account1] = accounts;
 
@@ -295,16 +292,16 @@ describe("E2E", () => {
     );
 
     // System parameters should be correct
-    expect(await coreEngine.totalDebt()).to.equal(exp(45).mul(10000 * 1000));
-    expect(await coreEngine.totalUnbackedDebt()).to.equal(0);
+    expect(await ledger.totalDebt()).to.equal(exp(45).mul(10000 * 1000));
+    expect(await ledger.totalUnbackedDebt()).to.equal(0);
 
     // Collateral parameters should be correct
-    const collateralData = await coreEngine.collateralTypes(collateralType);
+    const collateralData = await ledger.collateralTypes(collateralType);
     expect(collateralData.normalizedDebt).to.equal(exp(18).mul(10000 * 1000));
   });
 
   it("should allow user to save (assuming zero stability fee)", async () => {
-    const { savingsAccount, accounts, coreEngine, accountingEngine } =
+    const { savingsAccount, accounts, ledger, accountingEngine } =
       await whenDebtDrawn();
     const [, account1] = accounts;
 
@@ -319,11 +316,11 @@ describe("E2E", () => {
     await incrementTime(60 * 60 * 24 * 365, ethers.provider);
     await savingsAccount.connect(account1).updateAccumulatedRate();
 
-    const totalDebt = await coreEngine.totalDebt();
+    const totalDebt = await ledger.totalDebt();
     expect(totalDebt).to.be.gt(exp(45).mul(10900000));
     expect(totalDebt).to.be.lt(exp(45).mul(11000000));
 
-    const totalUnbackedDebt = await coreEngine.totalUnbackedDebt();
+    const totalUnbackedDebt = await ledger.totalUnbackedDebt();
     expect(totalUnbackedDebt).to.be.gt(exp(45).mul(900000));
     expect(totalUnbackedDebt).to.be.lt(exp(45).mul(1000000));
 
@@ -331,13 +328,11 @@ describe("E2E", () => {
     const totalSavings = await savingsAccount.savings(account1.address);
     await savingsAccount.connect(account1).exit(totalSavings);
 
-    const accountBalance = await coreEngine.debt(account1.address);
+    const accountBalance = await ledger.debt(account1.address);
     expect(accountBalance).to.be.gt(exp(45).mul(10900000));
     expect(accountBalance).to.be.lt(exp(45).mul(11000000));
 
-    const unbackedDebt = await coreEngine.unbackedDebt(
-      accountingEngine.address
-    );
+    const unbackedDebt = await ledger.unbackedDebt(accountingEngine.address);
     expect(unbackedDebt).to.be.gt(exp(45).mul(900000));
     expect(unbackedDebt).to.be.lt(exp(45).mul(1000000));
   });
@@ -345,7 +340,7 @@ describe("E2E", () => {
   it("should allow stability fees to be collected", async () => {
     const status = await whenDebtDrawn();
     const {
-      coreEngine,
+      ledger,
       accounts,
       feesEngine,
       collateral,
@@ -359,7 +354,7 @@ describe("E2E", () => {
     await incrementTime(60 * 60 * 24 * 365, ethers.provider);
     await feesEngine.updateAccumulatedRate(collateralType);
 
-    expect(await coreEngine.debt(accountingEngine.address)).to.gt(
+    expect(await ledger.debt(accountingEngine.address)).to.gt(
       exp(45).mul(1500000)
     );
     // Transfer from debt from another account (simulating buy from ext account)
@@ -369,7 +364,7 @@ describe("E2E", () => {
       collateralDeposit: exp(18).mul(10000),
       account: account2,
     });
-    await coreEngine
+    await ledger
       .connect(account2)
       .transferDebt(
         account2.address,
@@ -378,11 +373,8 @@ describe("E2E", () => {
       );
 
     // Pay off debt with stability fee and withdraw all collaterals
-    const position = await coreEngine.positions(
-      collateralType,
-      account1.address
-    );
-    await coreEngine
+    const position = await ledger.positions(collateralType, account1.address);
+    await ledger
       .connect(account1)
       .modifyPositionCollateralization(
         collateralType,
@@ -402,13 +394,13 @@ describe("E2E", () => {
     );
 
     // Check that system parameters are correct
-    const totalDebt = await coreEngine.totalDebt();
+    const totalDebt = await ledger.totalDebt();
     expect(totalDebt).to.lte(exp(45).mul(10000 * 1000));
     expect(totalDebt).to.gt(exp(45).mul(10000 * 999));
 
-    expect(await coreEngine.totalUnbackedDebt()).to.equal(0);
+    expect(await ledger.totalUnbackedDebt()).to.equal(0);
 
-    const collateralData = await coreEngine.collateralTypes(collateralType);
+    const collateralData = await ledger.collateralTypes(collateralType);
     const normalizedDebtCeil = Math.floor((10000 * 1000) / 1.14);
     const normalizedDebtFloor = Math.floor((10000 * 1000) / 1.16);
     expect(collateralData.normalizedDebt).to.lte(
@@ -431,7 +423,7 @@ describe("E2E", () => {
       liquidationAuction,
       accountingEngine,
       collateralType,
-      coreEngine,
+      ledger,
     } = status;
     const [, account1, account2] = accounts;
 
@@ -446,21 +438,21 @@ describe("E2E", () => {
     const {
       lockedCollateral: lockedCollateralAcc1,
       normalizedDebt: normalizedDebtAcc1,
-    } = await coreEngine.positions(collateralType, account1.address);
+    } = await ledger.positions(collateralType, account1.address);
     expect(lockedCollateralAcc1).to.equal(0);
     expect(normalizedDebtAcc1).to.equal(0);
     // Debt is not touched for liquidated position
-    expect(await coreEngine.debt(account1.address)).to.equal(
+    expect(await ledger.debt(account1.address)).to.equal(
       exp(45).mul(10000 * 1000)
     );
 
     // Collateral goes to liquidation auction (unlocked)
     expect(
-      await coreEngine.collateral(collateralType, liquidationAuction.address)
+      await ledger.collateral(collateralType, liquidationAuction.address)
     ).to.equal(exp(18).mul(10000));
 
     // Reward credited for starting auction
-    const reward = await coreEngine.debt(account2.address);
+    const reward = await ledger.debt(account2.address);
     expect(reward).to.equal(
       exp(45)
         .mul(10000 * 1000)
@@ -471,7 +463,7 @@ describe("E2E", () => {
     ); // Keeper incentive plus debtToRaise * keeperRewardFactor
 
     // Debt plus reward goes to accounting engine as unbacked debt
-    expect(await coreEngine.unbackedDebt(accountingEngine.address)).to.equal(
+    expect(await ledger.unbackedDebt(accountingEngine.address)).to.equal(
       exp(45)
         .mul(10000 * 1000)
         .add(reward)
@@ -500,7 +492,7 @@ describe("E2E", () => {
     await collateral.mint(account2.address, exp(18).mul(100000));
     await depositCollateralAndDrawDebt({
       collateral,
-      coreEngine,
+      ledger,
       collateralJoin,
       collateralType,
       account: account2,
@@ -550,18 +542,18 @@ describe("E2E", () => {
     const {
       lockedCollateral: lockedCollateralBeforeClose,
       normalizedDebt: normalizedDebtBeforeClose,
-    } = await coreEngine.positions(collateralType, account1.address);
+    } = await ledger.positions(collateralType, account1.address);
 
     expect(lockedCollateralBeforeClose).to.equal(0);
     expect(normalizedDebtBeforeClose).to.equal(0);
 
     // Liquidator has paid debt and collected collateral
-    expect(await coreEngine.debt(account2.address)).to.equal(
+    expect(await ledger.debt(account2.address)).to.equal(
       exp(45).mul(15011600).sub(collateralLeft.div(2).mul(discountedPrice))
     );
-    expect(
-      await coreEngine.collateral(collateralType, account2.address)
-    ).to.equal(collateralLeft.div(2));
+    expect(await ledger.collateral(collateralType, account2.address)).to.equal(
+      collateralLeft.div(2)
+    );
 
     // // Full liquidation
     await liquidationAuction
@@ -575,17 +567,17 @@ describe("E2E", () => {
       );
 
     // Liquidator paid all debt and received all collaterals
-    expect(await coreEngine.debt(account2.address)).to.equal(
+    expect(await ledger.debt(account2.address)).to.equal(
       exp(45).mul(15011600).sub(debtRequired)
     );
-    expect(
-      await coreEngine.collateral(collateralType, account2.address)
-    ).to.equal(debtRequired.div(discountedPrice));
+    expect(await ledger.collateral(collateralType, account2.address)).to.equal(
+      debtRequired.div(discountedPrice)
+    );
 
     // Liquidated position received remaining collateral as refunds
-    expect(
-      await coreEngine.collateral(collateralType, account1.address)
-    ).to.equal(collateralLeft.sub(debtRequired.div(discountedPrice)));
+    expect(await ledger.collateral(collateralType, account1.address)).to.equal(
+      collateralLeft.sub(debtRequired.div(discountedPrice))
+    );
   });
 
   it("should allow users to bid on surplus of debt collected from stability fee", async () => {
@@ -594,7 +586,7 @@ describe("E2E", () => {
       accounts,
       feesEngine,
       collateralType,
-      coreEngine,
+      ledger,
       accountingEngine,
       surplusAuction,
       governanceToken,
@@ -656,7 +648,7 @@ describe("E2E", () => {
     expect(await governanceToken.balanceOf(surplusAuction.address)).to.equal(0);
     expect(await governanceToken.totalSupply()).to.equal(exp(18).mul(150));
 
-    expect(await coreEngine.debt(account2.address)).to.equal(debtToSell);
+    expect(await ledger.debt(account2.address)).to.equal(debtToSell);
     expect(await surplusAuction.countActiveAuctions()).to.equal(0);
   });
 
@@ -668,7 +660,7 @@ describe("E2E", () => {
       oracleRelayer,
       liquidationEngine,
       collateralType,
-      coreEngine,
+      ledger,
       accountingEngine,
       debtAuction,
       governanceToken,
@@ -681,7 +673,7 @@ describe("E2E", () => {
     await liquidationEngine
       .connect(account2)
       .liquidatePosition(collateralType, account1.address, account2.address);
-    expect(await coreEngine.unbackedDebt(accountingEngine.address)).to.gt(
+    expect(await ledger.unbackedDebt(accountingEngine.address)).to.gt(
       exp(45).mul(10000000)
     );
 
@@ -715,7 +707,7 @@ describe("E2E", () => {
     expect(activeAuctions[1]).to.equal(2);
 
     // Bid on the auctions
-    expect(await coreEngine.debt(account1.address)).to.equal(
+    expect(await ledger.debt(account1.address)).to.equal(
       exp(45).mul(10000 * 1000)
     );
     await debtAuction
@@ -724,7 +716,7 @@ describe("E2E", () => {
     await debtAuction
       .connect(account1)
       .placeBid(2, exp(18).mul(800), exp(45).mul(50000));
-    expect(await coreEngine.debt(account1.address)).to.equal(
+    expect(await ledger.debt(account1.address)).to.equal(
       exp(45)
         .mul(10000 * 1000)
         .sub(exp(45).mul(100000))
@@ -739,7 +731,7 @@ describe("E2E", () => {
     await debtAuction
       .connect(account2)
       .placeBid(2, exp(18).mul(600), exp(45).mul(50000));
-    expect(await coreEngine.debt(account1.address)).to.equal(
+    expect(await ledger.debt(account1.address)).to.equal(
       exp(45).mul(10000 * 1000)
     );
 
@@ -749,7 +741,7 @@ describe("E2E", () => {
     await debtAuction.connect(account2).settleAuction(2);
 
     // Check that unbacked debt has decreased and account has gov token now
-    expect(await coreEngine.unbackedDebt(accountingEngine.address)).to.lt(
+    expect(await ledger.unbackedDebt(accountingEngine.address)).to.lt(
       exp(45).mul(10000000)
     );
     expect(await governanceToken.balanceOf(account2.address)).to.equal(

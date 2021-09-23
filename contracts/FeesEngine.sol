@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-interface CoreEngineLike {
+interface LedgerLike {
   function collateralTypes(bytes32)
     external
     returns (
@@ -40,14 +40,14 @@ contract FeesEngine {
   }
 
   mapping(bytes32 => CollateralType) public collateralTypes;
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   address public accountingEngine; // Debt Engine
   uint256 public globalStabilityFee; // Global, per-second stability fee contribution [ray]
 
   // --- Init ---
-  constructor(address coreEngine_) {
+  constructor(address ledger_) {
     authorizedAccounts[msg.sender] = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
   }
 
   // --- Math ---
@@ -159,9 +159,7 @@ contract FeesEngine {
       block.timestamp >= collateralTypes[collateralType].lastUpdated,
       "FeesEngine/invalid-block.timestamp"
     );
-    (, uint256 lastAccumulatedRate) = coreEngine.collateralTypes(
-      collateralType
-    );
+    (, uint256 lastAccumulatedRate) = ledger.collateralTypes(collateralType);
     nextAccumulatedRate = rmul(
       rpow(
         globalStabilityFee + collateralTypes[collateralType].stabilityFee,
@@ -170,7 +168,7 @@ contract FeesEngine {
       ),
       lastAccumulatedRate
     );
-    coreEngine.updateAccumulatedRate(
+    ledger.updateAccumulatedRate(
       collateralType,
       accountingEngine,
       diff(nextAccumulatedRate, lastAccumulatedRate)

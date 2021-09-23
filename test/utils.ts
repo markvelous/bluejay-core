@@ -53,11 +53,11 @@ export const formatWad = formatNumber(18);
 export const formatRay = formatNumber(27);
 export const formatRad = formatNumber(45);
 
-export const printCoreEngineCollateralType = async (
-  coreEngine: Contract,
+export const printLedgerCollateralType = async (
+  ledger: Contract,
   collateralType: string
 ) => {
-  const data = await coreEngine.collateralTypes(collateralType);
+  const data = await ledger.collateralTypes(collateralType);
   const {
     normalizedDebt,
     accumulatedRate,
@@ -79,11 +79,11 @@ export const printCoreEngineCollateralType = async (
   info(`Debt Floor: ${formatRad(debtFloor)} RAD`);
 };
 
-export const printCoreEngineGlobals = async (coreEngine: Contract) => {
+export const printLedgerGlobals = async (ledger: Contract) => {
   const [totalDebt, totalUnbackedDebt, totalDebtCeiling] = await Promise.all([
-    coreEngine.totalDebt(),
-    coreEngine.totalUnbackedDebt(),
-    coreEngine.totalDebtCeiling(),
+    ledger.totalDebt(),
+    ledger.totalUnbackedDebt(),
+    ledger.totalDebtCeiling(),
   ]);
   info(`==== CORE ENGINE ====`);
   info(`Total Debt: ${formatRad(totalDebt)} RAD`);
@@ -91,15 +91,15 @@ export const printCoreEngineGlobals = async (coreEngine: Contract) => {
   info(`Total Debt Ceiling: ${formatRad(totalDebtCeiling)} RAD`);
 };
 
-export const printCoreEnginePosition = async (
-  coreEngine: Contract,
+export const printLedgerPosition = async (
+  ledger: Contract,
   collateralType: string,
   address: string
 ) => {
-  const { safetyPrice } = await coreEngine.collateralTypes(collateralType);
-  const collateral = await coreEngine.collateral(collateralType, address);
-  const debt = await coreEngine.debt(address);
-  const position = await coreEngine.positions(collateralType, address);
+  const { safetyPrice } = await ledger.collateralTypes(collateralType);
+  const collateral = await ledger.collateral(collateralType, address);
+  const debt = await ledger.debt(address);
+  const position = await ledger.positions(collateralType, address);
   const {
     lockedCollateral,
     normalizedDebt,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-interface CoreEngineLike {
+interface LedgerLike {
   function transferDebt(
     address,
     address,
@@ -47,16 +47,16 @@ contract SavingsAccount {
   uint256 public savingsRate; // The Savings Rate          [ray]
   uint256 public accumulatedRates; // The Rate Accumulator          [ray]
 
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   address public accountingEngine; // Debt Engine
   uint256 public lastUpdated; // Time of last drip     [unix epoch time]
 
   uint256 public live; // Active Flag
 
   // --- Init ---
-  constructor(address coreEngine_) {
+  constructor(address ledger_) {
     authorizedAccounts[msg.sender] = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     savingsRate = ONE;
     accumulatedRates = ONE;
     lastUpdated = block.timestamp;
@@ -161,7 +161,7 @@ contract SavingsAccount {
     uint256 accumulatedRates_ = nextAccumulatedRate - accumulatedRates;
     accumulatedRates = nextAccumulatedRate;
     lastUpdated = block.timestamp;
-    coreEngine.createUnbackedDebt(
+    ledger.createUnbackedDebt(
       address(accountingEngine),
       address(this),
       totalSavings * accumulatedRates_
@@ -177,12 +177,12 @@ contract SavingsAccount {
     );
     savings[msg.sender] = savings[msg.sender] + wad;
     totalSavings = totalSavings + wad;
-    coreEngine.transferDebt(msg.sender, address(this), accumulatedRates * wad);
+    ledger.transferDebt(msg.sender, address(this), accumulatedRates * wad);
   }
 
   function exit(uint256 wad) external {
     savings[msg.sender] = savings[msg.sender] - wad;
     totalSavings = totalSavings - wad;
-    coreEngine.transferDebt(address(this), msg.sender, accumulatedRates * wad);
+    ledger.transferDebt(address(this), msg.sender, accumulatedRates * wad);
   }
 }

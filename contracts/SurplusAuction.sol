@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-interface CoreEngineLike {
+interface LedgerLike {
   function transferDebt(
     address,
     address,
@@ -60,7 +60,7 @@ contract SurplusAuction {
 
   mapping(uint256 => Bid) public bids;
 
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   TokenLike public governanceToken;
 
   uint256 constant ONE = 1.00E18;
@@ -75,9 +75,9 @@ contract SurplusAuction {
   event StartAuction(uint256 auctionId, uint256 debtToSell, uint256 bidAmount);
 
   // --- Init ---
-  constructor(address coreEngine_, address governanceToken_) {
+  constructor(address ledger_, address governanceToken_) {
     authorizedAccounts[msg.sender] = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     governanceToken = TokenLike(governanceToken_);
     live = 1;
   }
@@ -126,7 +126,7 @@ contract SurplusAuction {
       uint48(block.timestamp) +
       maxAuctionDuration;
 
-    coreEngine.transferDebt(msg.sender, address(this), debtToSell);
+    ledger.transferDebt(msg.sender, address(this), debtToSell);
 
     emit StartAuction(auctionId, debtToSell, bidAmount);
   }
@@ -204,7 +204,7 @@ contract SurplusAuction {
           bids[auctionId].auctionExpiry < block.timestamp),
       "SurplusAuction/not-finished"
     );
-    coreEngine.transferDebt(
+    ledger.transferDebt(
       address(this),
       bids[auctionId].highestBidder,
       bids[auctionId].debtToSell
@@ -225,7 +225,7 @@ contract SurplusAuction {
 
   function shutdown(uint256 rad) external isAuthorized {
     live = 0;
-    coreEngine.transferDebt(address(this), msg.sender, rad);
+    ledger.transferDebt(address(this), msg.sender, rad);
   }
 
   function emergencyBidWithdrawal(uint256 auctionId) external {

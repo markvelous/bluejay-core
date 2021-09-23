@@ -60,7 +60,7 @@
 
 | DaiJoin     | StablecoinJoin      |
 | ----------- | ------------------- |
-| VatLike     | CoreEngineLike      |
+| VatLike     | LedgerLike      |
 | DSTokenLike | TokenLike           |
 | dai         | stablecoin          |
 | wards       | authorizedAccounts  |
@@ -76,7 +76,7 @@
 
 | GemJoin     | CollateralJoin      |
 | ----------- | ------------------- |
-| VatLike     | CoreEngineLike      |
+| VatLike     | LedgerLike      |
 | DSTokenLike | TokenLike           |
 | dai         | stablecoin          |
 | wards       | authorizedAccounts  |
@@ -94,7 +94,7 @@
 
 | Spot          | OracleRelayer                |
 | ------------- | ---------------------------- |
-| VatLike       | CoreEngineLike               |
+| VatLike       | LedgerLike               |
 | PipLike       | OracleLike                   |
 | file(spot)    | updateSafetyPrice            |
 | wards         | authorizedAccounts           |
@@ -118,8 +118,8 @@
 
 | Pot        | SavingsAccount         |
 | ---------- | ---------------------- |
-| VatLike    | CoreEngineLike         |
-| vat        | coreEngine             |
+| VatLike    | LedgerLike         |
+| vat        | ledger             |
 | wards      | authorizedAccounts     |
 | rely       | grantAuthorization     |
 | deny       | revokeAuthorization    |
@@ -144,8 +144,8 @@
 
 | Jug         | FeesEngine               |
 | ----------- | ------------------------ |
-| VatLike     | CoreEngineLike           |
-| var         | coreEngine               |
+| VatLike     | LedgerLike           |
+| var         | ledger               |
 | vow         | accountingEngine         |
 | ilks        | collateralTypes          |
 | ilk         | collateralType           |
@@ -189,8 +189,8 @@
 | flopper        | debtAuction                   |
 | FlapLike       | SurplusAuctionLike            |
 | flapper        | surplusAuction                |
-| VatLike        | CoreEngineLike                |
-| vat            | coreEngine                    |
+| VatLike        | LedgerLike                |
+| vat            | ledger                    |
 | rely           | grantAuthorization            |
 | deny           | revokeAuthorization           |
 | auth           | isAuthorized                  |
@@ -223,7 +223,7 @@
 
 | Dog         | LiquidationEngine                    |
 | ----------- | ------------------------------------ |
-| VatLike     | CoreEngineLike                       |
+| VatLike     | LedgerLike                       |
 | ClipperLike | LiquidationAuctionLike               |
 | ilks        | collateralTypes                      |
 | Ilk.Art     | normalizedDebt                       |
@@ -237,7 +237,7 @@
 | grab        | confiscateCollateralAndDebt          |
 | hope        | grantAllowance                       |
 | nope        | revokeAllowance                      |
-| vat         | coreEngine                           |
+| vat         | ledger                           |
 | VowLike     | AccountingEngineLike                 |
 | fess        | pushDebtToQueue                      |
 | rely        | grantAuthorization                   |
@@ -284,7 +284,7 @@
 
 | Clipper       | LiquidationAuction        |
 | ------------- | ------------------------- |
-| VatLike       | CoreEngineLike            |
+| VatLike       | LedgerLike            |
 | flux          | transferCollateral        |
 | PipLike       | OracleLike                |
 | SpotterLike   | OracleRelayerLike         |
@@ -344,8 +344,8 @@
 
 | Flapper   | SurplusAuction           |
 | --------- | ------------------------ |
-| VatLike   | CoreEngineLike           |
-| vat       | coreEngine               |
+| VatLike   | LedgerLike           |
+| vat       | ledger               |
 | vat.move  | transferDebt             |
 | GemLike   | TokenLike                |
 | gem       | governanceToken          |
@@ -382,9 +382,9 @@
 
 | Flopper   | DebtAuction               |
 | --------- | ------------------------- |
-| VatLike   | CoreEngineLike            |
+| VatLike   | LedgerLike            |
 | VowLike   | AccountingEngineLike      |
-| vat       | coreEngine                |
+| vat       | ledger                |
 | vat.move  | transferDebt              |
 | vat.suck  | createUnbackedDebt        |
 | vow       | accountingEngine          |

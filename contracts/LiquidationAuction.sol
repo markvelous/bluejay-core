@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-interface CoreEngineLike {
+interface LedgerLike {
   function transferDebt(
     address,
     address,
@@ -80,7 +80,7 @@ contract LiquidationAuction {
 
   // --- Data ---
   bytes32 public immutable collateralType; // Collateral type of this LiquidationAuction
-  CoreEngineLike public immutable coreEngine; // Core CDP Engine
+  LedgerLike public immutable ledger; // Core CDP Engine
 
   LiquidationEngineLike public liquidationEngine; // Liquidation module
   address public accountingEngine; // Recipient of dai raised in auctions
@@ -152,12 +152,12 @@ contract LiquidationAuction {
 
   // --- Init ---
   constructor(
-    address coreEngine_,
+    address ledger_,
     address oracleRelayer_,
     address liquidationEngine_,
     bytes32 collateralType_
   ) {
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     oracleRelayer = OracleRelayerLike(oracleRelayer_);
     liquidationEngine = LiquidationEngineLike(liquidationEngine_);
     collateralType = collateralType_;
@@ -334,7 +334,7 @@ contract LiquidationAuction {
     uint256 reward;
     if (keeperIncentive > 0 || keeperRewardFactor > 0) {
       reward = keeperIncentive + wmul(debtToRaise, keeperRewardFactor);
-      coreEngine.createUnbackedDebt(accountingEngine, keeper, reward);
+      ledger.createUnbackedDebt(accountingEngine, keeper, reward);
     }
 
     emit StartAuction(
@@ -383,7 +383,7 @@ contract LiquidationAuction {
         (collateralToSell * feedPrice) >= minDebtForReward
       ) {
         reward = keeperIncentive + wmul(debtToRaise, keeperRewardFactor);
-        coreEngine.createUnbackedDebt(accountingEngine, keeper, reward);
+        ledger.createUnbackedDebt(accountingEngine, keeper, reward);
       }
     }
 
@@ -483,7 +483,7 @@ contract LiquidationAuction {
       collateralToSell = collateralToSell - collateralDelta;
 
       // Send collateral to liquidatorAddress
-      coreEngine.transferCollateral(
+      ledger.transferCollateral(
         collateralType,
         address(this),
         liquidatorAddress,
@@ -495,7 +495,7 @@ contract LiquidationAuction {
       // contracts which the LiquidationAuction needs to be authorized
       if (
         data.length > 0 &&
-        liquidatorAddress != address(coreEngine) &&
+        liquidatorAddress != address(ledger) &&
         liquidatorAddress != address(liquidationEngine)
       ) {
         LiquidationAuctionCallee(liquidatorAddress).liquidationCallback(
@@ -507,7 +507,7 @@ contract LiquidationAuction {
       }
 
       // Get DAI from caller
-      coreEngine.transferDebt(msg.sender, accountingEngine, debtDelta);
+      ledger.transferDebt(msg.sender, accountingEngine, debtDelta);
 
       // Removes Dai out for liquidation from accumulator
       liquidationEngine.removeDebtFromLiquidation(
@@ -521,7 +521,7 @@ contract LiquidationAuction {
       removeAuction(auctionId);
     } else if (debtToRaise == 0) {
       // When no more debt needs to be raised, refunds remaining collateral & close the auction
-      coreEngine.transferCollateral(
+      ledger.transferCollateral(
         collateralType,
         address(this),
         position,
@@ -606,7 +606,7 @@ contract LiquidationAuction {
 
   // Public function to update the cached dust*liquidatonPenalty value.
   function updateMinDebtForReward() external {
-    (, , , , uint256 debtFloor) = CoreEngineLike(coreEngine).collateralTypes(
+    (, , , , uint256 debtFloor) = LedgerLike(ledger).collateralTypes(
       collateralType
     );
     minDebtForReward = wmul(
@@ -625,7 +625,7 @@ contract LiquidationAuction {
       collateralType,
       auction[id].debtToRaise
     );
-    coreEngine.transferCollateral(
+    ledger.transferCollateral(
       collateralType,
       address(this),
       msg.sender,

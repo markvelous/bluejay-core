@@ -12,7 +12,7 @@ interface LiquidationAuctionLike {
   ) external returns (uint256);
 }
 
-interface CoreEngineLike {
+interface LedgerLike {
   function collateralTypes(bytes32)
     external
     view
@@ -75,7 +75,7 @@ contract LiquidationEngine {
     uint256 debtRequiredForActiveAuctions; // Amt debt needed to cover debt+fees of active auctions per ilk [rad]
   }
 
-  CoreEngineLike public immutable coreEngine; // CDP Engine
+  LedgerLike public immutable ledger; // CDP Engine
 
   mapping(bytes32 => CollateralTypes) public collateralTypes;
 
@@ -101,8 +101,8 @@ contract LiquidationEngine {
   event Shutdown();
 
   // --- Init ---
-  constructor(address coreEngine_) {
-    coreEngine = CoreEngineLike(coreEngine_);
+  constructor(address ledger_) {
+    ledger = LedgerLike(ledger_);
     live = 1;
     authorizedAccounts[msg.sender] = 1;
     emit Rely(msg.sender);
@@ -179,7 +179,7 @@ contract LiquidationEngine {
   ) external returns (uint256 auctionId) {
     require(live == 1, "LiquidationEngine/not-live");
 
-    (uint256 lockedCollateral, uint256 normalizedDebt) = coreEngine.positions(
+    (uint256 lockedCollateral, uint256 normalizedDebt) = ledger.positions(
       collateralType,
       position
     );
@@ -189,8 +189,9 @@ contract LiquidationEngine {
     uint256 debtFloor;
     {
       uint256 safetyPrice;
-      (, accumulatedRate, safetyPrice, , debtFloor) = coreEngine
-        .collateralTypes(collateralType);
+      (, accumulatedRate, safetyPrice, , debtFloor) = ledger.collateralTypes(
+        collateralType
+      );
       require(
         safetyPrice > 0 &&
           lockedCollateral * safetyPrice < normalizedDebt * accumulatedRate,
@@ -252,7 +253,7 @@ contract LiquidationEngine {
       "LiquidationEngine/overflow"
     );
 
-    coreEngine.confiscateCollateralAndDebt(
+    ledger.confiscateCollateralAndDebt(
       collateralType,
       position,
       collateralTypeData.liquidationAuction,

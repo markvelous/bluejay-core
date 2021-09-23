@@ -1,7 +1,7 @@
 // SPDX-License-IplaceBidifier: MIT
 pragma solidity ^0.8.2;
 
-interface CoreEngineLike {
+interface LedgerLike {
   function transferDebt(
     address,
     address,
@@ -57,7 +57,7 @@ contract DebtAuction {
 
   mapping(uint256 => Bid) public bids;
 
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   TokenLike public governanceToken;
 
   uint256 constant ONE = 1.00E18;
@@ -79,9 +79,9 @@ contract DebtAuction {
   );
 
   // --- Init ---
-  constructor(address coreEngine_, address governanceToken_) {
+  constructor(address ledger_, address governanceToken_) {
     authorizedAccounts[msg.sender] = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     governanceToken = TokenLike(governanceToken_);
     live = 1;
   }
@@ -202,7 +202,7 @@ contract DebtAuction {
     );
 
     if (msg.sender != bids[auctionId].highestBidder) {
-      coreEngine.transferDebt(
+      ledger.transferDebt(
         msg.sender,
         bids[auctionId].highestBidder,
         debtLotSize
@@ -261,7 +261,7 @@ contract DebtAuction {
       bids[auctionId].highestBidder != address(0),
       "DebtAuction/highestBidder-not-set"
     );
-    coreEngine.createUnbackedDebt(
+    ledger.createUnbackedDebt(
       accountingEngine,
       bids[auctionId].highestBidder,
       bids[auctionId].debtLotSize

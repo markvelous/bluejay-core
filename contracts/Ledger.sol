@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-contract CoreEngine {
+contract Ledger {
   // --- Auth ---
   mapping(address => uint256) public authorizedAccounts;
 
@@ -14,12 +14,12 @@ contract CoreEngine {
   }
 
   modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
+    require(authorizedAccounts[msg.sender] == 1, "Ledger/not-authorized");
     _;
   }
 
   modifier isLive() {
-    require(live == 1, "Core/not-live");
+    require(live == 1, "Ledger/not-live");
     _;
   }
 
@@ -109,7 +109,7 @@ contract CoreEngine {
   {
     require(
       collateralTypes[collateralType].accumulatedRate == 0,
-      "Core/collateralType-already-init"
+      "Ledger/collateralType-already-init"
     );
     collateralTypes[collateralType].accumulatedRate = 10**27;
   }
@@ -166,7 +166,7 @@ contract CoreEngine {
   ) external {
     require(
       allowedToModifyDebtOrCollateral(from, msg.sender),
-      "Core/not-allowed"
+      "Ledger/not-allowed"
     );
     collateral[collateralType][from] = collateral[collateralType][from] - wad;
     collateral[collateralType][to] = collateral[collateralType][to] + wad;
@@ -179,7 +179,7 @@ contract CoreEngine {
   ) external {
     require(
       allowedToModifyDebtOrCollateral(from, msg.sender),
-      "Core/not-allowed"
+      "Ledger/not-allowed"
     );
     debt[from] = debt[from] - rad;
     debt[to] = debt[to] + rad;
@@ -211,7 +211,7 @@ contract CoreEngine {
     // collateralType has been initialised
     require(
       collateralTypeData.accumulatedRate != 0,
-      "Core/collateralType-not-init"
+      "Ledger/collateralType-not-init"
     );
 
     positionData.lockedCollateral = addInt(
@@ -246,7 +246,7 @@ contract CoreEngine {
           totalDebt <= totalDebtCeiling
         )
       ),
-      "Core/ceiling-exceeded"
+      "Ledger/ceiling-exceeded"
     );
     // position is either less risky than before, or it is safe
     require(
@@ -255,7 +255,7 @@ contract CoreEngine {
         totalDebtOfPosition <=
           positionData.lockedCollateral * collateralTypeData.safetyPrice
       ),
-      "Core/not-safe"
+      "Ledger/not-safe"
     );
 
     // position is either more safe, or the owner consents
@@ -264,7 +264,7 @@ contract CoreEngine {
         both(normalizedDebtDelta <= 0, collateralDelta >= 0),
         allowedToModifyDebtOrCollateral(position, msg.sender)
       ),
-      "Core/not-allowed-position"
+      "Ledger/not-allowed-position"
     );
     // collateral src consents
     require(
@@ -272,7 +272,7 @@ contract CoreEngine {
         collateralDelta <= 0,
         allowedToModifyDebtOrCollateral(collateralSource, msg.sender)
       ),
-      "Core/not-allowed-collateral-src"
+      "Ledger/not-allowed-collateral-src"
     );
     // totalDebtdst consents
     require(
@@ -280,7 +280,7 @@ contract CoreEngine {
         normalizedDebtDelta >= 0,
         allowedToModifyDebtOrCollateral(debtDestination, msg.sender)
       ),
-      "Core/not-allowed-debt-dst"
+      "Ledger/not-allowed-debt-dst"
     );
 
     // position has no debt, or a non-negligible amount
@@ -289,7 +289,7 @@ contract CoreEngine {
         positionData.normalizedDebt == 0,
         totalDebtOfPosition >= collateralTypeData.debtFloor
       ),
-      "Core/debtFloor"
+      "Ledger/debtFloor"
     );
 
     collateral[collateralType][collateralSource] = subInt(
@@ -342,19 +342,19 @@ contract CoreEngine {
         allowedToModifyDebtOrCollateral(src, msg.sender),
         allowedToModifyDebtOrCollateral(dst, msg.sender)
       ),
-      "Core/not-allowed"
+      "Ledger/not-allowed"
     );
 
     // both sides safe
     require(
       sourceDebt <=
         sourcePosition.lockedCollateral * collateralTypeData.safetyPrice,
-      "Core/not-safe-src"
+      "Ledger/not-safe-src"
     );
     require(
       destinationDebt <=
         destinationPosition.lockedCollateral * collateralTypeData.safetyPrice,
-      "Core/not-safe-dst"
+      "Ledger/not-safe-dst"
     );
 
     // both sides non-negligible
@@ -363,14 +363,14 @@ contract CoreEngine {
         sourceDebt >= collateralTypeData.debtFloor,
         sourcePosition.normalizedDebt == 0
       ),
-      "Core/debtFloor-src"
+      "Ledger/debtFloor-src"
     );
     require(
       either(
         destinationDebt >= collateralTypeData.debtFloor,
         destinationPosition.normalizedDebt == 0
       ),
-      "Core/debtFloor-dst"
+      "Ledger/debtFloor-dst"
     );
   }
 

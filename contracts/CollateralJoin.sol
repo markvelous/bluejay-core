@@ -13,7 +13,7 @@ interface TokenLike {
   ) external returns (bool);
 }
 
-interface CoreEngineLike {
+interface LedgerLike {
   function modifyCollateral(
     bytes32,
     address,
@@ -41,20 +41,20 @@ contract CollateralJoin {
     _;
   }
 
-  CoreEngineLike public coreEngine; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   bytes32 public collateralType; // Collateral Type
   TokenLike public collateral;
   uint256 public decimals;
   uint256 public live; // Active Flag
 
   constructor(
-    address coreEngine_,
+    address ledger_,
     bytes32 collateralType_,
     address collateral_
   ) {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
-    coreEngine = CoreEngineLike(coreEngine_);
+    ledger = LedgerLike(ledger_);
     collateralType = collateralType_;
     collateral = TokenLike(collateral_);
     decimals = collateral.decimals();
@@ -67,7 +67,7 @@ contract CollateralJoin {
   function join(address usr, uint256 wad) external {
     require(live == 1, "CollateralJoin/not-live");
     require(int256(wad) >= 0, "CollateralJoin/overflow");
-    coreEngine.modifyCollateral(collateralType, usr, int256(wad));
+    ledger.modifyCollateral(collateralType, usr, int256(wad));
     require(
       collateral.transferFrom(msg.sender, address(this), wad),
       "CollateralJoin/failed-transfer"
@@ -76,7 +76,7 @@ contract CollateralJoin {
 
   function exit(address usr, uint256 wad) external {
     require(wad <= 2**255, "CollateralJoin/overflow");
-    coreEngine.modifyCollateral(collateralType, msg.sender, -int256(wad));
+    ledger.modifyCollateral(collateralType, msg.sender, -int256(wad));
     require(collateral.transfer(usr, wad), "CollateralJoin/failed-transfer");
   }
 }
