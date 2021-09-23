@@ -57,6 +57,7 @@ contract AccountingEngine {
   SurplusAuctionLike public surplusAuction; // Surplus Auction
   DebtAuctionLike public debtAuction; // Debt Auction
 
+  uint256[] public queuedDebts; // Array of debt in queue
   mapping(uint256 => uint256) public debtQueue; // debt queue
   uint256 public totalQueuedDebt; // Debt waiting for delay            [rad]
   uint256 public totalDebtOnAuction; // On-auction debt        [rad]
@@ -120,8 +121,18 @@ contract AccountingEngine {
     debtAuction = DebtAuctionLike(data);
   }
 
+  function removeDebtFromQueue(uint256 debtEra) internal {
+    uint256 lastDebtInList = queuedDebts[queuedDebts.length - 1];
+    if (debtEra != lastDebtInList) {
+      queuedDebts[debtEra] = lastDebtInList;
+      queuedDebts[lastDebtInList] = debtEra;
+    }
+    queuedDebts.pop();
+  }
+
   // Push to debt-queue
   function pushDebtToQueue(uint256 tab) external isAuthorized {
+    if (debtQueue[block.timestamp] == 0) queuedDebts.push(block.timestamp);
     debtQueue[block.timestamp] = debtQueue[block.timestamp] + tab;
     totalQueuedDebt = totalQueuedDebt + tab;
   }
@@ -134,6 +145,7 @@ contract AccountingEngine {
     );
     totalQueuedDebt = totalQueuedDebt - debtQueue[era];
     debtQueue[era] = 0;
+    removeDebtFromQueue(era);
   }
 
   // Debt settlement
@@ -203,6 +215,16 @@ contract AccountingEngine {
       "AccountingEngine/debt-not-zero"
     );
     id = surplusAuction.startAuction(surplusAuctionLotSize, 0);
+  }
+
+  // The number of debts in the queue
+  function countQueuedDebts() external view returns (uint256) {
+    return queuedDebts.length;
+  }
+
+  // Return the entire array of active auctions
+  function listQueuedDebts() external view returns (uint256[] memory) {
+    return queuedDebts;
   }
 
   function shutdown() external isAuthorized {

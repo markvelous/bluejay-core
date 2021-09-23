@@ -218,8 +218,7 @@
 | file (flopper) | updateDebtAuction             |
 
 - remove `add` and `sub`
-- TODO easier way to pop debt
-- TODO events 
+- added a way to list queued debts
 
 
 | Dog         | LiquidationEngine                    |

@@ -108,6 +108,8 @@ const whenCoreDeployed = async ({
 
   surplusAuction.grantAuthorization(accountingEngine.address);
 
+  debtAuction.grantAuthorization(accountingEngine.address);
+
   // Initializations
   await governanceToken.initialize();
   await governanceToken.grantRole(MINTER_ROLE, accounts[0].address);
@@ -144,8 +146,8 @@ const whenCoreDeployed = async ({
   await accountingEngine.updatePopDebtDelay(561600);
   await accountingEngine.updateSurplusAuctionLotSize(exp(45).mul(100000));
   await accountingEngine.updateSurplusBuffer(exp(45).mul(500000));
-  await accountingEngine.updateIntialDebtAuctionBid(exp(45).mul(50000));
-  await accountingEngine.updateDebtAuctionLotSize(exp(18).mul(1000));
+  await accountingEngine.updateIntialDebtAuctionBid(exp(18).mul(1000));
+  await accountingEngine.updateDebtAuctionLotSize(exp(45).mul(50000));
 
   // Reference https://etherscan.io/address/0x135954d155898D42C90D2a57824C690e0c7BEf1B#readContract
   // Ilk: 0x4554482d43000000000000000000000000000000000000000000000000000000
@@ -652,7 +654,7 @@ describe("E2E", () => {
     expect(await coreEngine.debt(account2.address)).to.equal(debtToSell);
   });
 
-  it.only("should allow users to bid on bad debt to earn governance token", async () => {
+  it("should allow users to bid on bad debt to earn governance token", async () => {
     const status = await whenDebtDrawn();
     const {
       accounts,
@@ -662,21 +664,85 @@ describe("E2E", () => {
       collateralType,
       coreEngine,
       accountingEngine,
+      debtAuction,
+      governanceToken,
     } = status;
     const [, account1, account2] = accounts;
 
+    // Generate some bad debt
     await oracle.setPrice(exp(18).mul(1000));
     await oracleRelayer.updateCollateralPrice(collateralType);
-
-    console.log(
-      (await coreEngine.unbackedDebt(accountingEngine.address)).toString()
-    );
     await liquidationEngine
       .connect(account2)
       .liquidatePosition(collateralType, account1.address, account2.address);
-
-    console.log(
-      (await coreEngine.unbackedDebt(accountingEngine.address)).toString()
+    expect(await coreEngine.unbackedDebt(accountingEngine.address)).to.gt(
+      exp(45).mul(10000000)
     );
+
+    // Get some stablecoin for account2
+    await depositCollateralAndDrawDebt({
+      ...status,
+      debtDrawn: exp(45).mul(100000),
+      collateralDeposit: exp(18).mul(10000),
+      account: account2,
+    });
+
+    // Wait for queue
+    await incrementTime(561600 + 1, ethers.provider);
+
+    // Allow debt to be liquidated
+    const debtEra = await accountingEngine.queuedDebts(0);
+    await accountingEngine.popDebtFromQueue(debtEra);
+
+    // Start off some auctions (each with 50k of unbacked debts)
+    expect(await accountingEngine.totalDebtOnAuction()).to.equal(0);
+    await accountingEngine.connect(account2).auctionDebt();
+    await accountingEngine.connect(account2).auctionDebt();
+    expect(await accountingEngine.totalDebtOnAuction()).to.equal(
+      exp(45).mul(100000)
+    );
+
+    // Bid on the auctions
+    expect(await coreEngine.debt(account1.address)).to.equal(
+      exp(45).mul(10000 * 1000)
+    );
+    await debtAuction
+      .connect(account1)
+      .placeBid(1, exp(18).mul(800), exp(45).mul(50000));
+    await debtAuction
+      .connect(account1)
+      .placeBid(2, exp(18).mul(800), exp(45).mul(50000));
+    expect(await coreEngine.debt(account1.address)).to.equal(
+      exp(45)
+        .mul(10000 * 1000)
+        .sub(exp(45).mul(100000))
+    );
+
+    await incrementTime(600, ethers.provider);
+
+    // Bid on auction from another account
+    await debtAuction
+      .connect(account2)
+      .placeBid(1, exp(18).mul(600), exp(45).mul(50000));
+    await debtAuction
+      .connect(account2)
+      .placeBid(2, exp(18).mul(600), exp(45).mul(50000));
+    expect(await coreEngine.debt(account1.address)).to.equal(
+      exp(45).mul(10000 * 1000)
+    );
+
+    // Settle the auction
+    await incrementTime(3 * 60 * 60, ethers.provider);
+    await debtAuction.connect(account2).settleAuction(1);
+    await debtAuction.connect(account2).settleAuction(2);
+
+    // Check that unbacked debt has decreased and account has gov token now
+    expect(await coreEngine.unbackedDebt(accountingEngine.address)).to.lt(
+      exp(45).mul(10000000)
+    );
+    expect(await governanceToken.balanceOf(account2.address)).to.equal(
+      exp(18).mul(1200)
+    );
+    expect(await governanceToken.balanceOf(account1.address)).to.equal(0);
   });
 });
