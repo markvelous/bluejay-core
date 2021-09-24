@@ -2,52 +2,6 @@
 pragma solidity ^0.8.2;
 
 contract Ledger {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 1;
-  }
-
-  function revokeAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "Ledger/not-authorized");
-    _;
-  }
-
-  modifier isLive() {
-    require(live == 1, "Ledger/not-live");
-    _;
-  }
-
-  mapping(address => mapping(address => uint256)) public allowed;
-
-  function grantAllowance(address user) external {
-    allowed[msg.sender][user] = 1;
-  }
-
-  function revokeAllowance(address user) external {
-    allowed[msg.sender][user] = 0;
-  }
-
-  function allowedToModifyDebtOrCollateral(address bit, address user)
-    internal
-    view
-    returns (bool)
-  {
-    return
-      either(
-        // Either user is owner, or allowance is given
-        either(bit == user, allowed[bit][user] == 1),
-        // Sender is admin
-        authorizedAccounts[msg.sender] == 1
-      );
-  }
-
-  // --- Data ---
   struct CollateralType {
     uint256 normalizedDebt; // Total Normalised Debt     [wad]
     uint256 accumulatedRate; // Accumulated Rates         [ray]
@@ -60,7 +14,9 @@ contract Ledger {
     uint256 normalizedDebt; // Normalised Debt    [wad]
   }
 
+  mapping(address => uint256) public authorizedAccounts;
   mapping(bytes32 => CollateralType) public collateralTypes;
+  mapping(address => mapping(address => uint256)) public allowed;
   mapping(bytes32 => mapping(address => Position)) public positions;
   mapping(bytes32 => mapping(address => uint256)) public collateral; // [wad]
   mapping(address => uint256) public debt; // internal coin balance [rad]
@@ -71,10 +27,119 @@ contract Ledger {
   uint256 public totalDebtCeiling; // Total Debt Ceiling  [rad]
   uint256 public live; // Active Flag
 
-  // --- Init ---
+  // --- Events ---
+  event GrantAuthorization(address account);
+  event RevokeAuthorization(address account);
+  event AllowModification(address target, address user);
+  event DenyModification(address target, address user);
+  event InitializeCollateralType(bytes32 indexed collateralType);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+  event UpdateParameter(
+    bytes32 indexed collateralType,
+    bytes32 indexed parameter,
+    uint256 data
+  );
+  event ModifyCollateral(bytes32 collateralType, address user, int256 amount);
+  event TransferCollateral(
+    bytes32 collateralType,
+    address from,
+    address to,
+    uint256 amount
+  );
+  event TransferDebt(address from, address to, uint256 amount);
+  event ModifyPositionCollateralization(
+    bytes32 indexed collateralType,
+    address indexed position,
+    address collateralSource,
+    address debtDestination,
+    int256 collateralDelta,
+    int256 normalizedDebtDelta,
+    uint256 lockedCollateral,
+    uint256 normalizedDebt
+  );
+  event TransferCollateralAndDebt(
+    bytes32 indexed collateralType,
+    address indexed src,
+    address indexed dst,
+    int256 collateralDelta,
+    int256 normalizedDebtDelta,
+    uint256 srcLockedCollateral,
+    uint256 srcNormalizedDebt,
+    uint256 dstLockedCollateral,
+    uint256 dstNormalizedDebt
+  );
+  event ConfiscateCollateralAndDebt(
+    bytes32 indexed collateralType,
+    address indexed position,
+    address collateralCounterparty,
+    address debtCounterparty,
+    int256 collateralDelta,
+    int256 normalizedDebtDelta
+  );
+  event SettleUnbackedDebt(address indexed account, uint256 amount);
+  event CreateUnbackedDebt(
+    address debtDestination,
+    address unbackedDebtDestination,
+    uint256 amount,
+    uint256 debtDestinationBalance,
+    uint256 unbackedDebtDestinationBalance
+  );
+  event UpdateAccumulatedRate(
+    bytes32 indexed collateralType,
+    address surplusDestination,
+    int256 accumulatedRatedelta,
+    int256 surplusDelta
+  );
+
+  modifier isAuthorized() {
+    require(authorizedAccounts[msg.sender] == 1, "Ledger/not-authorized");
+    _;
+  }
+
+  modifier isLive() {
+    require(live == 1, "Ledger/not-live");
+    _;
+  }
+
   constructor() {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
+  }
+
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  // --- Allowance ---
+  function allowModification(address user) external {
+    allowed[msg.sender][user] = 1;
+    emit AllowModification(msg.sender, user);
+  }
+
+  function denyModification(address user) external {
+    allowed[msg.sender][user] = 0;
+    emit DenyModification(msg.sender, user);
+  }
+
+  function allowedToModifyDebtOrCollateral(address bit, address user)
+    internal
+    view
+    returns (bool)
+  {
+    return
+      either(
+        // Either user is owner, or modification permission is given
+        either(bit == user, allowed[bit][user] == 1),
+        // Sender is admin
+        authorizedAccounts[msg.sender] == 1
+      );
   }
 
   // --- Math ---
@@ -102,6 +167,18 @@ contract Ledger {
     require(y == 0 || z / y == int256(x));
   }
 
+  function either(bool x, bool y) internal pure returns (bool z) {
+    assembly {
+      z := or(x, y)
+    }
+  }
+
+  function both(bool x, bool y) internal pure returns (bool z) {
+    assembly {
+      z := and(x, y)
+    }
+  }
+
   // --- Administration ---
   function initializeCollateralType(bytes32 collateralType)
     external
@@ -112,10 +189,12 @@ contract Ledger {
       "Ledger/collateralType-already-init"
     );
     collateralTypes[collateralType].accumulatedRate = 10**27;
+    emit InitializeCollateralType(collateralType);
   }
 
   function updateTotalDebtCeiling(uint256 data) external isAuthorized isLive {
     totalDebtCeiling = data;
+    emit UpdateParameter("totalDebtCeiling", data);
   }
 
   function updateSafetyPrice(bytes32 collateralType, uint256 data)
@@ -124,6 +203,7 @@ contract Ledger {
     isLive
   {
     collateralTypes[collateralType].safetyPrice = data;
+    emit UpdateParameter("safetyPrice", data);
   }
 
   function updateDebtCeiling(bytes32 collateralType, uint256 data)
@@ -132,6 +212,7 @@ contract Ledger {
     isLive
   {
     collateralTypes[collateralType].debtCeiling = data;
+    emit UpdateParameter("debtCeiling", data);
   }
 
   function updateDebtFloor(bytes32 collateralType, uint256 data)
@@ -140,6 +221,7 @@ contract Ledger {
     isLive
   {
     collateralTypes[collateralType].debtFloor = data;
+    emit UpdateParameter("debtFloor", data);
   }
 
   function shutdown() external isAuthorized {
@@ -156,6 +238,7 @@ contract Ledger {
       collateral[collateralType][user],
       wad
     );
+    emit ModifyCollateral(collateralType, user, wad);
   }
 
   function transferCollateral(
@@ -170,6 +253,7 @@ contract Ledger {
     );
     collateral[collateralType][from] = collateral[collateralType][from] - wad;
     collateral[collateralType][to] = collateral[collateralType][to] + wad;
+    emit TransferCollateral(collateralType, from, to, wad);
   }
 
   function transferDebt(
@@ -183,18 +267,7 @@ contract Ledger {
     );
     debt[from] = debt[from] - rad;
     debt[to] = debt[to] + rad;
-  }
-
-  function either(bool x, bool y) internal pure returns (bool z) {
-    assembly {
-      z := or(x, y)
-    }
-  }
-
-  function both(bool x, bool y) internal pure returns (bool z) {
-    assembly {
-      z := and(x, y)
-    }
+    emit TransferDebt(from, to, rad);
   }
 
   // --- CDP Manipulation ---
@@ -300,6 +373,16 @@ contract Ledger {
 
     positions[collateralType][position] = positionData;
     collateralTypes[collateralType] = collateralTypeData;
+    emit ModifyPositionCollateralization(
+      collateralType,
+      position,
+      collateralSource,
+      debtDestination,
+      collateralDelta,
+      normalizedDebtDelta,
+      positionData.lockedCollateral,
+      positionData.normalizedDebt
+    );
   }
 
   // --- CDP Fungibility ---
@@ -372,6 +455,17 @@ contract Ledger {
       ),
       "Ledger/debtFloor-dst"
     );
+    emit TransferCollateralAndDebt(
+      collateralType,
+      src,
+      dst,
+      collateralDelta,
+      normalizedDebtDelta,
+      sourcePosition.lockedCollateral,
+      sourcePosition.normalizedDebt,
+      destinationPosition.lockedCollateral,
+      destinationPosition.normalizedDebt
+    );
   }
 
   // --- CDP Confiscation ---
@@ -413,6 +507,14 @@ contract Ledger {
       unbackedDebtDelta
     );
     totalUnbackedDebt = subInt(totalUnbackedDebt, unbackedDebtDelta);
+    emit ConfiscateCollateralAndDebt(
+      collateralType,
+      user,
+      collateralCounterparty,
+      debtCounterparty,
+      collateralDelta,
+      normalizedDebtDelta
+    );
   }
 
   // --- Settlement ---
@@ -422,6 +524,7 @@ contract Ledger {
     debt[user] = debt[user] - rad;
     totalUnbackedDebt = totalUnbackedDebt - rad;
     totalDebt = totalDebt - rad;
+    emit SettleUnbackedDebt(user, rad);
   }
 
   function createUnbackedDebt(
@@ -433,6 +536,13 @@ contract Ledger {
     debt[debtAccount] = debt[debtAccount] + rad;
     totalUnbackedDebt = totalUnbackedDebt + rad;
     totalDebt = totalDebt + rad;
+    emit CreateUnbackedDebt(
+      debtAccount,
+      unbackedDebtAccount,
+      rad,
+      debt[debtAccount],
+      unbackedDebt[unbackedDebtAccount]
+    );
   }
 
   // --- Rates ---
@@ -452,5 +562,11 @@ contract Ledger {
     );
     debt[debtDestination] = addInt(debt[debtDestination], debtDelta);
     totalDebt = addInt(totalDebt, debtDelta);
+    emit UpdateAccumulatedRate(
+      collateralType,
+      debtDestination,
+      accumulatedRateDelta,
+      debtDelta
+    );
   }
 }

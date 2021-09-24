@@ -30,9 +30,9 @@ interface LedgerLike {
 
   function settleUnbackedDebt(uint256) external;
 
-  function grantAllowance(address) external;
+  function allowModification(address) external;
 
-  function revokeAllowance(address) external;
+  function denyModification(address) external;
 }
 
 contract AccountingEngine {
@@ -89,7 +89,7 @@ contract AccountingEngine {
     ledger = LedgerLike(ledger_);
     surplusAuction = SurplusAuctionLike(surplusAuction_);
     debtAuction = DebtAuctionLike(debtAuction_);
-    ledger.grantAllowance(surplusAuction_);
+    ledger.allowModification(surplusAuction_);
     live = 1;
   }
 
@@ -120,9 +120,9 @@ contract AccountingEngine {
   }
 
   function updateSurplusAuction(address data) external isAuthorized {
-    ledger.revokeAllowance(address(surplusAuction));
+    ledger.denyModification(address(surplusAuction));
     surplusAuction = SurplusAuctionLike(data);
-    ledger.grantAllowance(data);
+    ledger.allowModification(data);
   }
 
   function updateDebtAuction(address data) external isAuthorized {

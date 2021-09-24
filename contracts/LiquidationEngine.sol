@@ -40,10 +40,6 @@ interface LedgerLike {
     int256 collateralDelta,
     int256 normalizedDebtDelta
   ) external;
-
-  function grantAllowance(address) external;
-
-  function revokeAllowance(address) external;
 }
 
 interface AccountingEngineLike {

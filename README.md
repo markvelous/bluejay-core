@@ -40,8 +40,8 @@
 | tab      | totalDebtOfPosition             |
 | can      | allowed                         |
 | wish     | allowedToModifyDebtOrCollateral |
-| hope     | grantAllowance                  |
-| nope     | revokeAllowance                 |
+| hope     | allowModification                  |
+| nope     | denyModification                 |
 | heal     | settleUnbackedDebt              |
 | suck     | createUnbackedDebt              |
 | fold     | updateAccumulatedRate           |
@@ -235,8 +235,8 @@
 | Urn.ink     | lockedCollateral                     |
 | Urn.art     | normalizedDebt                       |
 | grab        | confiscateCollateralAndDebt          |
-| hope        | grantAllowance                       |
-| nope        | revokeAllowance                      |
+| hope        | allowModification                       |
+| nope        | denyModification                      |
 | vat         | ledger                               |
 | VowLike     | AccountingEngineLike                 |
 | fess        | pushDebtToQueue                      |
