@@ -60,7 +60,7 @@
 
 | DaiJoin     | StablecoinJoin      |
 | ----------- | ------------------- |
-| VatLike     | LedgerLike      |
+| VatLike     | LedgerLike          |
 | DSTokenLike | TokenLike           |
 | dai         | stablecoin          |
 | wards       | authorizedAccounts  |
@@ -76,7 +76,7 @@
 
 | GemJoin     | CollateralJoin      |
 | ----------- | ------------------- |
-| VatLike     | LedgerLike      |
+| VatLike     | LedgerLike          |
 | DSTokenLike | TokenLike           |
 | dai         | stablecoin          |
 | wards       | authorizedAccounts  |
@@ -94,7 +94,7 @@
 
 | Spot          | OracleRelayer                |
 | ------------- | ---------------------------- |
-| VatLike       | LedgerLike               |
+| VatLike       | LedgerLike                   |
 | PipLike       | OracleLike                   |
 | file(spot)    | updateSafetyPrice            |
 | wards         | authorizedAccounts           |
@@ -118,8 +118,8 @@
 
 | Pot        | SavingsAccount         |
 | ---------- | ---------------------- |
-| VatLike    | LedgerLike         |
-| vat        | ledger             |
+| VatLike    | LedgerLike             |
+| vat        | ledger                 |
 | wards      | authorizedAccounts     |
 | rely       | grantAuthorization     |
 | deny       | revokeAuthorization    |
@@ -144,8 +144,8 @@
 
 | Jug         | FeesEngine               |
 | ----------- | ------------------------ |
-| VatLike     | LedgerLike           |
-| var         | ledger               |
+| VatLike     | LedgerLike               |
+| var         | ledger                   |
 | vow         | accountingEngine         |
 | ilks        | collateralTypes          |
 | ilk         | collateralType           |
@@ -189,8 +189,8 @@
 | flopper        | debtAuction                   |
 | FlapLike       | SurplusAuctionLike            |
 | flapper        | surplusAuction                |
-| VatLike        | LedgerLike                |
-| vat            | ledger                    |
+| VatLike        | LedgerLike                    |
+| vat            | ledger                        |
 | rely           | grantAuthorization            |
 | deny           | revokeAuthorization           |
 | auth           | isAuthorized                  |
@@ -219,11 +219,11 @@
 
 - remove `add` and `sub`
 - added a way to list queued debts
-
+- remodeled to use queueId instead of timestamp
 
 | Dog         | LiquidationEngine                    |
 | ----------- | ------------------------------------ |
-| VatLike     | LedgerLike                       |
+| VatLike     | LedgerLike                           |
 | ClipperLike | LiquidationAuctionLike               |
 | ilks        | collateralTypes                      |
 | Ilk.Art     | normalizedDebt                       |
@@ -237,7 +237,7 @@
 | grab        | confiscateCollateralAndDebt          |
 | hope        | grantAllowance                       |
 | nope        | revokeAllowance                      |
-| vat         | ledger                           |
+| vat         | ledger                               |
 | VowLike     | AccountingEngineLike                 |
 | fess        | pushDebtToQueue                      |
 | rely        | grantAuthorization                   |
@@ -284,7 +284,7 @@
 
 | Clipper       | LiquidationAuction        |
 | ------------- | ------------------------- |
-| VatLike       | LedgerLike            |
+| VatLike       | LedgerLike                |
 | flux          | transferCollateral        |
 | PipLike       | OracleLike                |
 | SpotterLike   | OracleRelayerLike         |
@@ -344,8 +344,8 @@
 
 | Flapper   | SurplusAuction           |
 | --------- | ------------------------ |
-| VatLike   | LedgerLike           |
-| vat       | ledger               |
+| VatLike   | LedgerLike               |
+| vat       | ledger                   |
 | vat.move  | transferDebt             |
 | GemLike   | TokenLike                |
 | gem       | governanceToken          |
@@ -354,11 +354,12 @@
 | rely      | grantAuthorization       |
 | deny      | revokeAuthorization      |
 | auth      | isAuthorized             |
-| Bid.bid   | Bid.bidAmount            |
-| Bid.lot   | Bid.debtToSell           |
-| Bid.guy   | Bid.highestBidder        |
-| Bid.tic   | Bid.bidExpiry            |
-| Bid.end   | Bid.auctionExpiry        |
+| bids      | auctions                 |
+| Bid.bid   | Auction.bidAmount        |
+| Bid.lot   | Auction.debtToSell       |
+| Bid.guy   | Auction.highestBidder    |
+| Bid.tic   | Auction.bidExpiry        |
+| Bid.end   | Auction.auctionExpiry    |
 | beg       | minBidIncrement          |
 | ttl       | maxBidDuration           |
 | tau       | maxAuctionDuration       |
@@ -380,41 +381,42 @@
 - added listing & counting of active auctions
 
 
-| Flopper   | DebtAuction               |
-| --------- | ------------------------- |
-| VatLike   | LedgerLike            |
-| VowLike   | AccountingEngineLike      |
-| vat       | ledger                |
-| vat.move  | transferDebt              |
-| vat.suck  | createUnbackedDebt        |
-| vow       | accountingEngine          |
-| GemLike   | TokenLike                 |
-| gem       | governanceToken           |
-| rely      | grantAuthorization        |
-| deny      | revokeAuthorization       |
-| auth      | isAuthorized              |
-| now       | block.timestamp           |
-| Bid.bid   | Bid.debtLotSize           |
-| Bid.lot   | Bid.governanceTokenToMint |
-| Bid.guy   | Bid.highestBidder         |
-| Bid.tic   | Bid.bidExpiry             |
-| Bid.end   | Bid.auctionExpiry         |
-| beg       | minBidIncrement           |
-| ttl       | maxBidDuration            |
-| tau       | maxAuctionDuration        |
-| kicks     | auctionCount              |
-| Kick      | StartAuction              |
-| kick      | startAuction              |
-| tick      | restartAuction            |
-| dent      | placeBid                  |
-| deal      | settleAuction             |
-| yank      | emergencyBidWithdrawal    |
-| cage      | shutdown                  |
-| pad       | restartMultiplier         |
-| file(beg) | updateMinBidIncrement     |
-| file(pad) | updateRestartMultiplier   |
-| file(ttl) | updateMaxBidDuration      |
-| file(tau) | updateMaxAuctionDuration  |
+| Flopper   | DebtAuction                   |
+| --------- | ----------------------------- |
+| VatLike   | LedgerLike                    |
+| VowLike   | AccountingEngineLike          |
+| vat       | ledger                        |
+| vat.move  | transferDebt                  |
+| vat.suck  | createUnbackedDebt            |
+| vow       | accountingEngine              |
+| GemLike   | TokenLike                     |
+| gem       | governanceToken               |
+| rely      | grantAuthorization            |
+| deny      | revokeAuthorization           |
+| auth      | isAuthorized                  |
+| now       | block.timestamp               |
+| bids      | auctions                      |
+| Bid.bid   | Auction.debtLotSize           |
+| Bid.lot   | Auction.governanceTokenToMint |
+| Bid.guy   | Auction.highestBidder         |
+| Bid.tic   | Auction.bidExpiry             |
+| Bid.end   | Auction.auctionExpiry         |
+| beg       | minBidIncrement               |
+| ttl       | maxBidDuration                |
+| tau       | maxAuctionDuration            |
+| kicks     | auctionCount                  |
+| Kick      | StartAuction                  |
+| kick      | startAuction                  |
+| tick      | restartAuction                |
+| dent      | placeBid                      |
+| deal      | settleAuction                 |
+| yank      | emergencyBidWithdrawal        |
+| cage      | shutdown                      |
+| pad       | restartMultiplier             |
+| file(beg) | updateMinBidIncrement         |
+| file(pad) | updateRestartMultiplier       |
+| file(ttl) | updateMaxBidDuration          |
+| file(tau) | updateMaxAuctionDuration      |
 
 - removed overflow protection for kicks
 - added listing & counting of active auctions

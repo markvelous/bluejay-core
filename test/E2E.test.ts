@@ -611,7 +611,7 @@ describe("E2E", () => {
     expect(activeAuctions[0]).to.equal(1);
     expect(await surplusAuction.countActiveAuctions()).to.equal(1);
 
-    const { debtToSell } = await surplusAuction.bids(1);
+    const { debtToSell } = await surplusAuction.auctions(1);
     expect(debtToSell).to.equal(exp(45).mul(100000));
 
     await surplusAuction
@@ -623,7 +623,7 @@ describe("E2E", () => {
       exp(18).mul(150)
     );
 
-    const firstBid = await surplusAuction.bids(1);
+    const firstBid = await surplusAuction.auctions(1);
     expect(firstBid.bidAmount).to.equal(exp(18).mul(150));
     expect(firstBid.bidExpiry).to.not.equal(0);
     expect(firstBid.highestBidder).to.equal(account1.address);
@@ -689,8 +689,10 @@ describe("E2E", () => {
     await incrementTime(561600 + 1, ethers.provider);
 
     // Allow debt to be liquidated
-    const debtEra = await accountingEngine.queuedDebts(0);
-    await accountingEngine.popDebtFromQueue(debtEra);
+    expect(await accountingEngine.countPendingDebts()).to.equal(1);
+    expect((await accountingEngine.listPendingDebts())[0]).to.equal(1);
+    await accountingEngine.popDebtFromQueue(1);
+    expect(await accountingEngine.countPendingDebts()).to.equal(0);
 
     // Start off some auctions (each with 50k of unbacked debts)
     expect(await accountingEngine.totalDebtOnAuction()).to.equal(0);

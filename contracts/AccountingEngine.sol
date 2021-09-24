@@ -36,6 +36,13 @@ interface LedgerLike {
 }
 
 contract AccountingEngine {
+  // --- Data ---
+  struct QueuedDebt {
+    uint256 index; // Index in active auctions
+    uint256 debt; // Amount of debt
+    uint256 timestamp; // Time the debt was added
+  }
+
   // --- Auth ---
   mapping(address => uint256) public authorizedAccounts;
 
@@ -57,8 +64,9 @@ contract AccountingEngine {
   SurplusAuctionLike public surplusAuction; // Surplus Auction
   DebtAuctionLike public debtAuction; // Debt Auction
 
-  uint256[] public queuedDebts; // Array of debt in queue
-  mapping(uint256 => uint256) public debtQueue; // debt queue
+  uint256 public debtCount = 0;
+  uint256[] public pendingDebts; // Array of debt waiting for delay
+  mapping(uint256 => QueuedDebt) public debtQueue; // debt queue
   uint256 public totalQueuedDebt; // Debt waiting for delay            [rad]
   uint256 public totalDebtOnAuction; // On-auction debt        [rad]
 
@@ -121,31 +129,43 @@ contract AccountingEngine {
     debtAuction = DebtAuctionLike(data);
   }
 
-  function removeDebtFromQueue(uint256 debtEra) internal {
-    uint256 lastDebtInList = queuedDebts[queuedDebts.length - 1];
-    if (debtEra != lastDebtInList) {
-      queuedDebts[debtEra] = lastDebtInList;
-      queuedDebts[lastDebtInList] = debtEra;
+  function removeDebtFromQueue(uint256 queueId) internal {
+    uint256 lastDebtInList = pendingDebts[pendingDebts.length - 1];
+    if (queueId != lastDebtInList) {
+      // Swap auction to remove to last on the list
+      uint256 _index = debtQueue[queueId].index;
+      pendingDebts[_index] = lastDebtInList;
+      debtQueue[lastDebtInList].index = _index;
     }
-    queuedDebts.pop();
+    pendingDebts.pop();
+    delete debtQueue[queueId];
   }
 
   // Push to debt-queue
-  function pushDebtToQueue(uint256 tab) external isAuthorized {
-    if (debtQueue[block.timestamp] == 0) queuedDebts.push(block.timestamp);
-    debtQueue[block.timestamp] = debtQueue[block.timestamp] + tab;
+  function pushDebtToQueue(uint256 tab)
+    external
+    isAuthorized
+    returns (uint256 queueId)
+  {
+    queueId = ++debtCount;
+
+    pendingDebts.push(queueId);
+
+    debtQueue[queueId].index = pendingDebts.length - 1;
+    debtQueue[queueId].debt = tab;
+    debtQueue[queueId].timestamp = block.timestamp;
+
     totalQueuedDebt = totalQueuedDebt + tab;
   }
 
   // Pop from debt-queue
-  function popDebtFromQueue(uint256 era) external {
+  function popDebtFromQueue(uint256 queueId) external {
     require(
-      era + popDebtDelay <= block.timestamp,
+      debtQueue[queueId].timestamp + popDebtDelay <= block.timestamp,
       "AccountingEngine/popDebtDelay-not-finished"
     );
-    totalQueuedDebt = totalQueuedDebt - debtQueue[era];
-    debtQueue[era] = 0;
-    removeDebtFromQueue(era);
+    totalQueuedDebt = totalQueuedDebt - debtQueue[queueId].debt;
+    removeDebtFromQueue(queueId);
   }
 
   // Debt settlement
@@ -218,13 +238,13 @@ contract AccountingEngine {
   }
 
   // The number of debts in the queue
-  function countQueuedDebts() external view returns (uint256) {
-    return queuedDebts.length;
+  function countPendingDebts() external view returns (uint256) {
+    return pendingDebts.length;
   }
 
   // Return the entire array of active auctions
-  function listQueuedDebts() external view returns (uint256[] memory) {
-    return queuedDebts;
+  function listPendingDebts() external view returns (uint256[] memory) {
+    return pendingDebts;
   }
 
   function shutdown() external isAuthorized {

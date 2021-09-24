@@ -49,7 +49,7 @@ contract SurplusAuction {
   }
 
   // --- Data ---
-  struct Bid {
+  struct Auction {
     uint256 index; // Index in active auctions
     uint256 bidAmount; // governanceTokens paid               [wad]
     uint256 debtToSell; // debt in return for bid   [rad]
@@ -58,7 +58,7 @@ contract SurplusAuction {
     uint48 auctionExpiry; // auction expiry time     [unix epoch time]
   }
 
-  mapping(uint256 => Bid) public bids;
+  mapping(uint256 => Auction) public auctions;
 
   LedgerLike public ledger; // CDP Engine
   TokenLike public governanceToken;
@@ -100,12 +100,12 @@ contract SurplusAuction {
     uint256 lastAuctionIdInList = activeAuctions[activeAuctions.length - 1];
     if (auctionId != lastAuctionIdInList) {
       // Swap auction to remove to last on the list
-      uint256 _index = bids[auctionId].index;
+      uint256 _index = auctions[auctionId].index;
       activeAuctions[_index] = lastAuctionIdInList;
-      bids[lastAuctionIdInList].index = _index;
+      auctions[lastAuctionIdInList].index = _index;
     }
     activeAuctions.pop();
-    delete bids[auctionId];
+    delete auctions[auctionId];
   }
 
   function startAuction(uint256 debtToSell, uint256 bidAmount)
@@ -118,11 +118,11 @@ contract SurplusAuction {
 
     activeAuctions.push(auctionId);
 
-    bids[auctionId].index = activeAuctions.length - 1;
-    bids[auctionId].bidAmount = bidAmount;
-    bids[auctionId].debtToSell = debtToSell;
-    bids[auctionId].highestBidder = msg.sender; // configurable??
-    bids[auctionId].auctionExpiry =
+    auctions[auctionId].index = activeAuctions.length - 1;
+    auctions[auctionId].bidAmount = bidAmount;
+    auctions[auctionId].debtToSell = debtToSell;
+    auctions[auctionId].highestBidder = msg.sender; // configurable??
+    auctions[auctionId].auctionExpiry =
       uint48(block.timestamp) +
       maxAuctionDuration;
 
@@ -133,14 +133,14 @@ contract SurplusAuction {
 
   function restartAuction(uint256 auctionId) external {
     require(
-      bids[auctionId].auctionExpiry < block.timestamp,
+      auctions[auctionId].auctionExpiry < block.timestamp,
       "SurplusAuction/not-finished"
     );
     require(
-      bids[auctionId].bidExpiry == 0,
+      auctions[auctionId].bidExpiry == 0,
       "SurplusAuction/bid-already-placed"
     );
-    bids[auctionId].auctionExpiry =
+    auctions[auctionId].auctionExpiry =
       uint48(block.timestamp) +
       maxAuctionDuration;
   }
@@ -152,64 +152,64 @@ contract SurplusAuction {
   ) external {
     require(live == 1, "SurplusAuction/not-live");
     require(
-      bids[auctionId].highestBidder != address(0),
+      auctions[auctionId].highestBidder != address(0),
       "SurplusAuction/highestBidder-not-set"
     );
     require(
-      bids[auctionId].bidExpiry > block.timestamp ||
-        bids[auctionId].bidExpiry == 0,
+      auctions[auctionId].bidExpiry > block.timestamp ||
+        auctions[auctionId].bidExpiry == 0,
       "SurplusAuction/already-finished-bidExpiry"
     );
     require(
-      bids[auctionId].auctionExpiry > block.timestamp,
+      auctions[auctionId].auctionExpiry > block.timestamp,
       "SurplusAuction/already-finished-end"
     );
 
     require(
-      debtToSell == bids[auctionId].debtToSell,
+      debtToSell == auctions[auctionId].debtToSell,
       "SurplusAuction/debtToSell-not-matching"
     );
     require(
-      bidAmount > bids[auctionId].bidAmount,
+      bidAmount > auctions[auctionId].bidAmount,
       "SurplusAuction/bid-not-higher"
     );
     require(
-      bidAmount * ONE >= minBidIncrement * bids[auctionId].bidAmount,
+      bidAmount * ONE >= minBidIncrement * auctions[auctionId].bidAmount,
       "SurplusAuction/insufficient-increase"
     );
 
-    if (msg.sender != bids[auctionId].highestBidder) {
+    if (msg.sender != auctions[auctionId].highestBidder) {
       governanceToken.transferFrom(
         msg.sender,
-        bids[auctionId].highestBidder,
-        bids[auctionId].bidAmount
+        auctions[auctionId].highestBidder,
+        auctions[auctionId].bidAmount
       );
-      bids[auctionId].highestBidder = msg.sender;
+      auctions[auctionId].highestBidder = msg.sender;
     }
     governanceToken.transferFrom(
       msg.sender,
       address(this),
-      bidAmount - bids[auctionId].bidAmount
+      bidAmount - auctions[auctionId].bidAmount
     );
 
-    bids[auctionId].bidAmount = bidAmount;
-    bids[auctionId].bidExpiry = uint48(block.timestamp) + maxBidDuration;
+    auctions[auctionId].bidAmount = bidAmount;
+    auctions[auctionId].bidExpiry = uint48(block.timestamp) + maxBidDuration;
   }
 
   function settleAuction(uint256 auctionId) external {
     require(live == 1, "SurplusAuction/not-live");
     require(
-      bids[auctionId].bidExpiry != 0 &&
-        (bids[auctionId].bidExpiry < block.timestamp ||
-          bids[auctionId].auctionExpiry < block.timestamp),
+      auctions[auctionId].bidExpiry != 0 &&
+        (auctions[auctionId].bidExpiry < block.timestamp ||
+          auctions[auctionId].auctionExpiry < block.timestamp),
       "SurplusAuction/not-finished"
     );
     ledger.transferDebt(
       address(this),
-      bids[auctionId].highestBidder,
-      bids[auctionId].debtToSell
+      auctions[auctionId].highestBidder,
+      auctions[auctionId].debtToSell
     );
-    governanceToken.burn(bids[auctionId].bidAmount);
+    governanceToken.burn(auctions[auctionId].bidAmount);
     removeAuction(auctionId);
   }
 
@@ -231,13 +231,13 @@ contract SurplusAuction {
   function emergencyBidWithdrawal(uint256 auctionId) external {
     require(live == 0, "SurplusAuction/still-live");
     require(
-      bids[auctionId].highestBidder != address(0),
+      auctions[auctionId].highestBidder != address(0),
       "SurplusAuction/highestBidder-not-set"
     );
     governanceToken.transferFrom(
       address(this),
-      bids[auctionId].highestBidder,
-      bids[auctionId].bidAmount
+      auctions[auctionId].highestBidder,
+      auctions[auctionId].bidAmount
     );
     removeAuction(auctionId);
   }

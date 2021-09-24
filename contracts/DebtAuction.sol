@@ -46,7 +46,7 @@ contract DebtAuction {
   }
 
   // --- Data ---
-  struct Bid {
+  struct Auction {
     uint256 index; // Index in active array
     uint256 debtLotSize; // unbacked stablecoin to recover from the auction       [rad]
     uint256 governanceTokenBid; // governanceTokens in return for debtLotSize  [wad]
@@ -55,7 +55,7 @@ contract DebtAuction {
     uint48 auctionExpiry; // auction expiry time     [unix epoch time]
   }
 
-  mapping(uint256 => Bid) public bids;
+  mapping(uint256 => Auction) public auctions;
 
   LedgerLike public ledger; // CDP Engine
   TokenLike public governanceToken;
@@ -119,12 +119,12 @@ contract DebtAuction {
     uint256 lastAuctionIdInList = activeAuctions[activeAuctions.length - 1];
     if (auctionId != lastAuctionIdInList) {
       // Swap auction to remove to last on the list
-      uint256 _index = bids[auctionId].index;
+      uint256 _index = auctions[auctionId].index;
       activeAuctions[_index] = lastAuctionIdInList;
-      bids[lastAuctionIdInList].index = _index;
+      auctions[lastAuctionIdInList].index = _index;
     }
     activeAuctions.pop();
-    delete bids[auctionId];
+    delete auctions[auctionId];
   }
 
   function startAuction(
@@ -137,11 +137,11 @@ contract DebtAuction {
 
     activeAuctions.push(auctionId);
 
-    bids[auctionId].index = activeAuctions.length - 1;
-    bids[auctionId].debtLotSize = debtLotSize;
-    bids[auctionId].governanceTokenBid = initialGovernanceTokenBid;
-    bids[auctionId].highestBidder = stablecoinReceiver;
-    bids[auctionId].auctionExpiry =
+    auctions[auctionId].index = activeAuctions.length - 1;
+    auctions[auctionId].debtLotSize = debtLotSize;
+    auctions[auctionId].governanceTokenBid = initialGovernanceTokenBid;
+    auctions[auctionId].highestBidder = stablecoinReceiver;
+    auctions[auctionId].auctionExpiry =
       uint48(block.timestamp) +
       maxAuctionDuration;
 
@@ -155,14 +155,17 @@ contract DebtAuction {
 
   function restartAuction(uint256 auctionId) external {
     require(
-      bids[auctionId].auctionExpiry < block.timestamp,
+      auctions[auctionId].auctionExpiry < block.timestamp,
       "DebtAuction/not-finished"
     );
-    require(bids[auctionId].bidExpiry == 0, "DebtAuction/bid-already-placed");
-    bids[auctionId].governanceTokenBid =
-      (restartMultiplier * bids[auctionId].governanceTokenBid) /
+    require(
+      auctions[auctionId].bidExpiry == 0,
+      "DebtAuction/bid-already-placed"
+    );
+    auctions[auctionId].governanceTokenBid =
+      (restartMultiplier * auctions[auctionId].governanceTokenBid) /
       ONE;
-    bids[auctionId].auctionExpiry =
+    auctions[auctionId].auctionExpiry =
       uint48(block.timestamp) +
       maxAuctionDuration;
   }
@@ -174,67 +177,67 @@ contract DebtAuction {
   ) external {
     require(live == 1, "DebtAuction/not-live");
     require(
-      bids[auctionId].highestBidder != address(0),
+      auctions[auctionId].highestBidder != address(0),
       "DebtAuction/highestBidder-not-set"
     );
     require(
-      bids[auctionId].bidExpiry > block.timestamp ||
-        bids[auctionId].bidExpiry == 0,
+      auctions[auctionId].bidExpiry > block.timestamp ||
+        auctions[auctionId].bidExpiry == 0,
       "DebtAuction/already-finished-bidExpiry"
     );
     require(
-      bids[auctionId].auctionExpiry > block.timestamp,
+      auctions[auctionId].auctionExpiry > block.timestamp,
       "DebtAuction/already-finished-end"
     );
 
     require(
-      debtLotSize == bids[auctionId].debtLotSize,
+      debtLotSize == auctions[auctionId].debtLotSize,
       "DebtAuction/not-matching-bid"
     );
     require(
-      governanceTokenBid < bids[auctionId].governanceTokenBid,
+      governanceTokenBid < auctions[auctionId].governanceTokenBid,
       "DebtAuction/governanceTokenBid-not-lower"
     );
     require(
       minBidIncrement * governanceTokenBid <=
-        bids[auctionId].governanceTokenBid * ONE,
+        auctions[auctionId].governanceTokenBid * ONE,
       "DebtAuction/insufficient-decrease"
     );
 
-    if (msg.sender != bids[auctionId].highestBidder) {
+    if (msg.sender != auctions[auctionId].highestBidder) {
       ledger.transferDebt(
         msg.sender,
-        bids[auctionId].highestBidder,
+        auctions[auctionId].highestBidder,
         debtLotSize
       );
 
       // on first placeBid, clear as much totalDebtOnAuction as possible
-      if (bids[auctionId].bidExpiry == 0) {
+      if (auctions[auctionId].bidExpiry == 0) {
         uint256 totalDebtOnAuction = AccountingEngineLike(
-          bids[auctionId].highestBidder
+          auctions[auctionId].highestBidder
         ).totalDebtOnAuction();
-        AccountingEngineLike(bids[auctionId].highestBidder)
+        AccountingEngineLike(auctions[auctionId].highestBidder)
           .settleUnbackedDebtFromAuction(min(debtLotSize, totalDebtOnAuction));
       }
 
-      bids[auctionId].highestBidder = msg.sender;
+      auctions[auctionId].highestBidder = msg.sender;
     }
 
-    bids[auctionId].governanceTokenBid = governanceTokenBid;
-    bids[auctionId].bidExpiry = uint48(block.timestamp) + maxBidDuration;
+    auctions[auctionId].governanceTokenBid = governanceTokenBid;
+    auctions[auctionId].bidExpiry = uint48(block.timestamp) + maxBidDuration;
   }
 
   function settleAuction(uint256 auctionId) external {
     require(live == 1, "DebtAuction/not-live");
     require(
-      bids[auctionId].bidExpiry != 0 &&
-        (bids[auctionId].bidExpiry < block.timestamp ||
-          bids[auctionId].auctionExpiry < block.timestamp),
+      auctions[auctionId].bidExpiry != 0 &&
+        (auctions[auctionId].bidExpiry < block.timestamp ||
+          auctions[auctionId].auctionExpiry < block.timestamp),
       "DebtAuction/not-finished"
     );
     governanceToken.mint(
-      bids[auctionId].highestBidder,
-      bids[auctionId].governanceTokenBid
+      auctions[auctionId].highestBidder,
+      auctions[auctionId].governanceTokenBid
     );
     removeAuction(auctionId);
   }
@@ -258,13 +261,13 @@ contract DebtAuction {
   function emergencyBidWithdrawal(uint256 auctionId) external {
     require(live == 0, "DebtAuction/still-live");
     require(
-      bids[auctionId].highestBidder != address(0),
+      auctions[auctionId].highestBidder != address(0),
       "DebtAuction/highestBidder-not-set"
     );
     ledger.createUnbackedDebt(
       accountingEngine,
-      bids[auctionId].highestBidder,
-      bids[auctionId].debtLotSize
+      auctions[auctionId].highestBidder,
+      auctions[auctionId].debtLotSize
     );
     removeAuction(auctionId);
   }
