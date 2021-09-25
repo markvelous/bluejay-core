@@ -40,8 +40,8 @@
 | tab      | totalDebtOfPosition             |
 | can      | allowed                         |
 | wish     | allowedToModifyDebtOrCollateral |
-| hope     | allowModification                  |
-| nope     | denyModification                 |
+| hope     | allowModification               |
+| nope     | denyModification                |
 | heal     | settleUnbackedDebt              |
 | suck     | createUnbackedDebt              |
 | fold     | updateAccumulatedRate           |
@@ -157,6 +157,7 @@
 | auth        | isAuthorized             |
 | now         | block.timestamp          |
 | base        | globalStabilityFee       |
+| init        | initializeCollateral     |
 | rho         | lastUpdated              |
 | duty        | stabilityFee             |
 | file (duty) | updateStabilityFee       |
@@ -235,8 +236,8 @@
 | Urn.ink     | lockedCollateral                     |
 | Urn.art     | normalizedDebt                       |
 | grab        | confiscateCollateralAndDebt          |
-| hope        | allowModification                       |
-| nope        | denyModification                      |
+| hope        | allowModification                    |
+| nope        | denyModification                     |
 | vat         | ledger                               |
 | VowLike     | AccountingEngineLike                 |
 | fess        | pushDebtToQueue                      |

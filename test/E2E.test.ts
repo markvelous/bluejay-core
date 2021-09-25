@@ -135,7 +135,7 @@ const whenCoreDeployed = async ({
   await savingsAccount.updateSavingsRate(DEFAULT_SAVINGS_RATE);
   await savingsAccount.updateAccountingEngine(accountingEngine.address);
 
-  await feesEngine.init(collateralType);
+  await feesEngine.initializeCollateral(collateralType);
   await feesEngine.updateAccountingEngine(accountingEngine.address);
   await feesEngine.updateStabilityFee(collateralType, stabilityFee);
   await feesEngine.updateGlobalStabilityFee(globalStabilityFee);

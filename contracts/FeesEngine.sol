@@ -17,37 +17,56 @@ interface LedgerLike {
 }
 
 contract FeesEngine {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 1;
-  }
-
-  function revokeAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "FeesEngine/not-authorized");
-    _;
-  }
-
-  // --- Data ---
   struct CollateralType {
     uint256 stabilityFee; // Collateral-specific, per-second stability fee contribution [ray]
     uint256 lastUpdated; // Time of last drip [unix epoch time]
   }
 
+  uint256 constant ONE = 10**27;
+
+  mapping(address => uint256) public authorizedAccounts;
   mapping(bytes32 => CollateralType) public collateralTypes;
   LedgerLike public ledger; // CDP Engine
   address public accountingEngine; // Debt Engine
   uint256 public globalStabilityFee; // Global, per-second stability fee contribution [ray]
 
+  // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+  event UpdateParameter(bytes32 indexed parameter, address data);
+  event UpdateParameter(
+    bytes32 indexed parameter,
+    bytes32 indexed collateralType,
+    uint256 data
+  );
+  event UpdateAccumulatedRate(
+    bytes32 indexed collateralType,
+    uint256 timestamp,
+    int256 accumulatedRateDelta,
+    uint256 nextAccumulatedRate
+  );
+
   // --- Init ---
   constructor(address ledger_) {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
+  }
+
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  modifier isAuthorized() {
+    require(authorizedAccounts[msg.sender] == 1, "FeesEngine/not-authorized");
+    _;
   }
 
   // --- Math ---
@@ -106,8 +125,6 @@ contract FeesEngine {
     }
   }
 
-  uint256 constant ONE = 10**27;
-
   function diff(uint256 x, uint256 y) internal pure returns (int256 z) {
     z = int256(x) - int256(y);
     require(int256(x) >= 0 && int256(y) >= 0);
@@ -120,7 +137,7 @@ contract FeesEngine {
   }
 
   // --- Administration ---
-  function init(bytes32 collateralType) external isAuthorized {
+  function initializeCollateral(bytes32 collateralType) external isAuthorized {
     CollateralType storage collateralTypeData = collateralTypes[collateralType];
     require(
       collateralTypeData.stabilityFee == 0,
@@ -140,14 +157,17 @@ contract FeesEngine {
       "FeesEngine/lastUpdated-not-updated"
     );
     collateralTypes[collateralType].stabilityFee = data;
+    emit UpdateParameter("stabilityFee", collateralType, data);
   }
 
   function updateGlobalStabilityFee(uint256 data) external isAuthorized {
     globalStabilityFee = data;
+    emit UpdateParameter("globalStabilityFee", data);
   }
 
   function updateAccountingEngine(address data) external isAuthorized {
     accountingEngine = data;
+    emit UpdateParameter("accountingEngine", data);
   }
 
   // --- Stability Fee Collection ---
@@ -168,11 +188,21 @@ contract FeesEngine {
       ),
       lastAccumulatedRate
     );
+    int256 accumulatedRateDelta = diff(
+      nextAccumulatedRate,
+      lastAccumulatedRate
+    );
     ledger.updateAccumulatedRate(
       collateralType,
       accountingEngine,
-      diff(nextAccumulatedRate, lastAccumulatedRate)
+      accumulatedRateDelta
     );
     collateralTypes[collateralType].lastUpdated = block.timestamp;
+    emit UpdateAccumulatedRate(
+      collateralType,
+      block.timestamp,
+      accumulatedRateDelta,
+      nextAccumulatedRate
+    );
   }
 }
