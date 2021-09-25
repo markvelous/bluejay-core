@@ -10,43 +10,40 @@ interface OracleLike {
 }
 
 contract OracleRelayer {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address guy) external isAuthorized {
-    authorizedAccounts[guy] = 1;
-  }
-
-  function revokeAuthorization(address guy) external isAuthorized {
-    authorizedAccounts[guy] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(
-      authorizedAccounts[msg.sender] == 1,
-      "OracleRelayer/not-authorized"
-    );
-    _;
-  }
-
-  // --- Data ---
   struct CollateralType {
     OracleLike oracle; // Price Feed
     uint256 collateralizationRatio; // Liquidation ratio [ray]
   }
 
+  uint256 constant ONE = 10**27;
+
+  mapping(address => uint256) public authorizedAccounts;
   mapping(bytes32 => CollateralType) public collateralTypes;
 
   LedgerLike public ledger; // CDP Engine
   uint256 public redemptionPrice; // ref per dai [ray]
-
   uint256 public live;
 
   // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+
   event UpdateCollateralPrice(
     bytes32 collateralType,
     uint256 price, // [wad]
     uint256 safetyPrice // [ray]
+  );
+
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+  event UpdateParameter(
+    bytes32 indexed parameter,
+    bytes32 indexed collateralType,
+    uint256 data
+  );
+  event UpdateParameter(
+    bytes32 indexed parameter,
+    bytes32 indexed collateralType,
+    address data
   );
 
   // --- Init ---
@@ -57,9 +54,26 @@ contract OracleRelayer {
     live = 1;
   }
 
-  // --- Math ---
-  uint256 constant ONE = 10**27;
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
 
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  modifier isAuthorized() {
+    require(
+      authorizedAccounts[msg.sender] == 1,
+      "OracleRelayer/not-authorized"
+    );
+    _;
+  }
+
+  // --- Math ---
   function rdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
     z = (x * ONE) / y;
   }
@@ -70,17 +84,21 @@ contract OracleRelayer {
     isAuthorized
   {
     collateralTypes[collateralType].oracle = OracleLike(oracle_);
+    emit UpdateParameter("oracle", collateralType, oracle_);
   }
 
   function updateRedemptionPrice(uint256 data) external isAuthorized {
     redemptionPrice = data;
+    emit UpdateParameter("redemptionPrice", data);
   }
 
   function updateCollateralizationRatio(bytes32 collateralType, uint256 data)
     external
     isAuthorized
   {
+    require(data >= ONE, "OracleRelayer/ratio-lt-ray");
     collateralTypes[collateralType].collateralizationRatio = data;
+    emit UpdateParameter("collateralizationRatio", collateralType, data);
   }
 
   // --- Update value ---

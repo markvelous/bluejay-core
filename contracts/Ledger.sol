@@ -28,15 +28,15 @@ contract Ledger {
   uint256 public live; // Active Flag
 
   // --- Events ---
-  event GrantAuthorization(address account);
-  event RevokeAuthorization(address account);
-  event AllowModification(address target, address user);
-  event DenyModification(address target, address user);
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event AllowModification(address indexed target, address indexed user);
+  event DenyModification(address indexed target, address indexed user);
   event InitializeCollateralType(bytes32 indexed collateralType);
   event UpdateParameter(bytes32 indexed parameter, uint256 data);
   event UpdateParameter(
-    bytes32 indexed collateralType,
     bytes32 indexed parameter,
+    bytes32 indexed collateralType,
     uint256 data
   );
   event ModifyCollateral(bytes32 collateralType, address user, int256 amount);
@@ -212,7 +212,7 @@ contract Ledger {
     isLive
   {
     collateralTypes[collateralType].debtCeiling = data;
-    emit UpdateParameter("debtCeiling", data);
+    emit UpdateParameter("debtCeiling", collateralType, data);
   }
 
   function updateDebtFloor(bytes32 collateralType, uint256 data)
@@ -221,7 +221,7 @@ contract Ledger {
     isLive
   {
     collateralTypes[collateralType].debtFloor = data;
-    emit UpdateParameter("debtFloor", data);
+    emit UpdateParameter("debtFloor", collateralType, data);
   }
 
   function shutdown() external isAuthorized {
