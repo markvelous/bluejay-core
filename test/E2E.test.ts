@@ -307,7 +307,7 @@ describe("E2E", () => {
     const [, account1] = accounts;
 
     // Start saving in the SavingsAccount module
-    await savingsAccount.connect(account1).join(
+    await savingsAccount.connect(account1).deposit(
       exp(45)
         .mul(10000 * 1000 - 100)
         .div(DEFAULT_SAVINGS_RATE)
@@ -327,7 +327,7 @@ describe("E2E", () => {
 
     // Withdraw savings
     const totalSavings = await savingsAccount.savings(account1.address);
-    await savingsAccount.connect(account1).exit(totalSavings);
+    await savingsAccount.connect(account1).withdraw(totalSavings);
 
     const accountBalance = await ledger.debt(account1.address);
     expect(accountBalance).to.be.gt(exp(45).mul(10900000));

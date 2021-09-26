@@ -137,9 +137,11 @@
 | file (vow) | updateAccountingEngine |
 | cage       | shutdown               |
 | drip       | updateAccumulatedRate  |
+| join       | deposit                |
+| exit       | withdraw               |
 
 - Added `updateAccumulatedRate` to `updateSavingsRate`& `join`
-
+- Remove require check for `updateSavingsRate` & `join`
 
 
 | Jug         | FeesEngine               |
