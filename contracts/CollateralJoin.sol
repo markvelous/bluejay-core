@@ -22,30 +22,18 @@ interface LedgerLike {
 }
 
 contract CollateralJoin {
-  // --- Auth ---
   mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address usr) external isAuthorized {
-    authorizedAccounts[usr] = 1;
-  }
-
-  function revokeAuthorization(address usr) external isAuthorized {
-    authorizedAccounts[usr] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(
-      authorizedAccounts[msg.sender] == 1,
-      "CollateralJoin/not-authorized"
-    );
-    _;
-  }
-
   LedgerLike public ledger; // CDP Engine
   bytes32 public collateralType; // Collateral Type
   TokenLike public collateral;
   uint256 public decimals;
   uint256 public live; // Active Flag
+
+  // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event Deposit(address indexed user, uint256 amount);
+  event Withdraw(address indexed user, uint256 amount);
 
   constructor(
     address ledger_,
@@ -60,23 +48,44 @@ contract CollateralJoin {
     decimals = collateral.decimals();
   }
 
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  modifier isAuthorized() {
+    require(
+      authorizedAccounts[msg.sender] == 1,
+      "CollateralJoin/not-authorized"
+    );
+    _;
+  }
+
   function shutdown() external isAuthorized {
     live = 0;
   }
 
-  function join(address usr, uint256 wad) external {
+  function deposit(address user, uint256 wad) external {
     require(live == 1, "CollateralJoin/not-live");
     require(int256(wad) >= 0, "CollateralJoin/overflow");
-    ledger.modifyCollateral(collateralType, usr, int256(wad));
+    ledger.modifyCollateral(collateralType, user, int256(wad));
     require(
       collateral.transferFrom(msg.sender, address(this), wad),
       "CollateralJoin/failed-transfer"
     );
+    emit Deposit(user, wad);
   }
 
-  function exit(address usr, uint256 wad) external {
+  function withdraw(address user, uint256 wad) external {
     require(wad <= 2**255, "CollateralJoin/overflow");
     ledger.modifyCollateral(collateralType, msg.sender, -int256(wad));
-    require(collateral.transfer(usr, wad), "CollateralJoin/failed-transfer");
+    require(collateral.transfer(user, wad), "CollateralJoin/failed-transfer");
+    emit Withdraw(user, wad);
   }
 }

@@ -89,7 +89,8 @@
 | ilk         | collateralType      |
 | dec         | decimals            |
 | gem         | collateral          |
-
+| join        | deposit             |
+| exit        | withdraw            |
 
 
 

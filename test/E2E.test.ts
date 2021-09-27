@@ -235,7 +235,7 @@ const depositCollateralAndDrawDebt = async ({
   // Deposit 100k into collateralJoin
   await collateralJoin
     .connect(account)
-    .join(account.address, collateralDeposit);
+    .deposit(account.address, collateralDeposit);
 
   // Draw 10,000,000 max debt (10000 * 1500 / 150%)
   await ledger
@@ -389,7 +389,7 @@ describe("E2E", () => {
     // Exit into collateral
     await collateralJoin
       .connect(account1)
-      .exit(account1.address, exp(18).mul(10000));
+      .withdraw(account1.address, exp(18).mul(10000));
     expect(await collateral.balanceOf(account1.address)).to.equal(
       exp(18).mul(10000)
     );
