@@ -34,6 +34,7 @@ contract StablecoinJoin {
     live = 1;
     ledger = LedgerLike(ledger_);
     stablecoin = TokenLike(stablecoin_);
+    emit GrantAuthorization(msg.sender);
   }
 
   // --- Auth ---

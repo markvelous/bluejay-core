@@ -62,23 +62,20 @@ interface DiscountCalculatorLike {
 }
 
 contract LiquidationAuction {
-  // --- Auth ---
+  uint256 constant BLN = 10**9;
+  uint256 constant WAD = 10**18;
+  uint256 constant RAY = 10**27;
+
+  struct Auction {
+    uint256 index; // Index in active array
+    uint256 debtToRaise; // Dai to raise       [rad]
+    uint256 collateralToSell; // collateral to sell [wad]
+    address position; // Liquidated CDP
+    uint96 startTime; // Auction start time
+    uint256 startingPrice; // Starting price     [ray]
+  }
+
   mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 1;
-  }
-
-  function revokeAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
-    _;
-  }
-
-  // --- Data ---
   bytes32 public immutable collateralType; // Collateral type of this LiquidationAuction
   LedgerLike public immutable ledger; // Core CDP Engine
 
@@ -97,14 +94,6 @@ contract LiquidationAuction {
   uint256 public auctionCount; // Total auctions
   uint256[] public activeAuctions; // Array of active auction ids
 
-  struct Auction {
-    uint256 index; // Index in active array
-    uint256 debtToRaise; // Dai to raise       [rad]
-    uint256 collateralToSell; // collateral to sell [wad]
-    address position; // Liquidated CDP
-    uint96 startTime; // Auction start time
-    uint256 startingPrice; // Starting price     [ray]
-  }
   mapping(uint256 => Auction) public auction;
 
   uint256 internal locked;
@@ -117,38 +106,41 @@ contract LiquidationAuction {
   uint256 public stopped = 0;
 
   // --- Events ---
-  event Rely(address indexed usr);
-  event Deny(address indexed usr);
+  event GrantAuthorization(address indexed user);
+  event RevokeAuthorization(address indexed user);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+  event UpdateParameter(bytes32 indexed parameter, address data);
 
   event StartAuction(
-    uint256 indexed id,
-    uint256 top,
-    uint256 tab,
-    uint256 collateralToSell,
-    address indexed usr,
+    uint256 indexed auctionId,
+    address indexed position,
     address indexed keeper,
-    uint256 coin
+    uint256 startingPrice,
+    uint256 debtToRaise,
+    uint256 collateralToSell,
+    uint256 reward
   );
   event BidOnAuction(
-    uint256 indexed id,
-    uint256 max,
+    uint256 indexed auctionId,
+    address indexed position,
+    uint256 maxPrice,
     uint256 price,
-    uint256 owe,
-    uint256 tab,
-    uint256 collateralToSell,
-    address indexed usr
+    uint256 debtDelta,
+    uint256 debtToRaise,
+    uint256 collateralToSell
   );
   event RestartAuction(
-    uint256 indexed id,
-    uint256 top,
-    uint256 tab,
-    uint256 collateralToSell,
-    address indexed usr,
+    uint256 indexed auctionId,
+    address indexed position,
     address indexed keeper,
-    uint256 coin
+    uint256 startingPrice,
+    uint256 debtToRaise,
+    uint256 collateralToSell,
+    uint256 reward
   );
 
-  event CancelAuction(uint256 id);
+  event CancelAuction(uint256 indexed auctionId);
+  event UpdateMinDebtForReward(uint256 minDebtForReward, uint256 timestamp);
 
   // --- Init ---
   constructor(
@@ -163,7 +155,23 @@ contract LiquidationAuction {
     collateralType = collateralType_;
     startingPriceFactor = RAY;
     authorizedAccounts[msg.sender] = 1;
-    emit Rely(msg.sender);
+    emit GrantAuthorization(msg.sender);
+  }
+
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  modifier isAuthorized() {
+    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
+    _;
   }
 
   // --- Synchronization ---
@@ -186,6 +194,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     startingPriceFactor = data;
+    emit UpdateParameter("startingPriceFactor", data);
   }
 
   function updateMaxAuctionDuration(uint256 data)
@@ -194,6 +203,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     maxAuctionDuration = data; // Time elapsed before auction reset
+    emit UpdateParameter("maxAuctionDuration", data);
   }
 
   function updateMaxPriceDiscount(uint256 data)
@@ -202,6 +212,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     maxPriceDiscount = data; // Percentage drop before auction reset
+    emit UpdateParameter("maxPriceDiscount", data);
   }
 
   function updateKeeperRewardFactor(uint64 data)
@@ -210,6 +221,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     keeperRewardFactor = data; // Percentage of debtToRaise to incentivize (max: 2^64 - 1 => 18.xxx WAD = 18xx%)
+    emit UpdateParameter("keeperRewardFactor", data);
   }
 
   function updateKeeperIncentive(uint192 data)
@@ -218,10 +230,12 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     keeperIncentive = data; // Flat fee to incentivize keepers (max: 2^192 - 1 => 6.277T RAD)
+    emit UpdateParameter("keeperIncentive", data);
   }
 
   function updateStopped(uint256 data) external isAuthorized reentrancyGuard {
     stopped = data; // Set breaker (0, 1, 2, or 3)
+    emit UpdateParameter("stopped", data);
   }
 
   function updateOracleRelayer(address data)
@@ -230,6 +244,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     oracleRelayer = OracleRelayerLike(data);
+    emit UpdateParameter("oracleRelayer", data);
   }
 
   function updateLiquidationEngine(address data)
@@ -238,6 +253,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     liquidationEngine = LiquidationEngineLike(data);
+    emit UpdateParameter("liquidationEngine", data);
   }
 
   function updateAccountingEngine(address data)
@@ -246,6 +262,7 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     accountingEngine = data;
+    emit UpdateParameter("accountingEngine", data);
   }
 
   function updateDiscountCalculator(address data)
@@ -254,13 +271,10 @@ contract LiquidationAuction {
     reentrancyGuard
   {
     discountCalculator = DiscountCalculatorLike(data);
+    emit UpdateParameter("discountCalculator", data);
   }
 
   // --- Math ---
-  uint256 constant BLN = 10**9;
-  uint256 constant WAD = 10**18;
-  uint256 constant RAY = 10**27;
-
   function min(uint256 x, uint256 y) internal pure returns (uint256 z) {
     z = x <= y ? x : y;
   }
@@ -339,11 +353,11 @@ contract LiquidationAuction {
 
     emit StartAuction(
       auctionId,
+      position,
+      keeper,
       startingPrice,
       debtToRaise,
       collateralToSell,
-      position,
-      keeper,
       reward
     );
   }
@@ -389,11 +403,11 @@ contract LiquidationAuction {
 
     emit RestartAuction(
       auctionId,
+      position,
+      keeper,
       startingPrice,
       debtToRaise,
       collateralToSell,
-      position,
-      keeper,
       reward
     );
   }
@@ -536,12 +550,12 @@ contract LiquidationAuction {
 
     emit BidOnAuction(
       auctionId,
+      position,
       maxPrice,
       price,
       debtDelta,
       debtToRaise,
-      collateralToSell,
-      position
+      collateralToSell
     );
   }
 
@@ -613,6 +627,7 @@ contract LiquidationAuction {
       debtFloor,
       liquidationEngine.liquidatonPenalty(collateralType)
     );
+    emit UpdateMinDebtForReward(minDebtForReward, block.timestamp);
   }
 
   // Cancel an auction during ES or via governance action.

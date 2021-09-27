@@ -51,6 +51,7 @@ contract FeesEngine {
   constructor(address ledger_) {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
+    emit GrantAuthorization(msg.sender);
   }
 
   // --- Auth ---

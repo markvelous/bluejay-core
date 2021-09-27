@@ -46,6 +46,7 @@ contract CollateralJoin {
     collateralType = collateralType_;
     collateral = TokenLike(collateral_);
     decimals = collateral.decimals();
+    emit GrantAuthorization(msg.sender);
   }
 
   // --- Auth ---

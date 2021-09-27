@@ -16,6 +16,8 @@ interface LedgerLike {
 }
 
 contract SavingsAccount {
+  uint256 constant ONE = 10**27;
+
   mapping(address => uint256) public authorizedAccounts;
   mapping(address => uint256) public savings; // Normalised Savings [wad]
 
@@ -50,6 +52,7 @@ contract SavingsAccount {
     accumulatedRates = ONE;
     lastUpdated = block.timestamp;
     live = 1;
+    emit GrantAuthorization(msg.sender);
   }
 
   // --- Auth ---
@@ -77,8 +80,6 @@ contract SavingsAccount {
   }
 
   // --- Math ---
-  uint256 constant ONE = 10**27;
-
   function rpow(
     uint256 x,
     uint256 n,

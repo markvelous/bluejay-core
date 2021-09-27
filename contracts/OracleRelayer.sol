@@ -10,12 +10,12 @@ interface OracleLike {
 }
 
 contract OracleRelayer {
+  uint256 constant ONE = 10**27;
+
   struct CollateralType {
     OracleLike oracle; // Price Feed
     uint256 collateralizationRatio; // Liquidation ratio [ray]
   }
-
-  uint256 constant ONE = 10**27;
 
   mapping(address => uint256) public authorizedAccounts;
   mapping(bytes32 => CollateralType) public collateralTypes;
@@ -52,6 +52,7 @@ contract OracleRelayer {
     ledger = LedgerLike(ledger_);
     redemptionPrice = ONE;
     live = 1;
+    emit GrantAuthorization(msg.sender);
   }
 
   // --- Auth ---
