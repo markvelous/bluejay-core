@@ -43,23 +43,7 @@ contract AccountingEngine {
     uint256 timestamp; // Time the debt was added
   }
 
-  // --- Auth ---
   mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 1;
-  }
-
-  function revokeAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
-    _;
-  }
-
-  // --- Data ---
   LedgerLike public ledger; // CDP Engine
   SurplusAuctionLike public surplusAuction; // Surplus Auction
   DebtAuctionLike public debtAuction; // Debt Auction
@@ -79,6 +63,30 @@ contract AccountingEngine {
 
   uint256 public live; // Active Flag
 
+  // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+  event UpdateParameter(bytes32 indexed parameter, address data);
+  event PushDebtToQueue(
+    uint256 indexed queueId,
+    uint256 debt,
+    uint256 timestamp
+  );
+  event PopDebtFromQueue(
+    uint256 indexed queueId,
+    uint256 debt,
+    uint256 timestamp
+  );
+  event SettleUnbackedDebt(uint256 amount);
+  event SettleUnbackedDebtFromAuction(uint256 amount);
+  event AuctionDebt(
+    uint256 indexed auctionId,
+    uint256 debtOnAuction,
+    uint256 initialCollateralBid
+  );
+  event AuctionSurplus(uint256 indexed auctionId, uint256 surplusOnAuction);
+
   // --- Init ---
   constructor(
     address ledger_,
@@ -91,6 +99,23 @@ contract AccountingEngine {
     debtAuction = DebtAuctionLike(debtAuction_);
     ledger.allowModification(surplusAuction_);
     live = 1;
+    emit GrantAuthorization(msg.sender);
+  }
+
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(msg.sender);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(msg.sender);
+  }
+
+  modifier isAuthorized() {
+    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
+    _;
   }
 
   // --- Math ---
@@ -101,32 +126,39 @@ contract AccountingEngine {
   // --- Administration ---
   function updateIntialDebtAuctionBid(uint256 data) external isAuthorized {
     intialDebtAuctionBid = data;
+    emit UpdateParameter("intialDebtAuctionBid", data);
   }
 
   function updateDebtAuctionLotSize(uint256 data) external isAuthorized {
     debtAuctionLotSize = data;
+    emit UpdateParameter("debtAuctionLotSize", data);
   }
 
   function updateSurplusBuffer(uint256 data) external isAuthorized {
     surplusBuffer = data;
+    emit UpdateParameter("surplusBuffer", data);
   }
 
   function updatePopDebtDelay(uint256 data) external isAuthorized {
     popDebtDelay = data;
+    emit UpdateParameter("popDebtDelay", data);
   }
 
   function updateSurplusAuctionLotSize(uint256 data) external isAuthorized {
     surplusAuctionLotSize = data;
+    emit UpdateParameter("surplusAuctionLotSize", data);
   }
 
   function updateSurplusAuction(address data) external isAuthorized {
     ledger.denyModification(address(surplusAuction));
     surplusAuction = SurplusAuctionLike(data);
     ledger.allowModification(data);
+    emit UpdateParameter("surplusAuction", data);
   }
 
   function updateDebtAuction(address data) external isAuthorized {
     debtAuction = DebtAuctionLike(data);
+    emit UpdateParameter("debtAuction", data);
   }
 
   function removeDebtFromQueue(uint256 queueId) internal {
@@ -156,6 +188,7 @@ contract AccountingEngine {
     debtQueue[queueId].timestamp = block.timestamp;
 
     totalQueuedDebt = totalQueuedDebt + tab;
+    emit PushDebtToQueue(queueId, tab, block.timestamp);
   }
 
   // Pop from debt-queue
@@ -166,6 +199,7 @@ contract AccountingEngine {
     );
     totalQueuedDebt = totalQueuedDebt - debtQueue[queueId].debt;
     removeDebtFromQueue(queueId);
+    emit PopDebtFromQueue(queueId, debtQueue[queueId].debt, block.timestamp);
   }
 
   // Debt settlement
@@ -182,6 +216,7 @@ contract AccountingEngine {
       "AccountingEngine/insufficient-debt"
     );
     ledger.settleUnbackedDebt(rad);
+    emit SettleUnbackedDebt(rad);
   }
 
   function settleUnbackedDebtFromAuction(uint256 rad) external {
@@ -195,6 +230,7 @@ contract AccountingEngine {
     );
     totalDebtOnAuction = totalDebtOnAuction - rad;
     ledger.settleUnbackedDebt(rad);
+    emit SettleUnbackedDebtFromAuction(rad);
   }
 
   // Debt auction
@@ -216,6 +252,7 @@ contract AccountingEngine {
       intialDebtAuctionBid,
       debtAuctionLotSize
     );
+    emit AuctionDebt(id, debtAuctionLotSize, intialDebtAuctionBid);
   }
 
   // Surplus auction
@@ -235,6 +272,7 @@ contract AccountingEngine {
       "AccountingEngine/debt-not-zero"
     );
     id = surplusAuction.startAuction(surplusAuctionLotSize, 0);
+    emit AuctionSurplus(id, surplusAuctionLotSize);
   }
 
   // The number of debts in the queue
