@@ -27,13 +27,11 @@ contract OracleRelayer {
   // --- Events ---
   event GrantAuthorization(address indexed account);
   event RevokeAuthorization(address indexed account);
-
   event UpdateCollateralPrice(
     bytes32 collateralType,
     uint256 price, // [wad]
     uint256 safetyPrice // [ray]
   );
-
   event UpdateParameter(bytes32 indexed parameter, uint256 data);
   event UpdateParameter(
     bytes32 indexed parameter,

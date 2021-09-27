@@ -47,21 +47,7 @@ interface AccountingEngineLike {
 }
 
 contract LiquidationEngine {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 1;
-  }
-
-  function revokeAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
-    _;
-  }
+  uint256 constant WAD = 10**18;
 
   // --- Data ---
   struct CollateralTypes {
@@ -71,6 +57,7 @@ contract LiquidationEngine {
     uint256 debtRequiredForActiveAuctions; // Amt debt needed to cover debt+fees of active auctions per ilk [rad]
   }
 
+  mapping(address => uint256) public authorizedAccounts;
   LedgerLike public immutable ledger; // CDP Engine
 
   mapping(bytes32 => CollateralTypes) public collateralTypes;
@@ -81,17 +68,28 @@ contract LiquidationEngine {
   uint256 public globalDebtRequiredForActiveAuctions; // Amt debt needed to cover debt+fees of active auctions [rad]
 
   // --- Events ---
-  event Rely(address indexed usr);
-  event Deny(address indexed usr);
-
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+  event UpdateParameter(bytes32 indexed parameter, address data);
+  event UpdateParameter(
+    bytes32 indexed parameter,
+    bytes32 indexed collateralType,
+    uint256 data
+  );
+  event UpdateParameter(
+    bytes32 indexed parameter,
+    bytes32 indexed collateralType,
+    address data
+  );
   event LiquidatePosition(
     bytes32 indexed collateralType,
+    uint256 indexed auctionId,
     address indexed position,
     uint256 lockedCollateralToConfiscate,
     uint256 normalizedDebtToConfiscate,
     uint256 debtConfiscated,
-    address liquidationAuction,
-    uint256 indexed auctionId
+    address liquidationAuction
   );
   event DebtRemoved(bytes32 indexed ilk, uint256 rad);
   event Shutdown();
@@ -101,12 +99,26 @@ contract LiquidationEngine {
     ledger = LedgerLike(ledger_);
     live = 1;
     authorizedAccounts[msg.sender] = 1;
-    emit Rely(msg.sender);
+    emit GrantAuthorization(msg.sender);
+  }
+
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  modifier isAuthorized() {
+    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
+    _;
   }
 
   // --- Math ---
-  uint256 constant WAD = 10**18;
-
   function min(uint256 x, uint256 y) internal pure returns (uint256 z) {
     z = x <= y ? x : y;
   }
@@ -114,6 +126,7 @@ contract LiquidationEngine {
   // --- Administration ---
   function updateAccountingEngine(address data) external isAuthorized {
     accountingEngine = AccountingEngineLike(data);
+    emit UpdateParameter("accountingEngine", data);
   }
 
   function updateGlobalMaxDebtForActiveAuctions(uint256 data)
@@ -121,6 +134,7 @@ contract LiquidationEngine {
     isAuthorized
   {
     globalMaxDebtForActiveAuctions = data;
+    emit UpdateParameter("globalMaxDebtForActiveAuctions", data);
   }
 
   function updateLiquidatonPenalty(bytes32 collateralType, uint256 data)
@@ -129,6 +143,7 @@ contract LiquidationEngine {
   {
     require(data >= WAD, "LiquidationEngine/file-liquidatonPenalty-lt-WAD");
     collateralTypes[collateralType].liquidatonPenalty = data;
+    emit UpdateParameter("liquidatonPenalty", collateralType, data);
   }
 
   function updateMaxDebtForActiveAuctions(bytes32 collateralType, uint256 data)
@@ -136,6 +151,7 @@ contract LiquidationEngine {
     isAuthorized
   {
     collateralTypes[collateralType].maxDebtForActiveAuctions = data;
+    emit UpdateParameter("maxDebtForActiveAuctions", collateralType, data);
   }
 
   function updateLiquidationAuction(
@@ -148,6 +164,11 @@ contract LiquidationEngine {
       "LiquidationEngine/file-collateralType-neq-liquidationAuction.collateralType"
     );
     collateralTypes[collateralType].liquidationAuction = liquidationAuction;
+    emit UpdateParameter(
+      "liquidationAuction",
+      collateralType,
+      liquidationAuction
+    );
   }
 
   function liquidatonPenalty(bytes32 ilk) external view returns (uint256) {
@@ -284,12 +305,12 @@ contract LiquidationEngine {
 
     emit LiquidatePosition(
       collateralType,
+      auctionId,
       position,
       lockedCollateralToConfiscate,
       normalizedDebtToConfiscate,
       debtConfiscated,
-      collateralTypeData.liquidationAuction,
-      auctionId
+      collateralTypeData.liquidationAuction
     );
   }
 
