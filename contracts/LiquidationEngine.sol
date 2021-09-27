@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface LiquidationAuctionLike {
   function collateralType() external view returns (bytes32);
 
@@ -46,7 +48,7 @@ interface AccountingEngineLike {
   function pushDebtToQueue(uint256) external;
 }
 
-contract LiquidationEngine {
+contract LiquidationEngine is Initializable {
   uint256 constant WAD = 10**18;
 
   // --- Data ---
@@ -58,7 +60,7 @@ contract LiquidationEngine {
   }
 
   mapping(address => uint256) public authorizedAccounts;
-  LedgerLike public immutable ledger; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
 
   mapping(bytes32 => CollateralTypes) public collateralTypes;
 
@@ -95,7 +97,7 @@ contract LiquidationEngine {
   event Shutdown();
 
   // --- Init ---
-  constructor(address ledger_) {
+  function initialize(address ledger_) public initializer {
     ledger = LedgerLike(ledger_);
     live = 1;
     authorizedAccounts[msg.sender] = 1;

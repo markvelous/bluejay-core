@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface TokenLike {
   function decimals() external view returns (uint8);
 
@@ -21,7 +23,7 @@ interface LedgerLike {
   ) external;
 }
 
-contract CollateralJoin {
+contract CollateralJoin is Initializable {
   mapping(address => uint256) public authorizedAccounts;
   LedgerLike public ledger; // CDP Engine
   bytes32 public collateralType; // Collateral Type
@@ -35,11 +37,11 @@ contract CollateralJoin {
   event Deposit(address indexed user, uint256 amount);
   event Withdraw(address indexed user, uint256 amount);
 
-  constructor(
+  function initialize(
     address ledger_,
     bytes32 collateralType_,
     address collateral_
-  ) {
+  ) public initializer {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
     ledger = LedgerLike(ledger_);

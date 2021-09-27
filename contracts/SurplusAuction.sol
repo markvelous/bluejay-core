@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface LedgerLike {
   function transferDebt(
     address,
@@ -28,7 +30,7 @@ interface TokenLike {
  - `end` max auction duration
 */
 
-contract SurplusAuction {
+contract SurplusAuction is Initializable {
   uint256 constant ONE = 1.00E18;
 
   // --- Data ---
@@ -47,10 +49,10 @@ contract SurplusAuction {
   LedgerLike public ledger; // CDP Engine
   TokenLike public governanceToken;
 
-  uint256 public minBidIncrement = 1.05E18; // 5% minimum bid increase
-  uint48 public maxBidDuration = 3 hours; // 3 hours bid duration         [seconds]
-  uint48 public maxAuctionDuration = 2 days; // 2 days total auction length  [seconds]
-  uint256 public auctionCount = 0;
+  uint256 public minBidIncrement; // minimum bid increase [wad]
+  uint48 public maxBidDuration; // bid duration         [seconds]
+  uint48 public maxAuctionDuration; // total auction length  [seconds]
+  uint256 public auctionCount;
   uint256[] public activeAuctions; // Array of active auction ids
   uint256 public live; // Active Flag
 
@@ -85,12 +87,19 @@ contract SurplusAuction {
   );
 
   // --- Init ---
-  constructor(address ledger_, address governanceToken_) {
+  function initialize(address ledger_, address governanceToken_)
+    public
+    initializer
+  {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
     governanceToken = TokenLike(governanceToken_);
     live = 1;
     emit GrantAuthorization(msg.sender);
+
+    minBidIncrement = 1.05E18; // 5% minimum bid increase
+    maxBidDuration = 3 hours; // 3 hours bid duration         [seconds]
+    maxAuctionDuration = 2 days; // 2 days total auction length  [seconds]
   }
 
   // --- Auth ---

@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { exp } from "./utils";
 
@@ -7,7 +7,7 @@ describe("DiscountCalculator", () => {
     const Calculator = await ethers.getContractFactory(
       "StairstepExponentialDecrease"
     );
-    const calculator = await Calculator.deploy();
+    const calculator = await upgrades.deployProxy(Calculator, []);
 
     await calculator.updateStep(60); // 60 sec
     await calculator.updateFactorPerStep(exp(27).mul(99).div(100)); // 0.99 per step

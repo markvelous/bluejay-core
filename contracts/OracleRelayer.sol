@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface LedgerLike {
   function updateSafetyPrice(bytes32 collateralType, uint256 data) external;
 }
@@ -9,7 +11,7 @@ interface OracleLike {
   function getPrice() external returns (uint256, bool); // wad
 }
 
-contract OracleRelayer {
+contract OracleRelayer is Initializable {
   uint256 constant ONE = 10**27;
 
   struct CollateralType {
@@ -45,7 +47,7 @@ contract OracleRelayer {
   );
 
   // --- Init ---
-  constructor(address ledger_) {
+  function initialize(address ledger_) public initializer {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
     redemptionPrice = ONE;
