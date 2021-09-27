@@ -68,6 +68,8 @@
 | deny        | revokeAuthorization |
 | auth        | isAuthorized        |
 | cage        | shutdown            |
+| join        | deposit             |
+| exit        | withdraw            |
 
 - Removed `mul`
 

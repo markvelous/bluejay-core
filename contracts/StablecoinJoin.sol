@@ -16,15 +16,35 @@ interface LedgerLike {
 }
 
 contract StablecoinJoin {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
+  uint256 constant ONE = 10**27;
 
-  function grantAuthorization(address usr) external isAuthorized {
-    authorizedAccounts[usr] = 1;
+  mapping(address => uint256) public authorizedAccounts;
+  LedgerLike public ledger; // CDP Engine
+  TokenLike public stablecoin; // Stablecoin Token
+  uint256 public live; // Active Flag
+
+  // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event Deposit(address indexed user, uint256 amount);
+  event Withdraw(address indexed user, uint256 amount);
+
+  constructor(address ledger_, address stablecoin_) {
+    authorizedAccounts[msg.sender] = 1;
+    live = 1;
+    ledger = LedgerLike(ledger_);
+    stablecoin = TokenLike(stablecoin_);
   }
 
-  function revokeAuthorization(address usr) external isAuthorized {
-    authorizedAccounts[usr] = 0;
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
   }
 
   modifier isAuthorized() {
@@ -35,31 +55,20 @@ contract StablecoinJoin {
     _;
   }
 
-  LedgerLike public ledger; // CDP Engine
-  TokenLike public stablecoin; // Stablecoin Token
-  uint256 public live; // Active Flag
-
-  constructor(address ledger_, address stablecoin_) {
-    authorizedAccounts[msg.sender] = 1;
-    live = 1;
-    ledger = LedgerLike(ledger_);
-    stablecoin = TokenLike(stablecoin_);
-  }
-
   function shutdown() external isAuthorized {
     live = 0;
   }
 
-  uint256 constant ONE = 10**27;
-
-  function join(address usr, uint256 wad) external {
-    ledger.transferDebt(address(this), usr, ONE * wad);
+  function deposit(address user, uint256 wad) external {
+    ledger.transferDebt(address(this), user, ONE * wad);
     stablecoin.burn(msg.sender, wad);
+    emit Deposit(user, wad);
   }
 
-  function exit(address usr, uint256 wad) external {
+  function withdraw(address user, uint256 wad) external {
     require(live == 1, "StablecoinJoin/not-live");
     ledger.transferDebt(msg.sender, address(this), ONE * wad);
-    stablecoin.mint(usr, wad);
+    stablecoin.mint(user, wad);
+    emit Withdraw(user, wad);
   }
 }

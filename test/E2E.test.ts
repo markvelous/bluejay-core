@@ -285,7 +285,7 @@ describe("E2E", () => {
     // Withdraw as stablecoin
     await stablecoinJoin
       .connect(account1)
-      .exit(account1.address, exp(18).mul(10000 * 1000));
+      .withdraw(account1.address, exp(18).mul(10000 * 1000));
 
     // Should have the right amount of stablecoin
     expect(await stablecoin.balanceOf(account1.address)).to.equal(
