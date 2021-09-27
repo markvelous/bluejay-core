@@ -228,7 +228,7 @@ contract SurplusAuction {
     ledger.transferDebt(address(this), msg.sender, rad);
   }
 
-  function emergencyBidWithdrawal(uint256 auctionId) external {
+  function emergencyCloseAuction(uint256 auctionId) external {
     require(live == 0, "SurplusAuction/still-live");
     require(
       auctions[auctionId].highestBidder != address(0),

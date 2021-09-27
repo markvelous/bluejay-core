@@ -26,24 +26,7 @@ interface AccountingEngineLike {
 }
 
 contract DebtAuction {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
-
-  function grantAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 1;
-  }
-
-  function revokeAuthorization(address user) external isAuthorized {
-    authorizedAccounts[user] = 0;
-  }
-
-  modifier isAuthorized() {
-    require(
-      authorizedAccounts[msg.sender] == 1,
-      "SurplusAuction/not-authorized"
-    );
-    _;
-  }
+  uint256 constant ONE = 1.00E18;
 
   // --- Data ---
   struct Auction {
@@ -55,12 +38,12 @@ contract DebtAuction {
     uint48 auctionExpiry; // auction expiry time     [unix epoch time]
   }
 
+  mapping(address => uint256) public authorizedAccounts;
   mapping(uint256 => Auction) public auctions;
 
   LedgerLike public ledger; // CDP Engine
   TokenLike public governanceToken;
 
-  uint256 constant ONE = 1.00E18;
   uint256 public minBidIncrement = 1.05E18; // 5% minimum bid increase
   uint256 public restartMultiplier = 1.50E18; // 50% governanceTokenBid increase for restartAuction
   uint48 public maxBidDuration = 3 hours; // 3 hours bid lifetime         [seconds]
@@ -71,11 +54,37 @@ contract DebtAuction {
   address public accountingEngine; // not used until shutdown
 
   // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
   event StartAuction(
-    uint256 auctionId,
+    uint256 indexed auctionId,
+    address indexed initialBidder,
+    uint256 auctionExpiry,
+    uint256 debtLotSize,
+    uint256 initialGovernanceTokenBid
+  );
+  event RestartAuction(
+    uint256 indexed auctionId,
+    uint256 auctionExpiry,
+    uint256 updatedGovernanceTokenBid
+  );
+  event PlaceBid(
+    uint256 indexed auctionId,
+    address indexed bidder,
     uint256 governanceTokenBid,
     uint256 debtLotSize,
-    address indexed bidder
+    uint256 auctionExpiry
+  );
+  event SettleAuction(
+    uint256 indexed auctionId,
+    address indexed winningBidder,
+    uint256 governanceTokenMinted
+  );
+  event EmergencyCloseAuction(
+    uint256 indexed auctionId,
+    address indexed refundAddress,
+    uint256 debtRefunded
   );
 
   // --- Init ---
@@ -84,6 +93,26 @@ contract DebtAuction {
     ledger = LedgerLike(ledger_);
     governanceToken = TokenLike(governanceToken_);
     live = 1;
+    emit GrantAuthorization(msg.sender);
+  }
+
+  // --- Auth ---
+  function grantAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 1;
+    emit GrantAuthorization(user);
+  }
+
+  function revokeAuthorization(address user) external isAuthorized {
+    authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
+  }
+
+  modifier isAuthorized() {
+    require(
+      authorizedAccounts[msg.sender] == 1,
+      "SurplusAuction/not-authorized"
+    );
+    _;
   }
 
   // --- Math ---
@@ -99,19 +128,23 @@ contract DebtAuction {
   function updateMinBidIncrement(uint256 data) external isAuthorized {
     require(data > ONE, "DebtAuction/min-bid-increment-lte-ONE");
     minBidIncrement = data;
+    emit UpdateParameter("minBidIncrement", data);
   }
 
   function updateRestartMultiplier(uint256 data) external isAuthorized {
     require(data > ONE, "DebtAuction/restart-multiplier-lte-ONE");
     restartMultiplier = data;
+    emit UpdateParameter("restartMultiplier", data);
   }
 
   function updateMaxBidDuration(uint48 data) external isAuthorized {
     maxBidDuration = data;
+    emit UpdateParameter("maxBidDuration", data);
   }
 
   function updateMaxAuctionDuration(uint256 data) external isAuthorized {
     maxAuctionDuration = uint48(data);
+    emit UpdateParameter("maxAuctionDuration", data);
   }
 
   // --- Auction ---
@@ -147,9 +180,10 @@ contract DebtAuction {
 
     emit StartAuction(
       auctionId,
-      initialGovernanceTokenBid,
+      stablecoinReceiver,
+      auctions[auctionId].auctionExpiry,
       debtLotSize,
-      stablecoinReceiver
+      initialGovernanceTokenBid
     );
   }
 
@@ -168,6 +202,11 @@ contract DebtAuction {
     auctions[auctionId].auctionExpiry =
       uint48(block.timestamp) +
       maxAuctionDuration;
+    emit RestartAuction(
+      auctionId,
+      auctions[auctionId].auctionExpiry,
+      auctions[auctionId].governanceTokenBid
+    );
   }
 
   function placeBid(
@@ -225,6 +264,13 @@ contract DebtAuction {
 
     auctions[auctionId].governanceTokenBid = governanceTokenBid;
     auctions[auctionId].bidExpiry = uint48(block.timestamp) + maxBidDuration;
+    emit PlaceBid(
+      auctionId,
+      msg.sender,
+      governanceTokenBid,
+      debtLotSize,
+      auctions[auctionId].bidExpiry
+    );
   }
 
   function settleAuction(uint256 auctionId) external {
@@ -240,6 +286,11 @@ contract DebtAuction {
       auctions[auctionId].governanceTokenBid
     );
     removeAuction(auctionId);
+    emit SettleAuction(
+      auctionId,
+      auctions[auctionId].highestBidder,
+      auctions[auctionId].governanceTokenBid
+    );
   }
 
   // The number of active auctions
@@ -258,7 +309,7 @@ contract DebtAuction {
     accountingEngine = msg.sender;
   }
 
-  function emergencyBidWithdrawal(uint256 auctionId) external {
+  function emergencyCloseAuction(uint256 auctionId) external {
     require(live == 0, "DebtAuction/still-live");
     require(
       auctions[auctionId].highestBidder != address(0),
@@ -270,5 +321,10 @@ contract DebtAuction {
       auctions[auctionId].debtLotSize
     );
     removeAuction(auctionId);
+    emit EmergencyCloseAuction(
+      auctionId,
+      auctions[auctionId].highestBidder,
+      auctions[auctionId].debtLotSize
+    );
   }
 }

@@ -374,7 +374,7 @@
 | kick      | startAuction             |
 | tick      | restartAuction           |
 | cage      | shutdown                 |
-| yank      | emergencyBidWithdrawal   |
+| yank      | emergencyCloseAuction    |
 | deal      | settleAuction            |
 | tend      | placeBid                 |
 | file(beg) | updateMinBidIncrement    |
@@ -416,7 +416,7 @@
 | tick      | restartAuction                |
 | dent      | placeBid                      |
 | deal      | settleAuction                 |
-| yank      | emergencyBidWithdrawal        |
+| yank      | emergencyCloseAuction         |
 | cage      | shutdown                      |
 | pad       | restartMultiplier             |
 | file(beg) | updateMinBidIncrement         |
