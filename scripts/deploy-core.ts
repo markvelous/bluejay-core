@@ -107,6 +107,11 @@ export const deployCore = async () => {
       collateralType,
     ],
   });
+  const LogicDiscountCalculator = await deployOrGetInstance({
+    key: "LogicDiscountCalculator",
+    factory: "StairstepExponentialDecrease",
+    initArgs: [],
+  });
 
   // Deploy uups
   const { implementation: stablecoin } = await deployUupsOrGetInstance({
@@ -160,6 +165,10 @@ export const deployCore = async () => {
   const BeaconLiquidationAuction = await deployBeaconOrGetInstance({
     address: LogicLiquidationAuction.address,
     key: "BeaconLiquidationAuction",
+  });
+  const BeaconDiscountCalculator = await deployBeaconOrGetInstance({
+    address: LogicDiscountCalculator.address,
+    key: "BeaconDiscountCalculator",
   });
 
   // Deploy beacon proxy
@@ -243,6 +252,13 @@ export const deployCore = async () => {
       ],
       beacon: BeaconLiquidationAuction.address,
     });
+  const { implementation: discountCalculator } =
+    await deployBeaconProxyOrGetInsance({
+      key: "ProxyDiscountCalculator",
+      factory: "StairstepExponentialDecrease",
+      args: [],
+      beacon: BeaconDiscountCalculator.address,
+    });
 
   return {
     collateral,
@@ -261,6 +277,7 @@ export const deployCore = async () => {
     accountingEngine,
     liquidationEngine,
     liquidationAuction,
+    discountCalculator,
   };
 };
 
