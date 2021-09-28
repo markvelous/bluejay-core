@@ -112,6 +112,7 @@ const whenCoreDeployed = async ({
   ledger.grantAuthorization(liquidationEngine.address);
   ledger.grantAuthorization(liquidationAuction.address);
   ledger.grantAuthorization(debtAuction.address);
+  ledger.grantAuthorization(surplusAuction.address);
 
   accountingEngine.grantAuthorization(liquidationEngine.address);
 

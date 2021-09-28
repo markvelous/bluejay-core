@@ -99,7 +99,6 @@ contract AccountingEngine is Initializable {
     ledger = LedgerLike(ledger_);
     surplusAuction = SurplusAuctionLike(surplusAuction_);
     debtAuction = DebtAuctionLike(debtAuction_);
-    ledger.allowModification(surplusAuction_);
     live = 1;
     emit GrantAuthorization(msg.sender);
   }
@@ -152,9 +151,7 @@ contract AccountingEngine is Initializable {
   }
 
   function updateSurplusAuction(address data) external isAuthorized {
-    ledger.denyModification(address(surplusAuction));
     surplusAuction = SurplusAuctionLike(data);
-    ledger.allowModification(data);
     emit UpdateParameter("surplusAuction", data);
   }
 
