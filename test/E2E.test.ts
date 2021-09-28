@@ -57,7 +57,7 @@ const whenCoreDeployed = async ({
   const stablecoin = await upgrades.deployProxy(Stablecoin, [
     "Myanmar Kyat Tracker",
     "MMKT",
-  ]); 
+  ]);
   // governanceToken not using uups to avoid console warning during testing
   const governanceToken = await upgrades.deployProxy(SimpleGovernanceToken, []);
   const collateralType = keccak256(collateral.address);
@@ -117,6 +117,7 @@ const whenCoreDeployed = async ({
   accountingEngine.grantAuthorization(liquidationEngine.address);
 
   liquidationAuction.grantAuthorization(liquidationEngine.address);
+
   liquidationEngine.grantAuthorization(liquidationAuction.address);
 
   surplusAuction.grantAuthorization(accountingEngine.address);

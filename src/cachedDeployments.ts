@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { ContractFactory } from "ethers";
+import { Contract, ContractFactory, ContractTransaction } from "ethers";
 import { readFileSync, existsSync, writeFileSync } from "fs";
 import { getLogger } from "./debug";
 
@@ -21,6 +21,20 @@ const buildDeploymentCache = (network: string, cache: string) => {
   };
 };
 
+const buildTransactionCache = (network: string, cache: string) => {
+  if (!existsSync(cache)) writeFileSync(cache, "{}");
+  const transactions: { [network: string]: { [key: string]: boolean } } =
+    JSON.parse(readFileSync(cache).toString());
+  if (!transactions[network]) transactions[network] = {};
+  return {
+    isExecuted: (key: string) => !!transactions[network][key],
+    setExecution: (key: string) => {
+      transactions[network][key] = true;
+      writeFileSync(cache, JSON.stringify(transactions, null, 2));
+    },
+  };
+};
+
 const getInitializerData = (
   ImplFactory: ContractFactory,
   args: unknown[]
@@ -30,17 +44,25 @@ const getInitializerData = (
 };
 
 export const buildCachedDeployments = ({
-  cache,
+  deploymentCachePath,
+  transactionCachePath,
   network,
-  skipCache,
+  skipDeploymentCache,
+  skipTransactionCache,
   transactionOverrides = {},
 }: {
-  cache: string;
+  deploymentCachePath: string;
+  transactionCachePath: string;
   network: string;
-  skipCache?: boolean;
+  skipDeploymentCache?: boolean;
+  skipTransactionCache?: boolean;
   transactionOverrides: any;
 }) => {
-  const deploymentCache = buildDeploymentCache(network, cache);
+  const deploymentCache = buildDeploymentCache(network, deploymentCachePath);
+  const { deployedAddress, updateDeployment } = deploymentCache;
+
+  const transactionCache = buildTransactionCache(network, transactionCachePath);
+  const { isExecuted, setExecution } = transactionCache;
 
   const deployUupsOrGetInstance = async ({
     key,
@@ -53,11 +75,10 @@ export const buildCachedDeployments = ({
     factory: string;
     args?: any[];
   }) => {
-    const { deployedAddress, updateDeployment } = deploymentCache;
     const ProxyFactory = await ethers.getContractFactory("ERC1967Proxy");
     const ImplementationFactory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
-    if (cachedAddr && !skipCache) {
+    if (cachedAddr && !skipDeploymentCache) {
       info(`${key} loaded from cache at ${cachedAddr}`);
       return {
         proxy: ProxyFactory.attach(cachedAddr),
@@ -94,10 +115,9 @@ export const buildCachedDeployments = ({
     args?: any[];
     initArgs?: any[];
   }) => {
-    const { deployedAddress, updateDeployment } = deploymentCache;
     const Factory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
-    if (cachedAddr && !skipCache) {
+    if (cachedAddr && !skipDeploymentCache) {
       info(`${key} loaded from cache at ${cachedAddr}`);
       return Factory.attach(cachedAddr);
     }
@@ -121,10 +141,9 @@ export const buildCachedDeployments = ({
     address: string;
     key: string;
   }) => {
-    const { deployedAddress, updateDeployment } = deploymentCache;
     const Beacon = await ethers.getContractFactory("UpgradeableBeacon");
     const cachedAddr = deployedAddress(key);
-    if (cachedAddr && !skipCache) {
+    if (cachedAddr && !skipDeploymentCache) {
       info(`${key} loaded from cache at ${cachedAddr}`);
       return Beacon.attach(cachedAddr);
     }
@@ -147,11 +166,10 @@ export const buildCachedDeployments = ({
     factory: string;
     args?: any[];
   }) => {
-    const { deployedAddress, updateDeployment } = deploymentCache;
     const ProxyFactory = await ethers.getContractFactory("BeaconProxy");
     const ImplementationFactory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
-    if (cachedAddr && !skipCache) {
+    if (cachedAddr && !skipDeploymentCache) {
       info(`${key} loaded from cache at ${cachedAddr}`);
       return {
         proxy: ProxyFactory.attach(cachedAddr),
@@ -175,11 +193,38 @@ export const buildCachedDeployments = ({
     };
   };
 
+  const executeTransaction = async ({
+    contract,
+    method,
+    key,
+    args = [],
+  }: {
+    contract: Contract;
+    method: string;
+    key: string;
+    args?: any[];
+  }) => {
+    const hasExecuted = isExecuted(key);
+    if (!hasExecuted || skipTransactionCache) {
+      const receipt: ContractTransaction = await contract[method](
+        ...args,
+        transactionOverrides
+      );
+      const tx = await receipt.wait();
+      setExecution(key);
+      info(`Executed ${key}: ${tx.transactionHash}`);
+    } else {
+      info(`Skipping ${key} on ${contract.address}`);
+    }
+  };
+
   return {
     deploymentCache,
+    transactionCache,
     deployOrGetInstance,
     deployUupsOrGetInstance,
     deployBeaconProxyOrGetInsance,
     deployBeaconOrGetInstance,
+    executeTransaction,
   };
 };

@@ -1,7 +1,7 @@
 import { BigNumber } from "ethers";
 import { exp } from "../test/utils";
 
-export const deploymentParameter = {
+export const deploymentParameters = {
   COLLATERAL_TYPE:
     "0x0000000000000000000000000000000000000000000000000000000000000001",
 
@@ -29,8 +29,8 @@ export const deploymentParameter = {
   LIQUIDATION_AUCTION_STARTING_PRICE_FACTOR: exp(27).mul(130).div(100), // 130%
   LIQUIDATION_AUCTION_MAX_AUCTION_DURATION: 8400, // 2 hours 20 mins
   LIQUIDATION_AUCTION_MAX_PRICE_DISCOUNT: exp(27).mul(40).div(100), // 40%
-  LIQUIDATION_KEEPER_REWARD_FACTOR: exp(18).div(1000), // 1/1000 of total amount as reward
-  LIQUIDATION_KEEPER_INCENTIVE: exp(45).mul(1000), // ~0.5 USD
+  LIQUIDATION_AUCTION_KEEPER_REWARD_FACTOR: exp(18).div(1000), // 1/1000 of total amount as reward
+  LIQUIDATION_AUCTION_KEEPER_INCENTIVE: exp(45).mul(1000), // ~0.5 USD
 
   DISCOUNT_CALCULATOR_STEP: 60, // 1 min
   DISCOUNT_CALCULATOR_FACTOR_PER_STEP: exp(27).mul(99).div(100), // 0.99 per step
