@@ -1,8 +1,11 @@
 {
   "name": "@bluejay/contract-core",
   "version": "1.0.0",
+  "main": "dist/src/index.js",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "npm run build:contract && npm run build:js",
+    "build:contract": "hardhat compile",
+    "build:js": "tsc",
     "lint": "eslint . --ext js,ts,tsx",
     "test": "hardhat test",
     "watch:e2e": "nodemon --exec \"hh test test/E2E.test.ts\" -e \"ts sol\""

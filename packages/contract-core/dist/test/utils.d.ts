@@ -1,0 +1,13 @@
+import { ethers } from "hardhat";
+import { BigNumber, Contract } from "ethers";
+export declare const exp: (exponent: number) => BigNumber;
+export declare const mineBlocks: (blocksToMine: number, provider: import("@ethersproject/providers").JsonRpcProvider) => Promise<void>;
+export declare const incrementTime: (ttl: number, provider: import("@ethersproject/providers").JsonRpcProvider) => Promise<void>;
+export declare const increaseTime: (timeToIncrease: number, provider: import("@ethersproject/providers").JsonRpcProvider) => Promise<void>;
+export declare const formatNumber: (decimal: number) => (num: BigNumber) => number;
+export declare const formatWad: (num: BigNumber) => number;
+export declare const formatRay: (num: BigNumber) => number;
+export declare const formatRad: (num: BigNumber) => number;
+export declare const printLedgerCollateralType: (ledger: Contract, collateralType: string) => Promise<void>;
+export declare const printLedgerGlobals: (ledger: Contract) => Promise<void>;
+export declare const printLedgerPosition: (ledger: Contract, collateralType: string, address: string) => Promise<void>;

@@ -39,7 +39,7 @@ export default {
     },
   },
   typechain: {
-    outDir: "./dist/types",
+    outDir: "./src/types",
     target: "ethers-v5",
     alwaysGenerateOverloads: false,
   },

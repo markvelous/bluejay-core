@@ -2,12 +2,15 @@
   "name": "@bluejay/contract-proxy",
   "version": "1.0.0",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "npm run build:contract && npm run build:js",
+    "build:contract": "hardhat compile",
+    "build:js": "tsc",
     "lint": "eslint . --ext js,ts,tsx",
     "test": "hardhat test",
     "watch:e2e": "nodemon --exec \"hh test test/E2E.test.ts\" -e \"ts sol\""
   },
   "dependencies": {
+    "@bluejay/contract-core": "^1.0.0",
     "debug": "^4.3.2",
     "dotenv": "^10.0.0",
     "ethers": "^5.4.4",
