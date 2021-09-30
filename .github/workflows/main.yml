@@ -17,19 +17,21 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
-    environment: test
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
       - name: install dependency
         run: npm install
 
+      - name: setup env
+        run: mv .env.example .env
+
       - name: Hardhat Test
-        env:
-          ALCHEMY_KEY: ${{ env.ALCHEMY_KEY }}
-          MATIC_ACCOUNT_1: ${{ env.MATIC_ACCOUNT_1 }}
-          MUMBAI_ACCOUNT_1: ${{ env.MUMBAI_ACCOUNT_1 }}
         run: npm run test
 
       - name: Linter
