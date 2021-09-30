@@ -19,10 +19,6 @@ jobs:
   build:
     environment: test
     runs-on: ubuntu-latest
-    env:
-      ALCHEMY_KEY: ${{ env.ALCHEMY_KEY }}
-      MATIC_ACCOUNT_1: ${{ env.MATIC_ACCOUNT_1 }}
-      MUMBAI_ACCOUNT_1: ${{ env.MUMBAI_ACCOUNT_1 }}
     steps:
       - uses: actions/checkout@v2
 
@@ -30,6 +26,10 @@ jobs:
         run: npm install
 
       - name: Hardhat Test
+        env:
+          ALCHEMY_KEY: ${{ env.ALCHEMY_KEY }}
+          MATIC_ACCOUNT_1: ${{ env.MATIC_ACCOUNT_1 }}
+          MUMBAI_ACCOUNT_1: ${{ env.MUMBAI_ACCOUNT_1 }}
         run: npm run test
 
       - name: Linter
