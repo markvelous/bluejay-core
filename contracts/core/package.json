@@ -8,11 +8,6 @@
     "watch:e2e": "nodemon --exec \"hh test test/E2E.test.ts\" -e \"ts sol\""
   },
   "dependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "4.3.1",
-    "@openzeppelin/contracts-upgradeable": "4.3.1",
-    "@openzeppelin/hardhat-upgrades": "^1.10.0",
     "debug": "^4.3.2",
     "dotenv": "^10.0.0",
     "ethers": "^5.4.4",
@@ -20,6 +15,11 @@
     "hardhat-watcher": "^2.1.1"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/contracts": "4.3.1",
+    "@openzeppelin/contracts-upgradeable": "4.3.1",
+    "@openzeppelin/hardhat-upgrades": "^1.10.0",
     "@typechain/ethers-v5": "^7.1.2",
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.21",

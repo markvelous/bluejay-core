@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 import { task } from "hardhat/config";
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
