@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface DiscountCalculator {
   // 1st arg: initial price               [ray]
   // 2nd arg: seconds since auction start [seconds]
@@ -8,47 +10,59 @@ interface DiscountCalculator {
   function discountPrice(uint256, uint256) external view returns (uint256);
 }
 
-contract StairstepExponentialDecrease is DiscountCalculator {
-  // --- Auth ---
-  mapping(address => uint256) public authorizedAccounts;
+contract StairstepExponentialDecrease is DiscountCalculator, Initializable {
+  uint256 constant RAY = 10**27;
 
+  // --- Data ---
+  mapping(address => uint256) public authorizedAccounts;
+  uint256 public step; // Length of time between price drops [seconds]
+  uint256 public factorPerStep; // Per-step multiplicative factor     [ray]
+
+  // --- Events ---
+  event GrantAuthorization(address indexed account);
+  event RevokeAuthorization(address indexed account);
+  event UpdateParameter(bytes32 indexed parameter, uint256 data);
+
+  // --- Init ---
+  // @notice: `factorPerStep` and `step` values must be correctly set for
+  //     this contract to return a valid price
+  function initialize() public initializer {
+    authorizedAccounts[msg.sender] = 1;
+    emit GrantAuthorization(msg.sender);
+  }
+
+  // --- Auth ---
   function grantAuthorization(address user) external isAuthorized {
+    emit GrantAuthorization(user);
     authorizedAccounts[user] = 1;
   }
 
   function revokeAuthorization(address user) external isAuthorized {
     authorizedAccounts[user] = 0;
+    emit RevokeAuthorization(user);
   }
 
   modifier isAuthorized() {
-    require(authorizedAccounts[msg.sender] == 1, "Core/not-authorized");
+    require(
+      authorizedAccounts[msg.sender] == 1,
+      "StairstepExponentialDecrease/not-authorized"
+    );
     _;
-  }
-
-  // --- Data ---
-  uint256 public step; // Length of time between price drops [seconds]
-  uint256 public factorPerStep; // Per-step multiplicative factor     [ray]
-
-  // --- Init ---
-  // @notice: `factorPerStep` and `step` values must be correctly set for
-  //     this contract to return a valid price
-  constructor() {
-    authorizedAccounts[msg.sender] = 1;
   }
 
   // --- Administration ---
   function updateFactorPerStep(uint256 data) external isAuthorized {
     require(data <= RAY, "StairstepExponentialDecrease/factorPerStep-gt-RAY");
     factorPerStep = data;
+    emit UpdateParameter("factorPerStep", data);
   }
 
   function updateStep(uint256 data) external isAuthorized {
     step = data;
+    emit UpdateParameter("step", data);
   }
 
   // --- Math ---
-  uint256 constant RAY = 10**27;
-
   function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
     z = x * y;
     require(y == 0 || z / y == x);

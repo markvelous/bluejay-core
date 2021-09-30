@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface LedgerLike {
   function transferDebt(
     address,
@@ -61,7 +63,7 @@ interface DiscountCalculatorLike {
   function discountPrice(uint256, uint256) external view returns (uint256);
 }
 
-contract LiquidationAuction {
+contract LiquidationAuction is Initializable {
   uint256 constant BLN = 10**9;
   uint256 constant WAD = 10**18;
   uint256 constant RAY = 10**27;
@@ -76,8 +78,8 @@ contract LiquidationAuction {
   }
 
   mapping(address => uint256) public authorizedAccounts;
-  bytes32 public immutable collateralType; // Collateral type of this LiquidationAuction
-  LedgerLike public immutable ledger; // Core CDP Engine
+  bytes32 public collateralType; // Collateral type of this LiquidationAuction
+  LedgerLike public ledger; // Core CDP Engine
 
   LiquidationEngineLike public liquidationEngine; // Liquidation module
   address public accountingEngine; // Recipient of dai raised in auctions
@@ -103,7 +105,7 @@ contract LiquidationAuction {
   // 1: no new startAuction()
   // 2: no new startAuction() or redo()
   // 3: no new startAuction(), redo(), or take()
-  uint256 public stopped = 0;
+  uint256 public stopped;
 
   // --- Events ---
   event GrantAuthorization(address indexed user);
@@ -143,12 +145,12 @@ contract LiquidationAuction {
   event UpdateMinDebtForReward(uint256 minDebtForReward, uint256 timestamp);
 
   // --- Init ---
-  constructor(
+  function initialize(
     address ledger_,
     address oracleRelayer_,
     address liquidationEngine_,
     bytes32 collateralType_
-  ) {
+  ) public initializer {
     ledger = LedgerLike(ledger_);
     oracleRelayer = OracleRelayerLike(oracleRelayer_);
     liquidationEngine = LiquidationEngineLike(liquidationEngine_);

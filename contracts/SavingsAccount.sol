@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface LedgerLike {
   function transferDebt(
     address,
@@ -15,7 +17,7 @@ interface LedgerLike {
   ) external;
 }
 
-contract SavingsAccount {
+contract SavingsAccount is Initializable {
   uint256 constant ONE = 10**27;
 
   mapping(address => uint256) public authorizedAccounts;
@@ -45,7 +47,7 @@ contract SavingsAccount {
   event Withdraw(address indexed user, uint256 amount);
 
   // --- Init ---
-  constructor(address ledger_) {
+  function initialize(address ledger_) public initializer {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
     savingsRate = ONE;

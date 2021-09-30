@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface LedgerLike {
   function collateralTypes(bytes32)
     external
@@ -16,7 +18,7 @@ interface LedgerLike {
   ) external;
 }
 
-contract FeesEngine {
+contract FeesEngine is Initializable {
   struct CollateralType {
     uint256 stabilityFee; // Collateral-specific, per-second stability fee contribution [ray]
     uint256 lastUpdated; // Time of last drip [unix epoch time]
@@ -48,7 +50,7 @@ contract FeesEngine {
   );
 
   // --- Init ---
-  constructor(address ledger_) {
+  function initialize(address ledger_) public initializer {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
     emit GrantAuthorization(msg.sender);

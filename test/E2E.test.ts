@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { keccak256 } from "ethers/lib/utils";
 import { BigNumber, constants, Contract, Signer } from "ethers";
@@ -53,43 +53,54 @@ const whenCoreDeployed = async ({
 
   const collateral = await SimpleCollateral.deploy();
   const oracle = await SimpleOracle.deploy();
-  const stablecoin = await Stablecoin.deploy("Myanmar Kyat Tracker", "MMKT");
-  const governanceToken = await SimpleGovernanceToken.deploy();
+  // stablecoin not using uups to avoid console warning during testing
+  const stablecoin = await upgrades.deployProxy(Stablecoin, [
+    "Myanmar Kyat Tracker",
+    "MMKT",
+  ]);
+  // governanceToken not using uups to avoid console warning during testing
+  const governanceToken = await upgrades.deployProxy(SimpleGovernanceToken, []);
   const collateralType = keccak256(collateral.address);
-  const ledger = await Ledger.deploy();
-  const collateralJoin = await CollateralJoin.deploy(
+  const ledger = await upgrades.deployProxy(Ledger, []);
+  const collateralJoin = await upgrades.deployProxy(CollateralJoin, [
     ledger.address,
     collateralType,
-    collateral.address
-  );
-  const stablecoinJoin = await StablecoinJoin.deploy(
+    collateral.address,
+  ]);
+  const stablecoinJoin = await upgrades.deployProxy(StablecoinJoin, [
     ledger.address,
-    stablecoin.address
-  );
-  const oracleRelayer = await OracleRelayer.deploy(ledger.address);
-  const savingsAccount = await SavingsAccount.deploy(ledger.address);
-  const feesEngine = await FeesEngine.deploy(ledger.address);
-  const surplusAuction = await SurplusAuction.deploy(
+    stablecoin.address,
+  ]);
+  const oracleRelayer = await upgrades.deployProxy(OracleRelayer, [
     ledger.address,
-    governanceToken.address
-  );
-  const debtAuction = await DebtAuction.deploy(
+  ]);
+  const savingsAccount = await upgrades.deployProxy(SavingsAccount, [
     ledger.address,
-    governanceToken.address
-  );
-  const accountingEngine = await AccountingEngine.deploy(
+  ]);
+  const feesEngine = await upgrades.deployProxy(FeesEngine, [ledger.address]);
+  const surplusAuction = await upgrades.deployProxy(SurplusAuction, [
+    ledger.address,
+    governanceToken.address,
+  ]);
+  const debtAuction = await upgrades.deployProxy(DebtAuction, [
+    ledger.address,
+    governanceToken.address,
+  ]);
+  const accountingEngine = await upgrades.deployProxy(AccountingEngine, [
     ledger.address,
     surplusAuction.address,
-    debtAuction.address
-  );
-  const discountCalculator = await DiscountCalculator.deploy();
-  const liquidationEngine = await LiquidationEngine.deploy(ledger.address);
-  const liquidationAuction = await LiquidationAuction.deploy(
+    debtAuction.address,
+  ]);
+  const discountCalculator = await upgrades.deployProxy(DiscountCalculator, []);
+  const liquidationEngine = await upgrades.deployProxy(LiquidationEngine, [
+    ledger.address,
+  ]);
+  const liquidationAuction = await upgrades.deployProxy(LiquidationAuction, [
     ledger.address,
     oracleRelayer.address,
     liquidationEngine.address,
-    collateralType
-  );
+    collateralType,
+  ]);
 
   // Permissions
   ledger.grantAuthorization(oracleRelayer.address);
@@ -101,10 +112,12 @@ const whenCoreDeployed = async ({
   ledger.grantAuthorization(liquidationEngine.address);
   ledger.grantAuthorization(liquidationAuction.address);
   ledger.grantAuthorization(debtAuction.address);
+  ledger.grantAuthorization(surplusAuction.address);
 
   accountingEngine.grantAuthorization(liquidationEngine.address);
 
   liquidationAuction.grantAuthorization(liquidationEngine.address);
+
   liquidationEngine.grantAuthorization(liquidationAuction.address);
 
   surplusAuction.grantAuthorization(accountingEngine.address);
@@ -112,7 +125,6 @@ const whenCoreDeployed = async ({
   debtAuction.grantAuthorization(accountingEngine.address);
 
   // Initializations
-  await governanceToken.initialize();
   await governanceToken.grantRole(MINTER_ROLE, accounts[0].address);
   await governanceToken.grantRole(MINTER_ROLE, debtAuction.address);
 

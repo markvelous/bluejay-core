@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-contract Ledger {
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+contract Ledger is Initializable {
   struct CollateralType {
     uint256 normalizedDebt; // Total Normalised Debt     [wad]
     uint256 accumulatedRate; // Accumulated Rates         [ray]
@@ -101,7 +103,7 @@ contract Ledger {
     _;
   }
 
-  constructor() {
+  function initialize() public initializer {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
   }

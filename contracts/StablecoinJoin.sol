@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface TokenLike {
   function mint(address, uint256) external;
 
@@ -15,7 +17,7 @@ interface LedgerLike {
   ) external;
 }
 
-contract StablecoinJoin {
+contract StablecoinJoin is Initializable {
   uint256 constant ONE = 10**27;
 
   mapping(address => uint256) public authorizedAccounts;
@@ -29,7 +31,7 @@ contract StablecoinJoin {
   event Deposit(address indexed user, uint256 amount);
   event Withdraw(address indexed user, uint256 amount);
 
-  constructor(address ledger_, address stablecoin_) {
+  function initialize(address ledger_, address stablecoin_) public initializer {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
     ledger = LedgerLike(ledger_);

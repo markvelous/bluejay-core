@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 interface DebtAuctionLike {
   function startAuction(
     address stablecoinReceiver,
@@ -35,7 +37,7 @@ interface LedgerLike {
   function denyModification(address) external;
 }
 
-contract AccountingEngine {
+contract AccountingEngine is Initializable {
   // --- Data ---
   struct QueuedDebt {
     uint256 index; // Index in active auctions
@@ -48,7 +50,7 @@ contract AccountingEngine {
   SurplusAuctionLike public surplusAuction; // Surplus Auction
   DebtAuctionLike public debtAuction; // Debt Auction
 
-  uint256 public debtCount = 0;
+  uint256 public debtCount;
   uint256[] public pendingDebts; // Array of debt waiting for delay
   mapping(uint256 => QueuedDebt) public debtQueue; // debt queue
   uint256 public totalQueuedDebt; // Debt waiting for delay            [rad]
@@ -88,16 +90,15 @@ contract AccountingEngine {
   event AuctionSurplus(uint256 indexed auctionId, uint256 surplusOnAuction);
 
   // --- Init ---
-  constructor(
+  function initialize(
     address ledger_,
     address surplusAuction_,
     address debtAuction_
-  ) {
+  ) public initializer {
     authorizedAccounts[msg.sender] = 1;
     ledger = LedgerLike(ledger_);
     surplusAuction = SurplusAuctionLike(surplusAuction_);
     debtAuction = DebtAuctionLike(debtAuction_);
-    ledger.allowModification(surplusAuction_);
     live = 1;
     emit GrantAuthorization(msg.sender);
   }
@@ -150,9 +151,7 @@ contract AccountingEngine {
   }
 
   function updateSurplusAuction(address data) external isAuthorized {
-    ledger.denyModification(address(surplusAuction));
     surplusAuction = SurplusAuctionLike(data);
-    ledger.allowModification(data);
     emit UpdateParameter("surplusAuction", data);
   }
 
