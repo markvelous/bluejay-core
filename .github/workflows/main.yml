@@ -29,12 +29,12 @@ jobs:
         run: npx lerna bootstrap
 
       - name: setup env
-        run: cp packages/contract-core/.env.example packages/contract-core/.env
+        run: cp packages/contracts/.env.example packages/contracts/.env
 
       - name: Hardhat Test
         run: npm run test
-        working-directory: ./packages/contract-core
+        working-directory: ./packages/contracts
 
       - name: Linter
         run: npm run lint
-        working-directory: ./packages/contract-core
+        working-directory: ./packages/contracts
