@@ -1,2 +1,2 @@
 .openzeppelin/unknown-*.json
-./dist
+dist/
