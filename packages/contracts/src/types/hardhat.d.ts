@@ -185,14 +185,6 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.LedgerLike__factory>;
     getContractFactory(
-      name: "ILedger",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ILedger__factory>;
-    getContractFactory(
-      name: "IToken",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IToken__factory>;
-    getContractFactory(
       name: "Ledger",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Ledger__factory>;
@@ -572,16 +564,6 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.LedgerLike>;
-    getContractAt(
-      name: "ILedger",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.ILedger>;
-    getContractAt(
-      name: "IToken",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IToken>;
     getContractAt(
       name: "Ledger",
       address: string,
