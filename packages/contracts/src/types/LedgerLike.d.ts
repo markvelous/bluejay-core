@@ -21,25 +21,16 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface LedgerLikeInterface extends ethers.utils.Interface {
   functions: {
-    "createUnbackedDebt(address,address,uint256)": FunctionFragment;
-    "transferDebt(address,address,uint256)": FunctionFragment;
+    "modifyCollateral(bytes32,address,int256)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "createUnbackedDebt",
-    values: [string, string, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "transferDebt",
-    values: [string, string, BigNumberish]
+    functionFragment: "modifyCollateral",
+    values: [BytesLike, string, BigNumberish]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "createUnbackedDebt",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "transferDebt",
+    functionFragment: "modifyCollateral",
     data: BytesLike
   ): Result;
 
@@ -90,45 +81,24 @@ export class LedgerLike extends BaseContract {
   interface: LedgerLikeInterface;
 
   functions: {
-    createUnbackedDebt(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    transferDebt(
-      arg0: string,
+    modifyCollateral(
+      arg0: BytesLike,
       arg1: string,
       arg2: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  createUnbackedDebt(
-    arg0: string,
-    arg1: string,
-    arg2: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  transferDebt(
-    arg0: string,
+  modifyCollateral(
+    arg0: BytesLike,
     arg1: string,
     arg2: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    createUnbackedDebt(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    transferDebt(
-      arg0: string,
+    modifyCollateral(
+      arg0: BytesLike,
       arg1: string,
       arg2: BigNumberish,
       overrides?: CallOverrides
@@ -138,15 +108,8 @@ export class LedgerLike extends BaseContract {
   filters: {};
 
   estimateGas: {
-    createUnbackedDebt(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    transferDebt(
-      arg0: string,
+    modifyCollateral(
+      arg0: BytesLike,
       arg1: string,
       arg2: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -154,15 +117,8 @@ export class LedgerLike extends BaseContract {
   };
 
   populateTransaction: {
-    createUnbackedDebt(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    transferDebt(
-      arg0: string,
+    modifyCollateral(
+      arg0: BytesLike,
       arg1: string,
       arg2: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }

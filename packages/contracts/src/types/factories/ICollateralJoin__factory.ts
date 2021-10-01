@@ -4,17 +4,20 @@
 
 import { Contract, Signer, utils } from "ethers";
 import { Provider } from "@ethersproject/providers";
-import type { TokenLike, TokenLikeInterface } from "../TokenLike";
+import type {
+  ICollateralJoin,
+  ICollateralJoinInterface,
+} from "../ICollateralJoin";
 
 const _abi = [
   {
     inputs: [],
-    name: "decimals",
+    name: "collateral",
     outputs: [
       {
-        internalType: "uint8",
+        internalType: "address",
         name: "",
-        type: "uint8",
+        type: "address",
       },
     ],
     stateMutability: "view",
@@ -24,23 +27,17 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
-        name: "",
+        name: "position",
         type: "address",
       },
       {
         internalType: "uint256",
-        name: "",
+        name: "amount",
         type: "uint256",
       },
     ],
-    name: "transfer",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    name: "deposit",
+    outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
@@ -48,42 +45,31 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "",
+        name: "position",
         type: "address",
       },
       {
         internalType: "uint256",
-        name: "",
+        name: "amount",
         type: "uint256",
       },
     ],
-    name: "transferFrom",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    name: "withdraw",
+    outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
 ];
 
-export class TokenLike__factory {
+export class ICollateralJoin__factory {
   static readonly abi = _abi;
-  static createInterface(): TokenLikeInterface {
-    return new utils.Interface(_abi) as TokenLikeInterface;
+  static createInterface(): ICollateralJoinInterface {
+    return new utils.Interface(_abi) as ICollateralJoinInterface;
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): TokenLike {
-    return new Contract(address, _abi, signerOrProvider) as TokenLike;
+  ): ICollateralJoin {
+    return new Contract(address, _abi, signerOrProvider) as ICollateralJoin;
   }
 }

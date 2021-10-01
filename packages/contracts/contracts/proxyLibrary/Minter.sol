@@ -1,39 +1,85 @@
 pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../core/Ledger.sol";
-import "../core/CollateralJoin.sol";
-import "../core/StablecoinJoin.sol";
-import "../core/SavingsAccount.sol";
+
+interface ILedger {
+  function collateralTypes(bytes32 collateralType)
+    external
+    view
+    returns (
+      uint256 normalizedDebt,
+      uint256 accumulatedRate,
+      uint256 safetyPrice,
+      uint256 debtCeiling,
+      uint256 debtFloor
+    );
+
+  function modifyPositionCollateralization(
+    bytes32 collateralType,
+    address position,
+    address collateralSource,
+    address debtDestination,
+    int256 collateralDelta,
+    int256 normalizedDebtDelta
+  ) external;
+}
+
+interface ICollateralJoin {
+  function collateral() external view returns (address);
+
+  function deposit(address position, uint256 amount) external;
+
+  function withdraw(address position, uint256 amount) external;
+}
+
+interface IStablecoinJoin {
+  function stablecoin() external view returns (address);
+
+  function deposit(address position, uint256 amount) external;
+
+  function withdraw(address position, uint256 amount) external;
+}
+
+interface ISavingsAccount {
+  function accumulatedRates() external view returns (uint256);
+
+  function updateAccumulatedRate()
+    external
+    returns (uint256 nextAccumulatedRate);
+
+  function deposit(uint256 normalizedSavings) external;
+
+  function withdraw(uint256 normalizedSavings) external;
+}
 
 contract Minter {
   uint256 constant RAY = 10**27;
 
   function joinStablecoin(address stablecoinJoinAddr, uint256 amount) public {
-    StablecoinJoin stablecoinJoin = StablecoinJoin(stablecoinJoinAddr);
-    IERC20 stablecoin = IERC20(address(stablecoinJoin.stablecoin()));
+    IStablecoinJoin stablecoinJoin = IStablecoinJoin(stablecoinJoinAddr);
+    IERC20 stablecoin = IERC20(stablecoinJoin.stablecoin());
     stablecoin.transferFrom(msg.sender, address(this), amount);
     stablecoin.approve(stablecoinJoinAddr, amount);
     stablecoinJoin.deposit(address(this), amount);
   }
 
   function joinCollateral(address collateralJoinAddr, uint256 amount) public {
-    CollateralJoin collateralJoin = CollateralJoin(collateralJoinAddr);
-    IERC20 collateral = IERC20(address(collateralJoin.collateral()));
+    ICollateralJoin collateralJoin = ICollateralJoin(collateralJoinAddr);
+    IERC20 collateral = IERC20(collateralJoin.collateral());
     collateral.transferFrom(msg.sender, address(this), amount);
     collateral.approve(collateralJoinAddr, amount);
     collateralJoin.deposit(address(this), amount);
   }
 
   function exitStablecoin(address stablecoinJoinAddr, uint256 amount) public {
-    StablecoinJoin stablecoinJoin = StablecoinJoin(stablecoinJoinAddr);
+    IStablecoinJoin stablecoinJoin = IStablecoinJoin(stablecoinJoinAddr);
     IERC20 stablecoin = IERC20(address(stablecoinJoin.stablecoin()));
     stablecoinJoin.withdraw(address(this), amount);
     stablecoin.transfer(msg.sender, amount);
   }
 
   function exitCollateral(address collateralJoinAddr, uint256 amount) public {
-    CollateralJoin collateralJoin = CollateralJoin(collateralJoinAddr);
+    ICollateralJoin collateralJoin = ICollateralJoin(collateralJoinAddr);
     IERC20 collateral = IERC20(address(collateralJoin.collateral()));
     collateralJoin.withdraw(address(this), amount);
     collateral.transfer(msg.sender, amount);
@@ -47,7 +93,7 @@ contract Minter {
     int256 collateralDelta,
     int256 normalizedDebtDelta
   ) public {
-    Ledger ledger = Ledger(ledgerAddr);
+    ILedger ledger = ILedger(ledgerAddr);
     (, uint256 accumulatedRate, , , ) = ledger.collateralTypes(collateralType);
 
     // Deposit collateral if collateralDelta is positive
@@ -88,7 +134,7 @@ contract Minter {
     address stablecoinJoinAddr,
     int256 debtDelta
   ) public {
-    SavingsAccount savingsAccount = SavingsAccount(savingsAccountAddr);
+    ISavingsAccount savingsAccount = ISavingsAccount(savingsAccountAddr);
     savingsAccount.updateAccumulatedRate();
     uint256 accumulatedRates = savingsAccount.accumulatedRates();
 

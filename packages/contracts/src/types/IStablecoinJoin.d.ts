@@ -19,34 +19,34 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface TokenLikeInterface extends ethers.utils.Interface {
+interface IStablecoinJoinInterface extends ethers.utils.Interface {
   functions: {
-    "decimals()": FunctionFragment;
-    "transfer(address,uint256)": FunctionFragment;
-    "transferFrom(address,address,uint256)": FunctionFragment;
+    "deposit(address,uint256)": FunctionFragment;
+    "stablecoin()": FunctionFragment;
+    "withdraw(address,uint256)": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "transfer",
+    functionFragment: "deposit",
     values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "transferFrom",
-    values: [string, string, BigNumberish]
+    functionFragment: "stablecoin",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "withdraw",
+    values: [string, BigNumberish]
   ): string;
 
-  decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "transferFrom",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "stablecoin", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
 
   events: {};
 }
 
-export class TokenLike extends BaseContract {
+export class IStablecoinJoin extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -87,89 +87,84 @@ export class TokenLike extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: TokenLikeInterface;
+  interface: IStablecoinJoinInterface;
 
   functions: {
-    decimals(overrides?: CallOverrides): Promise<[number]>;
-
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      position: string,
+      amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    stablecoin(overrides?: CallOverrides): Promise<[string]>;
+
+    withdraw(
+      position: string,
+      amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  decimals(overrides?: CallOverrides): Promise<number>;
-
-  transfer(
-    arg0: string,
-    arg1: BigNumberish,
+  deposit(
+    position: string,
+    amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  transferFrom(
-    arg0: string,
-    arg1: string,
-    arg2: BigNumberish,
+  stablecoin(overrides?: CallOverrides): Promise<string>;
+
+  withdraw(
+    position: string,
+    amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    decimals(overrides?: CallOverrides): Promise<number>;
-
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      position: string,
+      amount: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    stablecoin(overrides?: CallOverrides): Promise<string>;
+
+    withdraw(
+      position: string,
+      amount: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
   };
 
   filters: {};
 
   estimateGas: {
-    decimals(overrides?: CallOverrides): Promise<BigNumber>;
-
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      position: string,
+      amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    stablecoin(overrides?: CallOverrides): Promise<BigNumber>;
+
+    withdraw(
+      position: string,
+      amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      position: string,
+      amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    stablecoin(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    withdraw(
+      position: string,
+      amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

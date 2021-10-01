@@ -1,16 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./ILedger.sol";
-import "./IToken.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+interface TokenLike {
+  function mint(address, uint256) external;
+
+  function burnFrom(address, uint256) external;
+}
+
+interface LedgerLike {
+  function transferDebt(
+    address,
+    address,
+    uint256
+  ) external;
+}
 
 contract StablecoinJoin is Initializable {
   uint256 constant ONE = 10**27;
 
   mapping(address => uint256) public authorizedAccounts;
-  ILedger public ledger; // CDP Engine
-  IToken public stablecoin; // Stablecoin Token
+  LedgerLike public ledger; // CDP Engine
+  TokenLike public stablecoin; // Stablecoin Token
   uint256 public live; // Active Flag
 
   // --- Events ---
@@ -22,8 +34,8 @@ contract StablecoinJoin is Initializable {
   function initialize(address ledger_, address stablecoin_) public initializer {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
-    ledger = ILedger(ledger_);
-    stablecoin = IToken(stablecoin_);
+    ledger = LedgerLike(ledger_);
+    stablecoin = TokenLike(stablecoin_);
     emit GrantAuthorization(msg.sender);
   }
 

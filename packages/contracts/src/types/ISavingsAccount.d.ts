@@ -19,34 +19,46 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface TokenLikeInterface extends ethers.utils.Interface {
+interface ISavingsAccountInterface extends ethers.utils.Interface {
   functions: {
-    "decimals()": FunctionFragment;
-    "transfer(address,uint256)": FunctionFragment;
-    "transferFrom(address,address,uint256)": FunctionFragment;
+    "accumulatedRates()": FunctionFragment;
+    "deposit(uint256)": FunctionFragment;
+    "updateAccumulatedRate()": FunctionFragment;
+    "withdraw(uint256)": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "transfer",
-    values: [string, BigNumberish]
+    functionFragment: "accumulatedRates",
+    values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "transferFrom",
-    values: [string, string, BigNumberish]
+    functionFragment: "deposit",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateAccumulatedRate",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "withdraw",
+    values: [BigNumberish]
   ): string;
 
-  decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "transferFrom",
+    functionFragment: "accumulatedRates",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "updateAccumulatedRate",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
 
   events: {};
 }
 
-export class TokenLike extends BaseContract {
+export class ISavingsAccount extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -87,89 +99,92 @@ export class TokenLike extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: TokenLikeInterface;
+  interface: ISavingsAccountInterface;
 
   functions: {
-    decimals(overrides?: CallOverrides): Promise<[number]>;
+    accumulatedRates(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      normalizedSavings: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateAccumulatedRate(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    withdraw(
+      normalizedSavings: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  decimals(overrides?: CallOverrides): Promise<number>;
+  accumulatedRates(overrides?: CallOverrides): Promise<BigNumber>;
 
-  transfer(
-    arg0: string,
-    arg1: BigNumberish,
+  deposit(
+    normalizedSavings: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  transferFrom(
-    arg0: string,
-    arg1: string,
-    arg2: BigNumberish,
+  updateAccumulatedRate(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  withdraw(
+    normalizedSavings: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    decimals(overrides?: CallOverrides): Promise<number>;
+    accumulatedRates(overrides?: CallOverrides): Promise<BigNumber>;
 
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      normalizedSavings: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateAccumulatedRate(overrides?: CallOverrides): Promise<BigNumber>;
+
+    withdraw(
+      normalizedSavings: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
   };
 
   filters: {};
 
   estimateGas: {
-    decimals(overrides?: CallOverrides): Promise<BigNumber>;
+    accumulatedRates(overrides?: CallOverrides): Promise<BigNumber>;
 
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      normalizedSavings: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateAccumulatedRate(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    withdraw(
+      normalizedSavings: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    accumulatedRates(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    transfer(
-      arg0: string,
-      arg1: BigNumberish,
+    deposit(
+      normalizedSavings: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    transferFrom(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateAccumulatedRate(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    withdraw(
+      normalizedSavings: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

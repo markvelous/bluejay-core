@@ -1,16 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./ILedger.sol";
-import "./IToken.sol";
-
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+interface TokenLike {
+  function decimals() external view returns (uint8);
+
+  function transfer(address, uint256) external returns (bool);
+
+  function transferFrom(
+    address,
+    address,
+    uint256
+  ) external returns (bool);
+}
+
+interface LedgerLike {
+  function modifyCollateral(
+    bytes32,
+    address,
+    int256
+  ) external;
+}
 
 contract CollateralJoin is Initializable {
   mapping(address => uint256) public authorizedAccounts;
-  ILedger public ledger; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   bytes32 public collateralType; // Collateral Type
-  IToken public collateral;
+  TokenLike public collateral;
   uint256 public decimals;
   uint256 public live; // Active Flag
 
@@ -27,9 +44,9 @@ contract CollateralJoin is Initializable {
   ) public initializer {
     authorizedAccounts[msg.sender] = 1;
     live = 1;
-    ledger = ILedger(ledger_);
+    ledger = LedgerLike(ledger_);
     collateralType = collateralType_;
-    collateral = IToken(collateral_);
+    collateral = TokenLike(collateral_);
     decimals = collateral.decimals();
     emit GrantAuthorization(msg.sender);
   }

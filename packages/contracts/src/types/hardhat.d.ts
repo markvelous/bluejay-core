@@ -145,6 +145,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.CollateralJoin__factory>;
     getContractFactory(
+      name: "LedgerLike",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.LedgerLike__factory>;
+    getContractFactory(
+      name: "TokenLike",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TokenLike__factory>;
+    getContractFactory(
       name: "AccountingEngineLike",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.AccountingEngineLike__factory>;
@@ -245,6 +253,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OracleRelayer__factory>;
     getContractFactory(
+      name: "LedgerLike",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.LedgerLike__factory>;
+    getContractFactory(
       name: "SavingsAccount",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.SavingsAccount__factory>;
@@ -253,9 +265,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Stablecoin__factory>;
     getContractFactory(
+      name: "LedgerLike",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.LedgerLike__factory>;
+    getContractFactory(
       name: "StablecoinJoin",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.StablecoinJoin__factory>;
+    getContractFactory(
+      name: "TokenLike",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TokenLike__factory>;
     getContractFactory(
       name: "LedgerLike",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -300,6 +320,22 @@ declare module "hardhat/types/runtime" {
       name: "ProxyRegistry",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ProxyRegistry__factory>;
+    getContractFactory(
+      name: "ICollateralJoin",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ICollateralJoin__factory>;
+    getContractFactory(
+      name: "ILedger",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ILedger__factory>;
+    getContractFactory(
+      name: "ISavingsAccount",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ISavingsAccount__factory>;
+    getContractFactory(
+      name: "IStablecoinJoin",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IStablecoinJoin__factory>;
     getContractFactory(
       name: "Minter",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -487,6 +523,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.CollateralJoin>;
     getContractAt(
+      name: "LedgerLike",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.LedgerLike>;
+    getContractAt(
+      name: "TokenLike",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TokenLike>;
+    getContractAt(
       name: "AccountingEngineLike",
       address: string,
       signer?: ethers.Signer
@@ -612,6 +658,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.OracleRelayer>;
     getContractAt(
+      name: "LedgerLike",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.LedgerLike>;
+    getContractAt(
       name: "SavingsAccount",
       address: string,
       signer?: ethers.Signer
@@ -622,10 +673,20 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Stablecoin>;
     getContractAt(
+      name: "LedgerLike",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.LedgerLike>;
+    getContractAt(
       name: "StablecoinJoin",
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.StablecoinJoin>;
+    getContractAt(
+      name: "TokenLike",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TokenLike>;
     getContractAt(
       name: "LedgerLike",
       address: string,
@@ -681,6 +742,26 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.ProxyRegistry>;
+    getContractAt(
+      name: "ICollateralJoin",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ICollateralJoin>;
+    getContractAt(
+      name: "ILedger",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ILedger>;
+    getContractAt(
+      name: "ISavingsAccount",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ISavingsAccount>;
+    getContractAt(
+      name: "IStablecoinJoin",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IStablecoinJoin>;
     getContractAt(
       name: "Minter",
       address: string,

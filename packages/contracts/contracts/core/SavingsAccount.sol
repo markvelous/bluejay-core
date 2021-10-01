@@ -1,8 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./ILedger.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+interface LedgerLike {
+  function transferDebt(
+    address,
+    address,
+    uint256
+  ) external;
+
+  function createUnbackedDebt(
+    address,
+    address,
+    uint256
+  ) external;
+}
 
 contract SavingsAccount is Initializable {
   uint256 constant ONE = 10**27;
@@ -14,7 +27,7 @@ contract SavingsAccount is Initializable {
   uint256 public savingsRate; // The Savings Rate          [ray]
   uint256 public accumulatedRates; // The Rate Accumulator          [ray]
 
-  ILedger public ledger; // CDP Engine
+  LedgerLike public ledger; // CDP Engine
   address public accountingEngine; // Debt Engine
   uint256 public lastUpdated; // Time of last drip     [unix epoch time]
 
@@ -36,7 +49,7 @@ contract SavingsAccount is Initializable {
   // --- Init ---
   function initialize(address ledger_) public initializer {
     authorizedAccounts[msg.sender] = 1;
-    ledger = ILedger(ledger_);
+    ledger = LedgerLike(ledger_);
     savingsRate = ONE;
     accumulatedRates = ONE;
     lastUpdated = block.timestamp;
