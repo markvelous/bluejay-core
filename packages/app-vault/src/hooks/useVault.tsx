@@ -1,10 +1,9 @@
 import { useEthers, useContractCall, ContractCall, useContractFunction } from "@usedapp/core";
-import { abi as ProxyRegistryAbi } from "@bluejay/contracts/artifacts/contracts/proxy/ProxyRegistry.sol/ProxyRegistry.json";
+import ProxyRegistryAbi from "@bluejay/contracts/abi/ProxyRegistry.json";
 import { Contract, utils } from "ethers";
 import { config } from "../config";
-import deployedContracts from "../fixtures/deployment/contracts.json";
+import { proxyRegistryAddress } from "../fixtures/deployments";
 
-const proxyRegistryAddress = deployedContracts.local.ProxyRegistry;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxyRegistryContract = new Contract(proxyRegistryAddress, ProxyRegistryAbi) as any;
 
