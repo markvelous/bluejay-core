@@ -1,6 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { constants, Contract } from "ethers";
-import { ethers, network } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { dirSync } from "tmp";
 import { expect } from "chai";
 import { deployCore } from "../src/deployCore";
@@ -52,11 +52,13 @@ describe("Minter", () => {
       stablecoinJoin,
       stablecoin,
       feesEngine,
-    } = await deployCore({
-      network: network.name,
-      transactionCache: `${name}/tx.json`,
-      deploymentCache: `${name}/deploy.json`,
-    });
+    } = await deployCore(
+      {
+        transactionCache: `${name}/tx.json`,
+        deploymentCache: `${name}/deploy.json`,
+      },
+      hre
+    );
     const { dsProxy } = await deployDsProxy();
     const minter = await deployMinter();
 
@@ -185,11 +187,13 @@ describe("Minter", () => {
       stablecoinJoin,
       stablecoin,
       feesEngine,
-    } = await deployCore({
-      network: network.name,
-      transactionCache: `${name}/tx.json`,
-      deploymentCache: `${name}/deploy.json`,
-    });
+    } = await deployCore(
+      {
+        transactionCache: `${name}/tx.json`,
+        deploymentCache: `${name}/deploy.json`,
+      },
+      hre
+    );
     const { dsProxy } = await deployDsProxy();
     const minter = await deployMinter();
 
@@ -286,11 +290,13 @@ describe("Minter", () => {
       stablecoinJoin,
       stablecoin,
       savingsAccount,
-    } = await deployCore({
-      network: network.name,
-      transactionCache: `${name}/tx.json`,
-      deploymentCache: `${name}/deploy.json`,
-    });
+    } = await deployCore(
+      {
+        transactionCache: `${name}/tx.json`,
+        deploymentCache: `${name}/deploy.json`,
+      },
+      hre
+    );
     const { dsProxy } = await deployDsProxy();
     const minter = await deployMinter();
 

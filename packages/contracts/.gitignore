@@ -1,2 +1,3 @@
 .openzeppelin/unknown-*.json
 dist/
+abi/

@@ -83,7 +83,8 @@
     "start:js": "sleep 2 && react-scripts start",
     "storybook": "start-storybook -p 9009 -s public",
     "storybook:build": "npm run build:css && build-storybook -s public",
-    "test": "react-scripts test"
+    "test": "react-scripts test",
+    "deploy:local": "cd ../contracts && hh deployInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network local"
   },
   "config": {
     "commitizen": {

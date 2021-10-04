@@ -1,4 +1,4 @@
-import { network, ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { getLogger, enableAllLog } from "../src/debug";
 import { deployCore } from "../src/deployCore";
 
@@ -9,11 +9,13 @@ const TRANSACTION_CACHE_PATH = `${__dirname}/core-transaction-cache.json`;
 
 ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR);
 enableAllLog();
-deployCore({
-  network: network.name,
-  deploymentCache: DEPLOYMENT_CACHE_PATH,
-  transactionCache: TRANSACTION_CACHE_PATH,
-})
+deployCore(
+  {
+    deploymentCache: DEPLOYMENT_CACHE_PATH,
+    transactionCache: TRANSACTION_CACHE_PATH,
+  },
+  hre
+)
   .then(() => process.exit(0))
   .catch((err) => {
     error(err);

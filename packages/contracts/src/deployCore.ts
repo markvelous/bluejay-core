@@ -1,3 +1,4 @@
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { constants, utils } from "ethers";
 import { deploymentParameters } from "./deploymentParameter";
 import { buildCachedDeployments } from "./cachedDeployments";
@@ -6,15 +7,16 @@ import { exp } from "../test/utils";
 const MINTER_ROLE =
   "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
 
-export const deployCore = async ({
-  network,
-  deploymentCache,
-  transactionCache,
-}: {
-  network: string;
-  deploymentCache: string;
-  transactionCache: string;
-}) => {
+export const deployCore = async (
+  {
+    deploymentCache,
+    transactionCache,
+  }: {
+    deploymentCache: string;
+    transactionCache: string;
+  },
+  hre: HardhatRuntimeEnvironment
+) => {
   const transactionOverrides = { gasPrice: utils.parseUnits("10", "gwei") };
   const {
     deployBeaconOrGetInstance,
@@ -23,12 +25,13 @@ export const deployCore = async ({
     deployUupsOrGetInstance,
     executeTransaction,
   } = buildCachedDeployments({
-    network,
+    network: hre.network.name,
     deploymentCachePath: deploymentCache,
     transactionCachePath: transactionCache,
     skipDeploymentCache: false,
     skipTransactionCache: false,
     transactionOverrides,
+    hre,
   });
   const collateralType =
     "0x0000000000000000000000000000000000000000000000000000000000000001";

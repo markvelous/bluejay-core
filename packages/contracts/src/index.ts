@@ -1,2 +1,2 @@
 export { deployCore } from "./deployCore";
-export * from "./types";
+export * from "./contracts";

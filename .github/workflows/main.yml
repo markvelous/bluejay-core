@@ -25,11 +25,11 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: bootstrap project
-        run: npx lerna bootstrap
-
       - name: setup env
         run: cp packages/contracts/.env.example packages/contracts/.env
+
+      - name: bootstrap project
+        run: npx lerna bootstrap
 
       - name: Hardhat Test
         run: npm run test

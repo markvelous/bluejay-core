@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Contract, ContractFactory, ContractTransaction } from "ethers";
 import { readFileSync, existsSync, writeFileSync } from "fs";
 import { getLogger } from "./debug";
@@ -52,6 +52,7 @@ const getInitializerData = (
 };
 
 export const buildCachedDeployments = ({
+  hre,
   deploymentCachePath,
   transactionCachePath,
   network,
@@ -60,6 +61,7 @@ export const buildCachedDeployments = ({
   saveCache = true,
   transactionOverrides = {},
 }: {
+  hre: HardhatRuntimeEnvironment;
   deploymentCachePath: string;
   transactionCachePath: string;
   network: string;
@@ -68,6 +70,7 @@ export const buildCachedDeployments = ({
   skipTransactionCache?: boolean;
   transactionOverrides: any;
 }) => {
+  const { ethers } = hre;
   const deploymentCache = buildDeploymentCache(
     network,
     deploymentCachePath,
