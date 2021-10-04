@@ -5,7 +5,7 @@ import { Layout } from "../Layout";
 import { collaterals } from "../../fixtures/deployments";
 import { useParams } from "react-router-dom";
 
-export const VaultDetailContainer: FunctionComponent = () => {
+export const VaultStablecoinSelectContainer: FunctionComponent = () => {
   const { vaultAddr } = useParams<{ vaultAddr: string }>();
   return (
     <Layout>
