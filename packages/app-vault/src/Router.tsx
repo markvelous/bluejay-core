@@ -4,6 +4,7 @@ import { Home } from "./views/Home";
 import { Vault } from "./views/Vault";
 import { VaultStablecoinSelect } from "./views/VaultStablecoinSelect";
 import { VaultDetails } from "./views/VaultDetails";
+import { CollateralFaucet } from "./views/CollateralFaucet";
 
 export const Router = (): ReactElement => {
   return (
@@ -11,6 +12,9 @@ export const Router = (): ReactElement => {
       <Switch>
         <Route exact path="/">
           <Home />
+        </Route>
+        <Route exact path="/faucet">
+          <CollateralFaucet />
         </Route>
         <Route exact path="/vault">
           <Vault />

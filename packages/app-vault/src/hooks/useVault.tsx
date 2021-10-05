@@ -3,6 +3,7 @@ import ProxyRegistryAbi from "@bluejay/contracts/abi/ProxyRegistry.json";
 import { Contract, utils } from "ethers";
 import { config } from "../config";
 import { proxyRegistryAddress } from "../fixtures/deployments";
+import { switchNetwork } from "../utils/metamask";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxyRegistryContract = new Contract(proxyRegistryAddress, ProxyRegistryAbi) as any;
@@ -48,26 +49,6 @@ type VaultState =
   | VaultMissingState
   | ErrorState
   | DeployingVaultState;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare let window: any;
-const switchNetwork = async (): Promise<void> =>
-  window.ethereum.request({
-    method: "wallet_addEthereumChain",
-    params: [
-      {
-        chainId: config.network.chainId,
-        chainName: config.network.name,
-        nativeCurrency: {
-          name: config.network.nativeCurrency,
-          symbol: config.network.nativeCurrency,
-          decimals: 18,
-        },
-        rpcUrls: [config.network.publicRpc],
-        blockExplorerUrls: [config.network.blockExplorer],
-      },
-    ],
-  });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TypedContractCall<T extends any[]> =

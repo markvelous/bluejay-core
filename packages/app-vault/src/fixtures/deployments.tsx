@@ -8,6 +8,7 @@ export const ledgerAddress = contracts[config.environment].ProxyLedger;
 export const oracleRelayerAddress = contracts[config.environment].ProxyOracleRelayer;
 export const feesEngineAddress = contracts[config.environment].ProxyFeesEngine;
 export const savingsAccountAddress = contracts[config.environment].ProxySavingsAccount;
+export const collateralFaucetAddress = contracts[config.environment].SimpleCollateral;
 
 interface Collateral {
   name: string;
