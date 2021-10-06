@@ -41,7 +41,8 @@
     "ProxyLiquidationEngine": "0x4593ed9CbE6003e687e5e77368534bb04b162503",
     "ProxyLiquidationAuction": "0xCd7c00Ac6dc51e8dCc773971Ac9221cC582F3b1b",
     "ProxyDiscountCalculator": "0x8ac87219a0F5639BC01b470F87BA2b26356CB2B9",
-    "ProxyRegistry": "0x74Df809b1dfC099E8cdBc98f6a8D1F5c2C3f66f8"
+    "ProxyRegistry": "0x74Df809b1dfC099E8cdBc98f6a8D1F5c2C3f66f8",
+    "ProxyHelper": "0x398E4948e373Db819606A459456176D31C3B1F91"
   },
   "development": {
     "SimpleCollateral": "0xb0013549fD2f6e12590EB0C1f44470153a8d7f08",
@@ -85,6 +86,7 @@
     "ProxyLiquidationEngine": "0xE7D4FBa909ED45DBf886eE27af540dc7Fa3317Fa",
     "ProxyLiquidationAuction": "0x58FB273F8f86a56d343AB5FDbfd989Ee14db4442",
     "ProxyDiscountCalculator": "0x236bc872C5cc27146C267DCC2469281B86Ad1C8b",
-    "ProxyRegistry": "0xEC9A190F1fEF76234A96360d40EE4815c1b14d30"
+    "ProxyRegistry": "0xEC9A190F1fEF76234A96360d40EE4815c1b14d30",
+    "ProxyHelper": "0xa5CBd443bBA1AF9B1aA4deC0a9f2A19E1C682bE5"
   }
 }

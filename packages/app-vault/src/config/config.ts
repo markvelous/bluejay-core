@@ -5,7 +5,8 @@ import { ChainId } from "@usedapp/core";
 // staging - staging deployment on ploygon
 // production - production deployment on ploygon
 type ENVIRONMENT = "local" | "development" | "staging" | "production";
-const environment = (process.env.REACT_ENVIRONMENT ?? "local") as ENVIRONMENT;
+const environment = (process.env.REACT_APP_ENVIRONMENT ?? "local") as ENVIRONMENT;
+const multicallAddr = process.env.REACT_APP_MULTICALL_ADDR;
 
 const generateNetwork = (
   env: ENVIRONMENT
@@ -16,6 +17,7 @@ const generateNetwork = (
   publicRpc: string;
   nativeCurrency: string;
   blockExplorer: string;
+  multicallAddr?: string;
 } => {
   if (env === "local") {
     return {
@@ -25,6 +27,7 @@ const generateNetwork = (
       publicRpc: `http://localhost:8545`,
       nativeCurrency: "MATIC",
       blockExplorer: "",
+      multicallAddr,
     };
   }
   if (env === "development") {
@@ -35,6 +38,7 @@ const generateNetwork = (
       publicRpc: `https://rpc-mumbai.matic.today`,
       nativeCurrency: "MATIC",
       blockExplorer: "https://mumbai.polygonscan.com/",
+      multicallAddr,
     };
   }
   // staging or production
@@ -45,6 +49,7 @@ const generateNetwork = (
     publicRpc: `https://rpc-mainnet.matic.network`,
     nativeCurrency: "MATIC",
     blockExplorer: "https://polygonscan.com/",
+    multicallAddr,
   };
 };
 

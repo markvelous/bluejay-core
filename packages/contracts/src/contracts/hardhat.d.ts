@@ -329,9 +329,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IStablecoinJoin__factory>;
     getContractFactory(
-      name: "Minter",
+      name: "ProxyHelper",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Minter__factory>;
+    ): Promise<Contracts.ProxyHelper__factory>;
     getContractFactory(
       name: "SimpleCollateral",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -745,10 +745,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IStablecoinJoin>;
     getContractAt(
-      name: "Minter",
+      name: "ProxyHelper",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.Minter>;
+    ): Promise<Contracts.ProxyHelper>;
     getContractAt(
       name: "SimpleCollateral",
       address: string,

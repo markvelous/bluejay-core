@@ -4,11 +4,14 @@ import deployedContracts from "../fixtures/deployment/contracts.json";
 export const contracts: { [network: string]: { [contract: string]: string } } = deployedContracts;
 
 export const proxyRegistryAddress = contracts[config.environment].ProxyRegistry;
+export const proxyHelperAddress = contracts[config.environment].ProxyHelper;
 export const ledgerAddress = contracts[config.environment].ProxyLedger;
 export const oracleRelayerAddress = contracts[config.environment].ProxyOracleRelayer;
 export const feesEngineAddress = contracts[config.environment].ProxyFeesEngine;
 export const savingsAccountAddress = contracts[config.environment].ProxySavingsAccount;
 export const collateralFaucetAddress = contracts[config.environment].SimpleCollateral;
+export const stablecoinJoinAddress = contracts[config.environment].ProxyStablecoinJoin;
+export const collateralJoinAddress = contracts[config.environment].ProxyCollateralJoin;
 
 interface Collateral {
   name: string;

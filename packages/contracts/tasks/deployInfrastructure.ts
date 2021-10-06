@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { enableAllLog } from "../src/debug";
 import { deployCore } from "../src/deployCore";
 import { deployProxy } from "../src/deployProxy";
+import { deployProxyHelper } from "../src/deployProxyHelper";
 
 export const deployInfrastructure = async (
   {
@@ -24,6 +25,13 @@ export const deployInfrastructure = async (
     hre
   );
   await deployProxy(
+    {
+      deploymentCache,
+      transactionCache,
+    },
+    hre
+  );
+  await deployProxyHelper(
     {
       deploymentCache,
       transactionCache,

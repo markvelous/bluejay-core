@@ -2,9 +2,9 @@ import React, { ReactElement } from "react";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 import { Home } from "./views/Home";
 import { Vault } from "./views/Vault";
-import { VaultStablecoinSelect } from "./views/VaultStablecoinSelect";
 import { VaultDetails } from "./views/VaultDetails";
 import { CollateralFaucet } from "./views/CollateralFaucet";
+import { VaultPositionManager } from "./views/VaultPositionManager";
 
 export const Router = (): ReactElement => {
   return (
@@ -20,10 +20,10 @@ export const Router = (): ReactElement => {
           <Vault />
         </Route>
         <Route exact path="/vault/:vaultAddr">
-          <VaultStablecoinSelect />
-        </Route>
-        <Route exact path="/vault/:vaultAddr/:stablecoinAddr">
           <VaultDetails />
+        </Route>
+        <Route exact path="/vault/:vaultAddr/:collateralType">
+          <VaultPositionManager />
         </Route>
       </Switch>
     </BrowserRouter>

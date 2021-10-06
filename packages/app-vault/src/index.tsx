@@ -13,6 +13,13 @@ const dappConfig = {
     [config.network.chainId]: config.network.rpc,
   },
   supportedChains: Object.values(ChainId) as ChainId[],
+  ...(config.network.multicallAddr
+    ? {
+        multicallAddresses: {
+          [config.network.chainId]: config.network.multicallAddr,
+        },
+      }
+    : {}),
 };
 
 ReactDOM.render(

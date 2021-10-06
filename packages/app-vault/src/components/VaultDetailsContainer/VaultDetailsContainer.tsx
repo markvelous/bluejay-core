@@ -2,186 +2,46 @@ import React, { FunctionComponent } from "react";
 import { Button } from "../Button/Button";
 import { Link } from "react-router-dom";
 import { Layout } from "../Layout";
-import {
-  collaterals,
-  getCollateral,
-  savingsAccountAddress,
-  ledgerAddress,
-  oracleRelayerAddress,
-  feesEngineAddress,
-} from "../../fixtures/deployments";
+import { collaterals, getCollateral } from "../../fixtures/deployments";
 import { useParams } from "react-router-dom";
-import { useContractCalls, ContractCall } from "@usedapp/core";
-import { utils, BigNumber } from "ethers";
-import LedgerAbi from "@bluejay/contracts/abi/Ledger.json";
-import OracleRelayerAbi from "@bluejay/contracts/abi/OracleRelayer.json";
-import FeesEngineAbi from "@bluejay/contracts/abi/FeesEngine.json";
-import SavingsAccountAbi from "@bluejay/contracts/abi/SavingsAccount.json";
-import { bnToNum, exp } from "../../utils/number";
+import { BigNumber } from "ethers";
+import { bnToNum } from "../../utils/number";
+import { useVaultDetails, CollateralDetails } from "../../hooks/useVaultDetails";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TypedContractCalls<T extends any[][]> =
-  | {
-      state: "RESOLVED";
-      result: T;
-    }
-  | {
-      state: "UNRESOLVED";
-    };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const useTypedContractCalls = <T extends any[][]>(calls: ContractCall[]): TypedContractCalls<T> => {
-  const results = useContractCalls(calls);
-
-  if (results.every((r) => !r)) {
-    return { state: "UNRESOLVED" };
-  } else {
-    return { state: "RESOLVED", result: results as T };
-  }
-};
-
-interface ResolvedVaultDetails {
-  state: "RESOLVED";
-  savingsRate: BigNumber;
-  normalizedSavings: BigNumber;
-  savings: BigNumber;
-  collaterals: {
-    [collateralType: string]: {
-      debt: BigNumber;
-      lockedCollateral: BigNumber;
-      normalizedDebt: BigNumber;
-      totalNormalizedDebt: BigNumber;
-      accumulatedRate: BigNumber;
-      safetyPrice: BigNumber;
-      debtCeiling: BigNumber;
-      debtFloor: BigNumber;
-      collateralizationRatio: BigNumber;
-      oraclePrice: BigNumber;
-      stabilityFee: BigNumber;
-      globalStabilityFee: BigNumber;
-      collateralStabilityFee: BigNumber;
-    };
-  };
-}
-interface UnresolvedVaultDetails {
-  state: "UNRESOLVED";
-}
-
-export const useVaultDetails = ({
-  proxy,
-  collateralTypes,
-}: {
-  proxy: string;
-  collateralTypes: string[];
-}): UnresolvedVaultDetails | ResolvedVaultDetails => {
-  const collateralStateCalls = collateralTypes.reduce((acc, collateralType) => {
-    return [
-      ...acc,
-      {
-        abi: new utils.Interface(LedgerAbi),
-        address: ledgerAddress,
-        method: "positions",
-        args: [collateralType, proxy],
-      },
-      {
-        abi: new utils.Interface(LedgerAbi),
-        address: ledgerAddress,
-        method: "collateralTypes",
-        args: [collateralType],
-      },
-      {
-        abi: new utils.Interface(OracleRelayerAbi),
-        address: oracleRelayerAddress,
-        method: "collateralTypes",
-        args: [collateralType],
-      },
-      {
-        abi: new utils.Interface(FeesEngineAbi),
-        address: feesEngineAddress,
-        method: "globalStabilityFee",
-        args: [],
-      },
-      {
-        abi: new utils.Interface(FeesEngineAbi),
-        address: feesEngineAddress,
-        method: "collateralTypes",
-        args: [collateralType],
-      },
-    ];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }, [] as { abi: utils.Interface; address: string; method: string; args: any[] }[]);
-  const states = useTypedContractCalls<BigNumber[][]>([
-    {
-      abi: new utils.Interface(SavingsAccountAbi),
-      address: savingsAccountAddress,
-      method: "updateAccumulatedRate",
-      args: [],
-    },
-    {
-      abi: new utils.Interface(SavingsAccountAbi),
-      address: savingsAccountAddress,
-      method: "savings",
-      args: [proxy],
-    },
-    // TODO global stability fee
-    ...collateralStateCalls,
-  ]);
-  if (states.state === "RESOLVED") {
-    const OFFSET_COLLATERALS = 2;
-    const [[savingsRate], [normalizedSavings]] = states.result;
-    const collaterals: {
-      [collateralType: string]: {
-        debt: BigNumber;
-        lockedCollateral: BigNumber;
-        normalizedDebt: BigNumber;
-        totalNormalizedDebt: BigNumber;
-        accumulatedRate: BigNumber;
-        safetyPrice: BigNumber;
-        debtCeiling: BigNumber;
-        debtFloor: BigNumber;
-        collateralizationRatio: BigNumber;
-        oraclePrice: BigNumber;
-        stabilityFee: BigNumber;
-        globalStabilityFee: BigNumber;
-        collateralStabilityFee: BigNumber;
-      };
-    } = {};
-    collateralTypes.forEach((collateralType, index) => {
-      const [lockedCollateral, normalizedDebt] = states.result[index * 5 + OFFSET_COLLATERALS];
-      const [totalNormalizedDebt, accumulatedRate, safetyPrice, debtCeiling, debtFloor] =
-        states.result[index * 5 + 1 + OFFSET_COLLATERALS];
-      const [, collateralizationRatio] = states.result[index * 5 + 2 + OFFSET_COLLATERALS];
-      const [globalStabilityFee] = states.result[index * 5 + 3 + OFFSET_COLLATERALS];
-      const [collateralStabilityFee] = states.result[index * 5 + 4 + OFFSET_COLLATERALS];
-      const debt = normalizedDebt.mul(accumulatedRate).div(exp(27));
-      const oraclePrice = safetyPrice.mul(collateralizationRatio).div(exp(27));
-      const stabilityFee = collateralStabilityFee.add(globalStabilityFee);
-      collaterals[collateralType] = {
-        debt,
-        stabilityFee,
-        globalStabilityFee,
-        collateralStabilityFee,
-        collateralizationRatio,
-        lockedCollateral,
-        normalizedDebt,
-        totalNormalizedDebt,
-        accumulatedRate,
-        safetyPrice,
-        debtCeiling,
-        debtFloor,
-        oraclePrice,
-      };
-    });
-    const savings = normalizedSavings.mul(savingsRate).div(exp(27));
-    return {
-      state: "RESOLVED",
-      savingsRate,
-      normalizedSavings,
-      savings,
-      collaterals,
-    };
-  }
-  return { state: "UNRESOLVED" };
+const CollateralSection: FunctionComponent<{
+  vaultAddr: string;
+  collateralDetails: CollateralDetails;
+  collateral: { name: string; address: string; collateralType: string };
+}> = ({ collateral, collateralDetails, vaultAddr }) => {
+  const { debt, lockedCollateral, collateralizationRatio, oraclePrice } = collateralDetails;
+  return (
+    <div>
+      <h3>Collateral Type: {collateral.name}</h3>
+      <div>
+        <div>
+          <div>
+            <h4>Debt</h4>
+            <div>{debt.toString()}</div>
+          </div>
+          <div>
+            <h4>Locked Collateral</h4>
+            <div>{lockedCollateral.toString()}</div>
+          </div>
+          <div>
+            <h4>Collateralization Ratio</h4>
+            <div>{bnToNum(collateralizationRatio, 27) * 100}%</div>
+          </div>
+          <div>
+            <h4>Oracle Price</h4>
+            <div>{bnToNum(oraclePrice, 27, 4)}</div>
+          </div>
+          <Link to={`/vault/${vaultAddr}/${collateral.collateralType}`}>
+            <Button>Manage Position</Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export const VaultDetailsContainer: FunctionComponent = () => {
@@ -211,31 +71,15 @@ export const VaultDetailsContainer: FunctionComponent = () => {
             <div>
               {collaterals &&
                 Object.keys(collaterals).map((collateralType) => {
-                  const { debt, lockedCollateral, collateralizationRatio, oraclePrice } = collaterals[collateralType];
+                  const collateral = getCollateral(collateralType);
+                  if (!collateral) return null;
                   return (
-                    <div key={collateralType}>
-                      <h3>Collateral Type: {getCollateral(collateralType)?.name}</h3>
-                      <div>
-                        <div>
-                          <div>
-                            <h4>Debt</h4>
-                            <div>{debt.toString()}</div>
-                          </div>
-                          <div>
-                            <h4>Locked Collateral</h4>
-                            <div>{lockedCollateral.toString()}</div>
-                          </div>
-                          <div>
-                            <h4>Collateralization Ratio</h4>
-                            <div>{bnToNum(collateralizationRatio, 27) * 100}%</div>
-                          </div>
-                          <div>
-                            <h4>Oracle Price</h4>
-                            <div>{bnToNum(oraclePrice, 27, 4)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <CollateralSection
+                      key={collateralType}
+                      vaultAddr={vaultAddr}
+                      collateral={collateral}
+                      collateralDetails={collaterals[collateralType]}
+                    />
                   );
                 })}
             </div>

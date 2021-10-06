@@ -1,9 +1,10 @@
-import { useEthers, useContractCall, ContractCall, useContractFunction } from "@usedapp/core";
+import { useEthers, useContractFunction } from "@usedapp/core";
 import ProxyRegistryAbi from "@bluejay/contracts/abi/ProxyRegistry.json";
 import { Contract, utils } from "ethers";
 import { config } from "../config";
 import { proxyRegistryAddress } from "../fixtures/deployments";
 import { switchNetwork } from "../utils/metamask";
+import { useTypedContractCall } from "./utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxyRegistryContract = new Contract(proxyRegistryAddress, ProxyRegistryAbi) as any;
@@ -49,27 +50,6 @@ type VaultState =
   | VaultMissingState
   | ErrorState
   | DeployingVaultState;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TypedContractCall<T extends any[]> =
-  | {
-      state: "RESOLVED";
-      result: T;
-    }
-  | {
-      state: "UNRESOLVED";
-    };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const useTypedContractCall = <T extends any[]>(call: ContractCall): TypedContractCall<T> => {
-  const results = useContractCall(call);
-
-  if (!results) {
-    return { state: "UNRESOLVED" };
-  } else {
-    return { state: "RESOLVED", result: results as T };
-  }
-};
 
 export const useVault = (): VaultState => {
   const { account, chainId, activateBrowserWallet } = useEthers();
