@@ -1,6 +1,6 @@
 {
-  "name": "@bluejay/contracts",
-  "version": "1.0.0",
+  "name": "@bluejayfinance/contracts",
+  "version": "0.0.4",
   "main": "dist/index.js",
   "types": "dist/src/index.d.ts",
   "files": [

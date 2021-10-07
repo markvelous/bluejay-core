@@ -1,9 +1,9 @@
 import { savingsAccountAddress, ledgerAddress, oracleRelayerAddress, feesEngineAddress } from "../fixtures/deployments";
 import { utils, BigNumber } from "ethers";
-import LedgerAbi from "@bluejay/contracts/abi/Ledger.json";
-import OracleRelayerAbi from "@bluejay/contracts/abi/OracleRelayer.json";
-import FeesEngineAbi from "@bluejay/contracts/abi/FeesEngine.json";
-import SavingsAccountAbi from "@bluejay/contracts/abi/SavingsAccount.json";
+import LedgerAbi from "@bluejayfinance/contracts/abi/Ledger.json";
+import OracleRelayerAbi from "@bluejayfinance/contracts/abi/OracleRelayer.json";
+import FeesEngineAbi from "@bluejayfinance/contracts/abi/FeesEngine.json";
+import SavingsAccountAbi from "@bluejayfinance/contracts/abi/SavingsAccount.json";
 import { exp } from "../utils/number";
 import { useTypedContractCalls } from "./utils";
 

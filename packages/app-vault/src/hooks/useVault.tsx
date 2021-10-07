@@ -1,5 +1,5 @@
 import { useEthers, useContractFunction } from "@usedapp/core";
-import ProxyRegistryAbi from "@bluejay/contracts/abi/ProxyRegistry.json";
+import ProxyRegistryAbi from "@bluejayfinance/contracts/abi/ProxyRegistry.json";
 import { Contract, utils } from "ethers";
 import { config } from "../config";
 import { proxyRegistryAddress } from "../fixtures/deployments";
