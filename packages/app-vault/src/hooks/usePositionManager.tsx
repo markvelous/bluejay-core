@@ -241,7 +241,7 @@ export const usePositionManager = ({
   ] = queries.result;
   const debt = normalizedDebt.mul(accumulatedRate).div(exp(27));
   const oraclePrice = safetyPrice.mul(collateralizationRatio).div(exp(27));
-  const positionCollateralizationRatio = lockedCollateral.mul(oraclePrice).div(debt);
+  const positionCollateralizationRatio = debt.gt(0) ? lockedCollateral.mul(oraclePrice).div(debt) : BigNumber.from(0);
   const queryResult = {
     proxyOwner,
     account,
