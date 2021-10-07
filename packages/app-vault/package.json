@@ -1,9 +1,9 @@
 {
-  "name": "@bluejay/app-vault",
+  "name": "@bluejayfinance/app-vault",
   "version": "1.0.0",
   "private": false,
   "dependencies": {
-    "@bluejay/contracts": "1.0.0",
+    "@bluejayfinance/contracts": "1.0.0",
     "@craco/craco": "^6.2.0",
     "@emotion/css": "^11.1.3",
     "@emotion/react": "^11.4.1",

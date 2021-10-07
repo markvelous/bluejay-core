@@ -1,10 +1,10 @@
 import { useEthers, useContractFunction } from "@usedapp/core";
-import DSProxyAbi from "@bluejay/contracts/abi/DSProxy.json";
-import LedgerAbi from "@bluejay/contracts/abi/Ledger.json";
-import OracleRelayerAbi from "@bluejay/contracts/abi/OracleRelayer.json";
-import ProxyHelperAbi from "@bluejay/contracts/abi/ProxyHelper.json";
-import TokenAbi from "@bluejay/contracts/abi/IERC20.json";
-import HelperAbi from "@bluejay/contracts/abi/Helper.json";
+import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
+import LedgerAbi from "@bluejayfinance/contracts/abi/Ledger.json";
+import OracleRelayerAbi from "@bluejayfinance/contracts/abi/OracleRelayer.json";
+import ProxyHelperAbi from "@bluejayfinance/contracts/abi/ProxyHelper.json";
+import TokenAbi from "@bluejayfinance/contracts/abi/IERC20.json";
+import HelperAbi from "@bluejayfinance/contracts/abi/Helper.json";
 
 import { Contract, BigNumber, utils, constants } from "ethers";
 

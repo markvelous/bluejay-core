@@ -1,5 +1,5 @@
 {
-  "name": "@bluejay/contracts",
+  "name": "@bluejayfinance/contracts",
   "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/src/index.d.ts",

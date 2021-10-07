@@ -1,5 +1,5 @@
 import { useEthers, useContractFunction } from "@usedapp/core";
-import SimpleCollateralAbi from "@bluejay/contracts/abi/SimpleCollateral.json";
+import SimpleCollateralAbi from "@bluejayfinance/contracts/abi/SimpleCollateral.json";
 import { BigNumber, Contract, utils } from "ethers";
 import { config } from "../config";
 import { collateralFaucetAddress } from "../fixtures/deployments";
