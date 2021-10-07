@@ -7,6 +7,8 @@ import { useParams } from "react-router-dom";
 import { BigNumber } from "ethers";
 import { bnToNum } from "../../utils/number";
 import { useVaultDetails, CollateralDetails } from "../../hooks/useVaultDetails";
+import { addToken } from "../../utils/metamask";
+import { stablecoinAddress } from "../../fixtures/deployments";
 
 const CollateralSection: FunctionComponent<{
   vaultAddr: string;
@@ -21,11 +23,13 @@ const CollateralSection: FunctionComponent<{
         <div>
           <div>
             <h4>Debt</h4>
-            <div>{debt.toString()}</div>
+            <div>{bnToNum(debt, 18, 2)} MMKT</div>
           </div>
           <div>
             <h4>Locked Collateral</h4>
-            <div>{lockedCollateral.toString()}</div>
+            <div>
+              {bnToNum(lockedCollateral, 18, 2)} {collateral.name}
+            </div>
           </div>
           <div>
             <h4>Collateralization Ratio</h4>
@@ -55,15 +59,20 @@ export const VaultDetailsContainer: FunctionComponent = () => {
     return (
       <Layout>
         <h1 className="pt-6 pb-4">Vault Details</h1>
+        <Button
+          onClick={() => addToken({ tokenAddress: stablecoinAddress, tokenDecimals: 18, tokenSymbol: "FakeMMKT" })}
+        >
+          Add MMKT Token
+        </Button>
         <div>
           <div>
             <div>
               <h2>Total Savings</h2>
-              <div>{savings.toString()}</div>
+              <div>{bnToNum(savings)} MMKT</div>
             </div>
             <div>
               <h2>Total Debt</h2>
-              <div>{totalDebt.toString()}</div>
+              <div>{bnToNum(totalDebt, 18, 2)} MMKT</div>
             </div>
           </div>
           <div>
