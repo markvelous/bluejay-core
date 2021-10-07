@@ -1,0 +1,30 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      GH_PAT: ${{ secrets.GH_PAT }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: Configure CI Git User
+        run: |
+          git config --global user.name '@bluejay'
+          git config --global user.email 'bluejay@users.noreply.github.com'
+
+      - name: bootstrap project
+        run: npx lerna bootstrap
+
+      - name: Publish package
+        run: lerna publish --conventional-commits --yes
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
