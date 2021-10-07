@@ -15,6 +15,9 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
 
+      - name: setup env
+        run: cp packages/contracts/.env.example packages/contracts/.env
+
       - name: Configure CI Git User
         run: |
           git config --global user.name '@bluejay'
