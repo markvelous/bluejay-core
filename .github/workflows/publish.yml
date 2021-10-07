@@ -26,6 +26,9 @@ jobs:
       - name: bootstrap project
         run: npx lerna bootstrap
 
+      - name: build
+        run: cd packages/contracts && npm run build
+
       - name: Publish package
         run: lerna publish --conventional-commits --yes
         env:
