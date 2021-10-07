@@ -17,7 +17,7 @@ export const deployCore = async (
   },
   hre: HardhatRuntimeEnvironment
 ) => {
-  const transactionOverrides = { gasPrice: utils.parseUnits("10", "gwei") };
+  const transactionOverrides = { gasPrice: utils.parseUnits("30", "gwei") };
   const {
     deployBeaconOrGetInstance,
     deployBeaconProxyOrGetInsance,

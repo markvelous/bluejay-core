@@ -13,17 +13,17 @@ const generateNetworks = () => {
     },
     development: {
       url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.DEVELOPMENT_KEY ?? PLACEHOLDER_KEY],
+      accounts: [process.env.DEVELOPMENT_KEY || PLACEHOLDER_KEY],
       chainId: 80001,
     },
     staging: {
       url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.STAGING_KEY ?? PLACEHOLDER_KEY],
+      accounts: [process.env.STAGING_KEY || PLACEHOLDER_KEY],
       chainId: 137,
     },
     production: {
       url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.PRODUCTION_KEY ?? PLACEHOLDER_KEY],
+      accounts: [process.env.PRODUCTION_KEY || PLACEHOLDER_KEY],
       chainId: 137,
     },
   };

@@ -12,7 +12,7 @@ export const deployHelper = async (
   },
   hre: HardhatRuntimeEnvironment
 ) => {
-  const transactionOverrides = { gasPrice: utils.parseUnits("10", "gwei") };
+  const transactionOverrides = { gasPrice: utils.parseUnits("30", "gwei") };
   const { deployOrGetInstance } = buildCachedDeployments({
     network: hre.network.name,
     deploymentCachePath: deploymentCache,
