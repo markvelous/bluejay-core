@@ -39,7 +39,7 @@ const CollateralSection: FunctionComponent<{
             <h4>Oracle Price</h4>
             <div>{bnToNum(oraclePrice, 27, 4)}</div>
           </div>
-          <Link to={`/vault/${vaultAddr}/${collateral.collateralType}`}>
+          <Link to={`/vault/position/${vaultAddr}/${collateral.collateralType}`}>
             <Button>Manage Position</Button>
           </Link>
         </div>
@@ -64,6 +64,9 @@ export const VaultDetailsContainer: FunctionComponent = () => {
         >
           Add MMKT Token
         </Button>
+        <Link to={`/vault/savings/${vaultAddr}`}>
+          <Button>Manage Savings</Button>
+        </Link>
         <div>
           <div>
             <div>
@@ -97,17 +100,5 @@ export const VaultDetailsContainer: FunctionComponent = () => {
       </Layout>
     );
   }
-  return (
-    <Layout>
-      <div className="pt-10 bg-blue-600 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">
-        <div>Vault Addr: {vaultAddr}</div>
-        <div>Collaterals:</div>
-        {collaterals.map((collateral, key) => (
-          <Button key={key}>
-            <Link to={`/vault/${vaultAddr}/${collateral.address}`}>{collateral.name}</Link>
-          </Button>
-        ))}
-      </div>
-    </Layout>
-  );
+  return null;
 };

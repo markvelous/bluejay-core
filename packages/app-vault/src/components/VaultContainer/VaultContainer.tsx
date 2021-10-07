@@ -14,7 +14,7 @@ export const VaultContainer: FunctionComponent = () => {
       {vaultState.state === "UNCONNECTED" && <Button onClick={vaultState.activateBrowserWallet}>Connect</Button>}
       {vaultState.state === "WRONG_NETWORK" && <Button onClick={vaultState.switchNetwork}>Switch Network</Button>}
       {vaultState.state === "VAULT_MISSING" && <Button onClick={vaultState.deployVault}>Deploy Vault</Button>}
-      {vaultState.state === "VAULT_FOUND" && <Redirect to={`/vault/${vaultState.vault}`} />}
+      {vaultState.state === "VAULT_FOUND" && <Redirect to={`/vault/summary/${vaultState.vault}`} />}
     </Layout>
   );
 };

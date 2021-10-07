@@ -132,6 +132,9 @@ export const VaultPositionManagerContainer: FunctionComponent = () => {
     console.log(collateralDelta, debtDelta);
     positionManager.transferCollateralAndDebt(collateralDelta, debtDelta);
   };
+  if (positionManager.state === "UNCONNECTED") {
+    return <div>Unconnected!</div>;
+  }
   if (positionManager.state === "WRONG_NETWORK") {
     return <div>Wrong network!</div>;
   }
