@@ -281,6 +281,18 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TokenLike__factory>;
     getContractFactory(
+      name: "Helper",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Helper__factory>;
+    getContractFactory(
+      name: "IFeesEngine",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IFeesEngine__factory>;
+    getContractFactory(
+      name: "ISavingsAccount",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ISavingsAccount__factory>;
+    getContractFactory(
       name: "DSAuth",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.DSAuth__factory>;
@@ -684,6 +696,21 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.TokenLike>;
+    getContractAt(
+      name: "Helper",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Helper>;
+    getContractAt(
+      name: "IFeesEngine",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IFeesEngine>;
+    getContractAt(
+      name: "ISavingsAccount",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ISavingsAccount>;
     getContractAt(
       name: "DSAuth",
       address: string,

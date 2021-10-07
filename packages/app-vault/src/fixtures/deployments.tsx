@@ -11,7 +11,9 @@ export const feesEngineAddress = contracts[config.environment].ProxyFeesEngine;
 export const savingsAccountAddress = contracts[config.environment].ProxySavingsAccount;
 export const collateralFaucetAddress = contracts[config.environment].SimpleCollateral;
 export const stablecoinJoinAddress = contracts[config.environment].ProxyStablecoinJoin;
+export const stablecoinAddress = contracts[config.environment].ProxyStablecoin;
 export const collateralJoinAddress = contracts[config.environment].ProxyCollateralJoin;
+export const helperAddress = contracts[config.environment].Helper;
 
 interface Collateral {
   name: string;
