@@ -1,10 +1,11 @@
-import { useEthers, useContractCall, ContractCall, useContractFunction } from "@usedapp/core";
-import { abi as ProxyRegistryAbi } from "@bluejay/contracts/artifacts/contracts/proxy/ProxyRegistry.sol/ProxyRegistry.json";
+import { useEthers, useContractFunction } from "@usedapp/core";
+import ProxyRegistryAbi from "@bluejay/contracts/abi/ProxyRegistry.json";
 import { Contract, utils } from "ethers";
 import { config } from "../config";
-import deployedContracts from "../fixtures/deployment/contracts.json";
+import { proxyRegistryAddress } from "../fixtures/deployments";
+import { switchNetwork } from "../utils/metamask";
+import { useTypedContractCall } from "./utils";
 
-const proxyRegistryAddress = deployedContracts.local.ProxyRegistry;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxyRegistryContract = new Contract(proxyRegistryAddress, ProxyRegistryAbi) as any;
 
@@ -49,47 +50,6 @@ type VaultState =
   | VaultMissingState
   | ErrorState
   | DeployingVaultState;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare let window: any;
-const switchNetwork = async (): Promise<void> =>
-  window.ethereum.request({
-    method: "wallet_addEthereumChain",
-    params: [
-      {
-        chainId: config.network.chainId,
-        chainName: config.network.name,
-        nativeCurrency: {
-          name: config.network.nativeCurrency,
-          symbol: config.network.nativeCurrency,
-          decimals: 18,
-        },
-        rpcUrls: [config.network.publicRpc],
-        blockExplorerUrls: [config.network.blockExplorer],
-      },
-    ],
-  });
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TypedContractCall<T extends any[]> =
-  | {
-      state: "RESOLVED";
-      result: T;
-    }
-  | {
-      state: "UNRESOLVED";
-    };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const useTypedContractCall = <T extends any[]>(call: ContractCall): TypedContractCall<T> => {
-  const results = useContractCall(call);
-
-  if (!results) {
-    return { state: "UNRESOLVED" };
-  } else {
-    return { state: "RESOLVED", result: results as T };
-  }
-};
 
 export const useVault = (): VaultState => {
   const { account, chainId, activateBrowserWallet } = useEthers();

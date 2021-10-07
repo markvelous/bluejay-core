@@ -18,3 +18,16 @@ export const toBigNumber = (num: number, decimals = 18): BigNumber => {
   const multiplier = decimals - adjustments;
   return BigNumber.from(num * 10 ** adjustments).mul(exp(multiplier));
 };
+
+export const bnToNum = (num: BigNumber, decimals = 18, precision = 2): number => {
+  const beforeDecimals = num.div(exp(decimals - precision));
+  return beforeDecimals.toNumber() / 10 ** precision;
+};
+
+export const bnRayPow = (ray: BigNumber, pow: number): BigNumber => {
+  const res = ray;
+  for (let i = 0; i < pow; i++) {
+    res.mul(ray).div(exp(27));
+  }
+  return res;
+};

@@ -52,7 +52,7 @@ interface ISavingsAccount {
   function withdraw(uint256 normalizedSavings) external;
 }
 
-contract Minter {
+contract ProxyHelper {
   uint256 constant RAY = 10**27;
 
   function joinStablecoin(address stablecoinJoinAddr, uint256 amount) public {

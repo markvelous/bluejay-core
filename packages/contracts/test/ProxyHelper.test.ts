@@ -22,26 +22,25 @@ const deployDsProxy = async () => {
   return { dsProxy, proxyRegistry };
 };
 
-const deployMinter = async () => {
-  const MinterFactory = await ethers.getContractFactory("Minter");
-  const minter = await MinterFactory.deploy();
-  return minter;
+const deployProxyHelper = async () => {
+  const ProxyHelperFactory = await ethers.getContractFactory("ProxyHelper");
+  const ProxyHelper = await ProxyHelperFactory.deploy();
+  return ProxyHelper;
 };
 
 const getTransactionData = async (
-  minter: Contract,
+  ProxyHelper: Contract,
   method: string,
   args: any[]
 ) => {
-  const { data: depositData } = await minter.populateTransaction[method].apply(
-    null,
-    args
-  );
+  const { data: depositData } = await ProxyHelper.populateTransaction[
+    method
+  ].apply(null, args);
   if (!depositData) throw new Error("No data");
   return depositData;
 };
 
-describe("Minter", () => {
+describe("ProxyHelper", () => {
   it("should allow both deposit and withdrawal of stablecoin & collateral", async () => {
     const [deployer] = await ethers.getSigners();
     const { name, removeCallback } = dirSync({ unsafeCleanup: true });
@@ -60,7 +59,7 @@ describe("Minter", () => {
       hre
     );
     const { dsProxy } = await deployDsProxy();
-    const minter = await deployMinter();
+    const ProxyHelper = await deployProxyHelper();
 
     await collateral.mint(deployer.address, exp(18).mul(1000));
     await collateral.approve(dsProxy.address, constants.MaxUint256);
@@ -68,7 +67,7 @@ describe("Minter", () => {
 
     // Deposit collateral
     const depositCollateralData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -80,7 +79,7 @@ describe("Minter", () => {
       ]
     );
     await dsProxy["execute(address,bytes)"](
-      minter.address,
+      ProxyHelper.address,
       depositCollateralData
     );
 
@@ -95,7 +94,7 @@ describe("Minter", () => {
 
     // Draw out stablecoin
     const mintStablecoinData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -106,7 +105,10 @@ describe("Minter", () => {
         exp(18).mul(100000),
       ]
     );
-    await dsProxy["execute(address,bytes)"](minter.address, mintStablecoinData);
+    await dsProxy["execute(address,bytes)"](
+      ProxyHelper.address,
+      mintStablecoinData
+    );
     expect(
       (
         await ledger.positions(
@@ -127,7 +129,7 @@ describe("Minter", () => {
 
     // Deposit stablecoin
     const repayStablecoinData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -139,7 +141,7 @@ describe("Minter", () => {
       ]
     );
     await dsProxy["execute(address,bytes)"](
-      minter.address,
+      ProxyHelper.address,
       repayStablecoinData
     );
 
@@ -156,7 +158,7 @@ describe("Minter", () => {
 
     // Withdraw collateral
     const withdrawCollateralData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -168,7 +170,7 @@ describe("Minter", () => {
       ]
     );
     await dsProxy["execute(address,bytes)"](
-      minter.address,
+      ProxyHelper.address,
       withdrawCollateralData
     );
     expect(await collateral.balanceOf(deployer.address)).to.equal(
@@ -195,7 +197,7 @@ describe("Minter", () => {
       hre
     );
     const { dsProxy } = await deployDsProxy();
-    const minter = await deployMinter();
+    const ProxyHelper = await deployProxyHelper();
 
     await collateral.mint(deployer.address, exp(18).mul(1000));
     await collateral.approve(dsProxy.address, constants.MaxUint256);
@@ -203,7 +205,7 @@ describe("Minter", () => {
 
     // Deposit collateral & mint stablecoin
     const depositCollateralData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -215,7 +217,7 @@ describe("Minter", () => {
       ]
     );
     await dsProxy["execute(address,bytes)"](
-      minter.address,
+      ProxyHelper.address,
       depositCollateralData
     );
 
@@ -247,7 +249,7 @@ describe("Minter", () => {
 
     // Deposit stablecoin and unlock collateral
     const repayStablecoinData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -259,7 +261,7 @@ describe("Minter", () => {
       ]
     );
     await dsProxy["execute(address,bytes)"](
-      minter.address,
+      ProxyHelper.address,
       repayStablecoinData
     );
 
@@ -298,7 +300,7 @@ describe("Minter", () => {
       hre
     );
     const { dsProxy } = await deployDsProxy();
-    const minter = await deployMinter();
+    const ProxyHelper = await deployProxyHelper();
 
     await incrementTime(60 * 60, ethers.provider);
 
@@ -308,7 +310,7 @@ describe("Minter", () => {
 
     // Deposit collateral & mint stablecoin
     const depositCollateralData = await getTransactionData(
-      minter,
+      ProxyHelper,
       "transferCollateralAndDebt",
       [
         "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -320,18 +322,18 @@ describe("Minter", () => {
       ]
     );
     await dsProxy["execute(address,bytes)"](
-      minter.address,
+      ProxyHelper.address,
       depositCollateralData
     );
 
     // Save stablecoin
     await savingsAccount.updateAccumulatedRate();
-    const depositData = await getTransactionData(minter, "transferSavings", [
-      savingsAccount.address,
-      stablecoinJoin.address,
-      exp(18).mul(100000),
-    ]);
-    await dsProxy["execute(address,bytes)"](minter.address, depositData);
+    const depositData = await getTransactionData(
+      ProxyHelper,
+      "transferSavings",
+      [savingsAccount.address, stablecoinJoin.address, exp(18).mul(100000)]
+    );
+    await dsProxy["execute(address,bytes)"](ProxyHelper.address, depositData);
     expect(await stablecoin.balanceOf(deployer.address)).to.equal(0);
 
     const normalizedSavings = await savingsAccount.savings(dsProxy.address);
@@ -340,16 +342,20 @@ describe("Minter", () => {
     await savingsAccount.updateAccumulatedRate();
 
     // Withdraw savings
-    const withdrawData = await getTransactionData(minter, "transferSavings", [
-      savingsAccount.address,
-      stablecoinJoin.address,
-      BigNumber.from(0)
-        .sub(normalizedSavings)
-        .add(1)
-        .mul(await savingsAccount.accumulatedRates())
-        .div(exp(27)),
-    ]);
-    await dsProxy["execute(address,bytes)"](minter.address, withdrawData);
+    const withdrawData = await getTransactionData(
+      ProxyHelper,
+      "transferSavings",
+      [
+        savingsAccount.address,
+        stablecoinJoin.address,
+        BigNumber.from(0)
+          .sub(normalizedSavings)
+          .add(1)
+          .mul(await savingsAccount.accumulatedRates())
+          .div(exp(27)),
+      ]
+    );
+    await dsProxy["execute(address,bytes)"](ProxyHelper.address, withdrawData);
 
     expect(await stablecoin.balanceOf(deployer.address)).to.gt(
       exp(18).mul(110000)

@@ -19,7 +19,7 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface MinterInterface extends ethers.utils.Interface {
+interface ProxyHelperInterface extends ethers.utils.Interface {
   functions: {
     "exitCollateral(address,uint256)": FunctionFragment;
     "exitStablecoin(address,uint256)": FunctionFragment;
@@ -82,7 +82,7 @@ interface MinterInterface extends ethers.utils.Interface {
   events: {};
 }
 
-export class Minter extends BaseContract {
+export class ProxyHelper extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -123,7 +123,7 @@ export class Minter extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: MinterInterface;
+  interface: ProxyHelperInterface;
 
   functions: {
     exitCollateral(

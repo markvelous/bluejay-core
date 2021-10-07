@@ -281,6 +281,18 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TokenLike__factory>;
     getContractFactory(
+      name: "Helper",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Helper__factory>;
+    getContractFactory(
+      name: "IFeesEngine",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IFeesEngine__factory>;
+    getContractFactory(
+      name: "ISavingsAccount",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ISavingsAccount__factory>;
+    getContractFactory(
       name: "DSAuth",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.DSAuth__factory>;
@@ -329,9 +341,9 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IStablecoinJoin__factory>;
     getContractFactory(
-      name: "Minter",
+      name: "ProxyHelper",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Minter__factory>;
+    ): Promise<Contracts.ProxyHelper__factory>;
     getContractFactory(
       name: "SimpleCollateral",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -685,6 +697,21 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.TokenLike>;
     getContractAt(
+      name: "Helper",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Helper>;
+    getContractAt(
+      name: "IFeesEngine",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IFeesEngine>;
+    getContractAt(
+      name: "ISavingsAccount",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ISavingsAccount>;
+    getContractAt(
       name: "DSAuth",
       address: string,
       signer?: ethers.Signer
@@ -745,10 +772,10 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IStablecoinJoin>;
     getContractAt(
-      name: "Minter",
+      name: "ProxyHelper",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.Minter>;
+    ): Promise<Contracts.ProxyHelper>;
     getContractAt(
       name: "SimpleCollateral",
       address: string,
