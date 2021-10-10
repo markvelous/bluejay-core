@@ -41,10 +41,6 @@ export const deployCore = async (
     key: "SimpleCollateral",
     factory: "SimpleCollateral",
   });
-  const oracle = await deployOrGetInstance({
-    key: "SimpleOracle",
-    factory: "SimpleOracle",
-  });
   const governanceToken = await deployOrGetInstance({
     key: "SimpleGovernanceToken",
     factory: "SimpleGovernanceToken",
@@ -52,6 +48,16 @@ export const deployCore = async (
   });
 
   // Deploy implementations
+  const LogicOracle = await deployOrGetInstance({
+    key: "LogicOracle",
+    factory: "SingleFeedOracle",
+    initArgs: [],
+  });
+  const LogicOSM = await deployOrGetInstance({
+    key: "OracleSecurityModule",
+    factory: "OracleSecurityModule",
+    initArgs: [constants.AddressZero],
+  });
   const LogicStablecoin = await deployOrGetInstance({
     key: "LogicStablecoin",
     factory: "Stablecoin",
@@ -136,6 +142,14 @@ export const deployCore = async (
   });
 
   // Deploy beacons
+  const BeaconOracle = await deployBeaconOrGetInstance({
+    address: LogicOracle.address,
+    key: "BeaconOracle",
+  });
+  const BeaconOSM = await deployBeaconOrGetInstance({
+    address: LogicOSM.address,
+    key: "BeaconOSM",
+  });
   const BeaconLedger = await deployBeaconOrGetInstance({
     address: LogicLedger.address,
     key: "BeaconLedger",
@@ -191,6 +205,19 @@ export const deployCore = async (
     factory: "Ledger",
     args: [],
     beacon: BeaconLedger.address,
+  });
+  const { implementation: oracle } = await deployBeaconProxyOrGetInsance({
+    key: "ProxyOracle",
+    factory: "SingleFeedOracle",
+    args: [],
+    beacon: BeaconOracle.address,
+  });
+
+  const { implementation: osm } = await deployBeaconProxyOrGetInsance({
+    key: "ProxyOSM",
+    factory: "OracleSecurityModule",
+    args: [oracle.address],
+    beacon: BeaconOSM.address,
   });
   const { implementation: collateralJoin } =
     await deployBeaconProxyOrGetInsance({
@@ -419,9 +446,9 @@ export const deployCore = async (
   });
   await executeTransaction({
     contract: oracleRelayer,
-    key: "ORACLE_RELAYER_UPDATE_ORACLE",
+    key: "ORACLE_RELAYER_UPDATE_OSM",
     method: "updateOracle",
-    args: [deploymentParameters.COLLATERAL_TYPE, oracle.address],
+    args: [deploymentParameters.COLLATERAL_TYPE, osm.address],
   });
   await executeTransaction({
     contract: oracleRelayer,
@@ -603,6 +630,7 @@ export const deployCore = async (
   return {
     collateral,
     oracle,
+    osm,
     governanceToken,
     stablecoin,
     collateralType,

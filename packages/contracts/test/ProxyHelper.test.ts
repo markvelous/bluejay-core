@@ -4,7 +4,7 @@ import hre, { ethers } from "hardhat";
 import { dirSync } from "tmp";
 import { expect } from "chai";
 import { deployCore } from "../src/deployCore";
-import { exp, incrementTime } from "./utils";
+import { exp, increaseTime, incrementTime } from "./utils";
 
 ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR);
 
@@ -48,9 +48,12 @@ describe("ProxyHelper", () => {
       ledger,
       collateralJoin,
       collateral,
+      collateralType,
       stablecoinJoin,
       stablecoin,
       feesEngine,
+      osm,
+      oracleRelayer,
     } = await deployCore(
       {
         transactionCache: `${name}/tx.json`,
@@ -58,6 +61,11 @@ describe("ProxyHelper", () => {
       },
       hre
     );
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await oracleRelayer.updateCollateralPrice(collateralType);
     const { dsProxy } = await deployDsProxy();
     const ProxyHelper = await deployProxyHelper();
 
@@ -186,9 +194,12 @@ describe("ProxyHelper", () => {
       ledger,
       collateralJoin,
       collateral,
+      collateralType,
       stablecoinJoin,
       stablecoin,
       feesEngine,
+      osm,
+      oracleRelayer,
     } = await deployCore(
       {
         transactionCache: `${name}/tx.json`,
@@ -196,6 +207,11 @@ describe("ProxyHelper", () => {
       },
       hre
     );
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await oracleRelayer.updateCollateralPrice(collateralType);
     const { dsProxy } = await deployDsProxy();
     const ProxyHelper = await deployProxyHelper();
 
@@ -286,11 +302,14 @@ describe("ProxyHelper", () => {
     const [deployer] = await ethers.getSigners();
     const { name, removeCallback } = dirSync({ unsafeCleanup: true });
     const {
-      collateral,
       ledger,
       collateralJoin,
+      collateral,
+      collateralType,
       stablecoinJoin,
       stablecoin,
+      osm,
+      oracleRelayer,
       savingsAccount,
     } = await deployCore(
       {
@@ -299,6 +318,11 @@ describe("ProxyHelper", () => {
       },
       hre
     );
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await oracleRelayer.updateCollateralPrice(collateralType);
     const { dsProxy } = await deployDsProxy();
     const ProxyHelper = await deployProxyHelper();
 

@@ -426,3 +426,29 @@
 
 - removed overflow protection for kicks
 - added listing & counting of active auctions
+
+
+| OSM         | OracleSecurityModule |
+| ----------- | -------------------- |
+| rely        | grantAuthorization   |
+| deny        | revokeAuthorization  |
+| auth        | isAuthorized         |
+| src         | oracle               |
+| DSNote.peek | getPrice             |
+| Feed        | PriceFeed            |
+| Feed.val    | PriceFeed.price      |
+| Feed.has    | PriceFeed.isValid    |
+| hop         | priceDelay           |
+| zzz         | lastPriceUpdate      |
+| change      | updateOracle         |
+| era         | timestamp            |
+| prev        | roundTimestamp       |
+| step        | updatePriceDelay     |
+| void        | clearPriceFeeds      |
+| poke        | updatePriceFeed      |
+| peek        | getPrice             |
+| peep        | getNextPrice         |
+| read        | getPriceSafe         |
+
+  function getPrice() external returns (uint256, bool);
+- removed `toll`, `bud`, `kiss` & *`diss`
