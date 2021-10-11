@@ -1,0 +1,6 @@
+.serverless
+.dynamodb
+.webpack
+.eslintcache
+.build/*
+sesTmp

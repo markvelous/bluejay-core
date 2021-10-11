@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { BigNumber, Contract } from "ethers";
-import { getLogger } from "../src/debug";
+import { getLogger } from "./debug";
 
 const { info, error } = getLogger("utils");
 
