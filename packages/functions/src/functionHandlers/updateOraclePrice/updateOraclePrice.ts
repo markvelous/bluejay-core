@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/camelcase
+// eslint-disable-next-line @typescript-eslint/camelcase,@typescript-eslint/camelcase
 import { SingleFeedOracle__factory } from "@bluejayfinance/contracts";
 import { BigNumber, providers, utils, Wallet } from "ethers";
 import { publicRequestHandler } from "../../middlewares/handlers";
@@ -17,6 +17,7 @@ const provider = new providers.JsonRpcProvider(config.network.url, {
   chainId: config.network.chainId
 });
 const wallet = new Wallet(config.wallets.oraclePriceFeed, provider) as any;
+// eslint-disable-next-line @typescript-eslint/camelcase,@typescript-eslint/camelcase
 const OracleContract = SingleFeedOracle__factory.connect(config.contracts.oracle, wallet);
 
 const handleUpdateOraclePrice = async () => {
