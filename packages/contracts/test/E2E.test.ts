@@ -2,7 +2,7 @@ import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { keccak256 } from "ethers/lib/utils";
 import { BigNumber, constants, Contract, Signer } from "ethers";
-import { exp, incrementTime } from "./utils";
+import { exp, incrementTime } from "../src/utils";
 import { enableAllLog } from "../src/debug";
 
 enableAllLog();

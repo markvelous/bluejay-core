@@ -23,6 +23,14 @@ functions:
           path: /debug
           method: get
           cors: true
+  updateOraclePrice:
+    handler: src/functionHandlers/updateOraclePrice/index.handler
+    events:
+      - schedule: rate(30 minutes)
+      - http:
+          path: /updateOraclePrice
+          method: get
+          cors: true
 custom:
   webpack:
     includeModules: true

@@ -1,5 +1,5 @@
 import { BigNumber } from "ethers";
-import { exp } from "../test/utils";
+import { exp } from "./utils";
 
 export const deploymentParameters = {
   COLLATERAL_TYPE:

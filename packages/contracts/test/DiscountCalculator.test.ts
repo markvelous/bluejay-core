@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
-import { exp } from "./utils";
+import { exp } from "../src/utils";
 
 describe("DiscountCalculator", () => {
   it("discounts price correctly", async () => {

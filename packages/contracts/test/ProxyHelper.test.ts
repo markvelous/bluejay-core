@@ -4,7 +4,7 @@ import hre, { ethers } from "hardhat";
 import { dirSync } from "tmp";
 import { expect } from "chai";
 import { deployCore } from "../src/deployCore";
-import { exp, increaseTime, incrementTime } from "./utils";
+import { exp, increaseTime, incrementTime } from "../src/utils";
 
 ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR);
 
