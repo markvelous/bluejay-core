@@ -6,7 +6,7 @@ import { getLogger } from "../../common/logger";
 import { getPricesFromMultipleSources } from "./getPricesFromMultipleSources";
 import { config } from "../../config";
 
-const { info } = getLogger("create claim");
+const { info } = getLogger("updateOraclePrice");
 
 export const exp = (exponent: number) => {
   return BigNumber.from(10).pow(exponent);
