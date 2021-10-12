@@ -54,13 +54,22 @@ const generateWallets = () => {
   return { oraclePriceFeed, poker };
 };
 
+const generateTelegram = () => {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not defined");
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!chatId) throw new Error("TELEGRAM_CHAT_ID is not defined");
+  return { botToken, chatId };
+};
+
 const generateConfig = () => ({
   appName: "bluejay",
   networkName: currentNetwork,
   contracts: generateContracts(),
   network: generateNetworks(),
   apiKeys: generateApiKeys(),
-  wallets: generateWallets()
+  wallets: generateWallets(),
+  telegram: generateTelegram()
 });
 
 export const config = generateConfig();
