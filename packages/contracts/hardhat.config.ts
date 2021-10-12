@@ -8,6 +8,7 @@ import "hardhat-watcher";
 import "hardhat-abi-exporter";
 import { config } from "./src/config";
 import { deployInfrastructure } from "./tasks/deployInfrastructure";
+import { poke } from "./tasks/poke";
 
 task(
   "deployInfrastructure",
@@ -28,6 +29,15 @@ task(
     undefined,
     types.string
   );
+
+task("poke", "Use mega poke the infrastructure", async (args: any, hre) => {
+  await poke(args, hre);
+}).addParam(
+  "pokerAddress",
+  "Address of poker contract",
+  undefined,
+  types.string
+);
 
 task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();

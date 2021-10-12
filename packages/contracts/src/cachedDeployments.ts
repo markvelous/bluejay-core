@@ -155,6 +155,22 @@ export const buildCachedDeployments = ({
     return deployedContract;
   };
 
+  const getInstance = async ({
+    key,
+    factory,
+  }: {
+    key: string;
+    factory: string;
+  }) => {
+    const Factory = await ethers.getContractFactory(factory);
+    const cachedAddr = deployedAddress(key);
+    if (cachedAddr) {
+      info(`${key} loaded from cache at ${cachedAddr}`);
+      return Factory.attach(cachedAddr);
+    }
+    throw new Error("Instance not found");
+  };
+
   const deployBeaconOrGetInstance = async ({
     address,
     key,
@@ -246,6 +262,7 @@ export const buildCachedDeployments = ({
     deployUupsOrGetInstance,
     deployBeaconProxyOrGetInsance,
     deployBeaconOrGetInstance,
+    getInstance,
     executeTransaction,
   };
 };
