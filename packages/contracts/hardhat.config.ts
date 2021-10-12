@@ -9,12 +9,33 @@ import "hardhat-abi-exporter";
 import { config } from "./src/config";
 import { deployInfrastructure } from "./tasks/deployInfrastructure";
 import { poke } from "./tasks/poke";
+import { debugInfrastructure } from "./tasks/debugInfrastructure";
 
 task(
   "deployInfrastructure",
   "Deploy entire infrastructure",
   async (args: any, hre) => {
     await deployInfrastructure(args, hre);
+  }
+)
+  .addParam(
+    "deploymentCache",
+    "Cache for deployed contracts",
+    undefined,
+    types.string
+  )
+  .addParam(
+    "transactionCache",
+    "Cache for executed transactions",
+    undefined,
+    types.string
+  );
+
+task(
+  "debugInfrastructure",
+  "Print debug information for entire infrastructure",
+  async (args: any, hre) => {
+    await debugInfrastructure(args, hre);
   }
 )
   .addParam(
