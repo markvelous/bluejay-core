@@ -85,7 +85,9 @@
     "storybook:build": "npm run build:css && build-storybook -s public",
     "test": "react-scripts test",
     "deploy:local": "cd ../contracts && hh deployInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network local",
-    "deploy:staging": "cd ../contracts && hh deployInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging"
+    "deploy:staging": "cd ../contracts && hh deployInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging",
+    "debug:local": "cd ../contracts && hh debugInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network local",
+    "debug:staging": "cd ../contracts && hh debugInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging"
   },
   "config": {
     "commitizen": {

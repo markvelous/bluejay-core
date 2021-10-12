@@ -59,6 +59,7 @@ export const buildCachedDeployments = ({
   skipDeploymentCache,
   skipTransactionCache,
   saveCache = true,
+  emitLog = true,
   transactionOverrides = {},
 }: {
   hre: HardhatRuntimeEnvironment;
@@ -66,6 +67,7 @@ export const buildCachedDeployments = ({
   transactionCachePath: string;
   network: string;
   saveCache?: boolean;
+  emitLog?: boolean;
   skipDeploymentCache?: boolean;
   skipTransactionCache?: boolean;
   transactionOverrides: any;
@@ -100,7 +102,7 @@ export const buildCachedDeployments = ({
     const ImplementationFactory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
     if (cachedAddr && !skipDeploymentCache) {
-      info(`${key} loaded from cache at ${cachedAddr}`);
+      if (emitLog) info(`${key} loaded from cache at ${cachedAddr}`);
       return {
         proxy: ProxyFactory.attach(cachedAddr),
         implementation: ImplementationFactory.attach(cachedAddr),
@@ -117,7 +119,7 @@ export const buildCachedDeployments = ({
     );
     await proxy.deployed();
     updateDeployment(key, proxy.address);
-    info(`${key} deployed at ${proxy.address}`);
+    if (emitLog) info(`${key} deployed at ${proxy.address}`);
     const implementation = ImplementationFactory.attach(proxy.address);
     return {
       proxy,
@@ -139,7 +141,7 @@ export const buildCachedDeployments = ({
     const Factory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
     if (cachedAddr && !skipDeploymentCache) {
-      info(`${key} loaded from cache at ${cachedAddr}`);
+      if (emitLog) info(`${key} loaded from cache at ${cachedAddr}`);
       return Factory.attach(cachedAddr);
     }
     const deployedContract = await Factory.deploy(
@@ -148,7 +150,7 @@ export const buildCachedDeployments = ({
     );
     await deployedContract.deployed();
     updateDeployment(key, deployedContract.address);
-    info(`${key} deployed at ${deployedContract.address}`);
+    if (emitLog) info(`${key} deployed at ${deployedContract.address}`);
     if (initArgs) {
       await deployedContract.initialize(...initArgs, transactionOverrides);
     }
@@ -165,7 +167,7 @@ export const buildCachedDeployments = ({
     const Factory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
     if (cachedAddr) {
-      info(`${key} loaded from cache at ${cachedAddr}`);
+      if (emitLog) info(`${key} loaded from cache at ${cachedAddr}`);
       return Factory.attach(cachedAddr);
     }
     throw new Error("Instance not found");
@@ -181,13 +183,13 @@ export const buildCachedDeployments = ({
     const Beacon = await ethers.getContractFactory("UpgradeableBeacon");
     const cachedAddr = deployedAddress(key);
     if (cachedAddr && !skipDeploymentCache) {
-      info(`${key} loaded from cache at ${cachedAddr}`);
+      if (emitLog) info(`${key} loaded from cache at ${cachedAddr}`);
       return Beacon.attach(cachedAddr);
     }
     const beacon = await Beacon.deploy(address, transactionOverrides);
     await beacon.deployed();
     updateDeployment(key, beacon.address);
-    info(`${key} deployed at ${beacon.address}`);
+    if (emitLog) info(`${key} deployed at ${beacon.address}`);
     return beacon;
   };
 
@@ -207,7 +209,7 @@ export const buildCachedDeployments = ({
     const ImplementationFactory = await ethers.getContractFactory(factory);
     const cachedAddr = deployedAddress(key);
     if (cachedAddr && !skipDeploymentCache) {
-      info(`${key} loaded from cache at ${cachedAddr}`);
+      if (emitLog) info(`${key} loaded from cache at ${cachedAddr}`);
       return {
         proxy: ProxyFactory.attach(cachedAddr),
         implementation: ImplementationFactory.attach(cachedAddr),
@@ -223,7 +225,7 @@ export const buildCachedDeployments = ({
     );
     await proxy.deployed();
     updateDeployment(key, proxy.address);
-    info(`${key} deployed at ${proxy.address}`);
+    if (emitLog) info(`${key} deployed at ${proxy.address}`);
     return {
       proxy,
       implementation: ImplementationFactory.attach(proxy.address),
@@ -249,10 +251,8 @@ export const buildCachedDeployments = ({
       );
       const tx = await receipt.wait();
       setExecution(key);
-      info(`Executed ${key}: ${tx.transactionHash}`);
-    } else {
-      info(`Skipping ${key} on ${contract.address}`);
-    }
+      if (emitLog) info(`Executed ${key}: ${tx.transactionHash}`);
+    } else if (emitLog) info(`Skipping ${key} on ${contract.address}`);
   };
 
   return {

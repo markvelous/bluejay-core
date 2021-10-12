@@ -21,8 +21,8 @@ contract OracleSecurityModule is Initializable {
   uint16 public priceDelay;
   uint64 public lastPriceUpdate;
 
-  PriceFeed currentPrice;
-  PriceFeed nextPrice;
+  PriceFeed public currentPrice;
+  PriceFeed public nextPrice;
 
   // --- Events ---
   event GrantAuthorization(address indexed account);
