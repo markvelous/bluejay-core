@@ -31,6 +31,14 @@ functions:
           path: /updateOraclePrice
           method: get
           cors: true
+  updateInfrastructure:
+    handler: src/functionHandlers/updateInfrastructure/index.handler
+    events:
+      - schedule: rate(30 minutes)
+      - http:
+          path: /updateInfrastructure
+          method: get
+          cors: true
 custom:
   webpack:
     includeModules: true

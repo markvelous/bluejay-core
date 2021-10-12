@@ -38,15 +38,20 @@ const generateApiKeys = () => {
 const generateContracts = () => {
   const oracle = process.env.ORACLE_ADDRESS;
   if (!oracle) throw new Error("ORACLE_ADDRESS is not defined");
+  const poker = process.env.POKER_ADDRESS;
+  if (!poker) throw new Error("POKER_ADDRESS is not defined");
   return {
-    oracle
+    oracle,
+    poker
   };
 };
 
 const generateWallets = () => {
   const oraclePriceFeed = process.env.ORACLE_UPDATER_KEY;
   if (!oraclePriceFeed) throw new Error("ORACLE_UPDATER_KEY is not defined");
-  return { oraclePriceFeed };
+  const poker = process.env.POKER_KEY;
+  if (!poker) throw new Error("POKER_KEY is not defined");
+  return { oraclePriceFeed, poker };
 };
 
 const generateConfig = () => ({
