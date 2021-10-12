@@ -1,6 +1,6 @@
 {
   "name": "@bluejayfinance/functions",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@bluejayfinance/contracts": "^0.1.1",
+    "@bluejayfinance/contracts": "^0.1.2",
     "@middy/core": "^1.5.0",
     "@middy/http-security-headers": "^1.5.0",
     "@types/uuid": "^8.3.0",
