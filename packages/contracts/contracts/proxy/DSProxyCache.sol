@@ -17,8 +17,6 @@
 
 pragma solidity >=0.8.0;
 
-import "./DSProxy.sol";
-
 // DSProxyCache
 // This global cache stores addresses of contracts previously deployed
 // by a proxy. This saves gas from repeat deployment of the same

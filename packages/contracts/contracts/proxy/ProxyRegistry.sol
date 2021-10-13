@@ -24,7 +24,8 @@ import "./DSProxyFactory.sol";
 // This Registry deploys new proxy instances through DSProxyFactory.build(address) and keeps a registry of owner => proxy
 contract ProxyRegistry {
   mapping(address => DSProxy) public proxies;
-  DSProxyFactory factory;
+  address[] public deployed;
+  DSProxyFactory public factory;
 
   constructor() {
     factory = new DSProxyFactory();
@@ -44,5 +45,14 @@ contract ProxyRegistry {
     ); // Not allow new proxy if the user already has one and remains being the owner
     proxy = DSProxy(factory.build(owner));
     proxies[owner] = proxy;
+    deployed.push(address(proxy));
+  }
+
+  function countDeployedProxies() external view returns (uint256) {
+    return deployed.length;
+  }
+
+  function listDeployedProxies() external view returns (address[] memory) {
+    return deployed;
   }
 }

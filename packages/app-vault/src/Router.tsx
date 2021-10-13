@@ -6,6 +6,7 @@ import { VaultDetails } from "./views/VaultDetails";
 import { CollateralFaucet } from "./views/CollateralFaucet";
 import { VaultPositionManager } from "./views/VaultPositionManager";
 import { VaultSavingsManager } from "./views/VaultSavingsManager";
+import { VaultList } from "./views/VaultList";
 
 export const Router = (): ReactElement => {
   return (
@@ -19,6 +20,9 @@ export const Router = (): ReactElement => {
         </Route>
         <Route exact path="/vault">
           <Vault />
+        </Route>
+        <Route exact path="/vault/list">
+          <VaultList />
         </Route>
         <Route exact path="/vault/summary/:vaultAddr">
           <VaultDetails />
