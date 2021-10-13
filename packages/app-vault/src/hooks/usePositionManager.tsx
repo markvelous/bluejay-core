@@ -67,6 +67,7 @@ export interface PendingMulticallState {
 export interface ReadyState extends StateWithQueryResults {
   state: "READY";
   transferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
+  closePosition: () => void;
   approveCollateralSpendByProxy: () => void;
   approveStablecoinSpendByProxy: () => void;
 }
@@ -79,6 +80,7 @@ export interface PendingTransferState extends StateWithQueryResults {
 export interface SuccessfulTransferState extends StateWithQueryResults {
   state: "TRANSFER_SUCCESS";
   transferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
+  closePosition: () => void;
   approveCollateralSpendByProxy: () => void;
   approveStablecoinSpendByProxy: () => void;
 }
@@ -109,6 +111,10 @@ export const usePositionManager = ({
 
   const { account, chainId, activateBrowserWallet } = useEthers();
   const { state: transferCollateralAndDebtState, send: sendTransferCollateralAndDebt } = useContractFunctionCustom(
+    proxyContract,
+    "execute(address,bytes)"
+  );
+  const { state: closePositionState, send: sendClosePosition } = useContractFunctionCustom(
     proxyContract,
     "execute(address,bytes)"
   );
@@ -211,6 +217,16 @@ export const usePositionManager = ({
     sendTransferCollateralAndDebt(proxyHelperAddress, tx.data);
   };
 
+  const closePosition = async (): Promise<void> => {
+    const tx = await ProxyHelperContract.populateTransaction.closePosition(
+      collateralType,
+      ledgerAddress,
+      stablecoinJoinAddress,
+      collateralJoinAddress
+    );
+    sendClosePosition(proxyHelperAddress, tx.data);
+  };
+
   const multicallResolved = queries.state == "RESOLVED" && queries.result.every((r) => !!r);
 
   if (!account) {
@@ -271,7 +287,7 @@ export const usePositionManager = ({
       state: "PENDING_APPROVAL",
     };
   }
-  if (transferCollateralAndDebtState.status === "Mining") {
+  if (transferCollateralAndDebtState.status === "Mining" || closePositionState.status === "Mining") {
     return {
       ...queryResult,
       state: "PENDING_TRANSFER",
@@ -281,6 +297,7 @@ export const usePositionManager = ({
     return {
       ...queryResult,
       state: "TRANSFER_SUCCESS",
+      closePosition,
       transferCollateralAndDebt,
       approveCollateralSpendByProxy,
       approveStablecoinSpendByProxy,
@@ -296,6 +313,7 @@ export const usePositionManager = ({
   return {
     ...queryResult,
     state: "READY",
+    closePosition,
     transferCollateralAndDebt,
     approveCollateralSpendByProxy,
     approveStablecoinSpendByProxy,

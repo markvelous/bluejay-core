@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { constants, Contract } from "ethers";
+import { constants, Contract, Signer } from "ethers";
 import hre, { ethers } from "hardhat";
 import { dirSync } from "tmp";
 import { expect } from "chai";
@@ -8,18 +8,22 @@ import { exp, increaseTime, incrementTime } from "../src/utils";
 
 ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR);
 
-const deployDsProxy = async () => {
+const deployProxyRegistry = async () => {
+  const ProxyRegistry = await ethers.getContractFactory("ProxyRegistry");
+  const proxyRegistry = await ProxyRegistry.deploy();
+  return proxyRegistry;
+};
+
+const deployDsProxy = async (proxyRegistry: Contract, signer: Signer) => {
   const factory = await (
     await ethers.getContractFactory("DSProxyFactory")
   ).interface;
-  const ProxyRegistry = await ethers.getContractFactory("ProxyRegistry");
   const DSProxy = await ethers.getContractFactory("DSProxy");
-  const proxyRegistry = await ProxyRegistry.deploy();
-  const tx = await (await proxyRegistry["build()"]()).wait();
+  const tx = await (await proxyRegistry.connect(signer)["build()"]()).wait();
   if (!tx.events || !tx.events[2]) throw Error("not found");
   const { proxy } = factory.decodeEventLog("Created", tx.events[2].data);
   const dsProxy = DSProxy.attach(proxy);
-  return { dsProxy, proxyRegistry };
+  return { dsProxy };
 };
 
 const deployProxyHelper = async () => {
@@ -66,7 +70,8 @@ describe("ProxyHelper", () => {
     await increaseTime(3600, ethers.provider);
     await osm.updatePriceFeed();
     await oracleRelayer.updateCollateralPrice(collateralType);
-    const { dsProxy } = await deployDsProxy();
+    const proxyRegistry = await deployProxyRegistry();
+    const { dsProxy } = await deployDsProxy(proxyRegistry, deployer);
     const ProxyHelper = await deployProxyHelper();
 
     await collateral.mint(deployer.address, exp(18).mul(1000));
@@ -212,7 +217,8 @@ describe("ProxyHelper", () => {
     await increaseTime(3600, ethers.provider);
     await osm.updatePriceFeed();
     await oracleRelayer.updateCollateralPrice(collateralType);
-    const { dsProxy } = await deployDsProxy();
+    const proxyRegistry = await deployProxyRegistry();
+    const { dsProxy } = await deployDsProxy(proxyRegistry, deployer);
     const ProxyHelper = await deployProxyHelper();
 
     await collateral.mint(deployer.address, exp(18).mul(1000));
@@ -298,6 +304,137 @@ describe("ProxyHelper", () => {
     removeCallback();
   });
 
+  it.only("should allow closing of position", async () => {
+    const [deployer, account1] = await ethers.getSigners();
+    const { name, removeCallback } = dirSync({ unsafeCleanup: true });
+    const {
+      ledger,
+      collateralJoin,
+      collateral,
+      collateralType,
+      stablecoinJoin,
+      stablecoin,
+      feesEngine,
+      osm,
+      oracleRelayer,
+    } = await deployCore(
+      {
+        transactionCache: `${name}/tx.json`,
+        deploymentCache: `${name}/deploy.json`,
+      },
+      hre
+    );
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await increaseTime(3600, ethers.provider);
+    await osm.updatePriceFeed();
+    await oracleRelayer.updateCollateralPrice(collateralType);
+    const proxyRegistry = await deployProxyRegistry();
+    const { dsProxy: deployerProxy } = await deployDsProxy(
+      proxyRegistry,
+      deployer
+    );
+    const { dsProxy: account1Proxy } = await deployDsProxy(
+      proxyRegistry,
+      account1
+    );
+    const ProxyHelper = await deployProxyHelper();
+
+    await collateral.mint(deployer.address, exp(18).mul(1000));
+    await collateral.approve(deployerProxy.address, constants.MaxUint256);
+    await stablecoin.approve(deployerProxy.address, constants.MaxUint256);
+
+    await collateral.mint(account1.address, exp(18).mul(1000));
+    await collateral
+      .connect(account1)
+      .approve(account1Proxy.address, constants.MaxUint256);
+    await stablecoin
+      .connect(account1)
+      .approve(account1Proxy.address, constants.MaxUint256);
+
+    // Deposit collateral & mint stablecoin
+    const depositCollateralData = await getTransactionData(
+      ProxyHelper,
+      "transferCollateralAndDebt",
+      [
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        ledger.address,
+        stablecoinJoin.address,
+        collateralJoin.address,
+        exp(18).mul(1000),
+        exp(18).mul(100000),
+      ]
+    );
+    await deployerProxy["execute(address,bytes)"](
+      ProxyHelper.address,
+      depositCollateralData
+    );
+    await account1Proxy
+      .connect(account1)
+      ["execute(address,bytes)"](ProxyHelper.address, depositCollateralData);
+
+    expect(
+      (
+        await ledger.positions(
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          deployerProxy.address
+        )
+      ).lockedCollateral
+    ).equal(exp(18).mul(1000));
+    expect(
+      (
+        await ledger.positions(
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          deployerProxy.address
+        )
+      ).normalizedDebt
+    ).equal(exp(18).mul(100000));
+    expect(await stablecoin.balanceOf(deployer.address)).to.equal(
+      exp(18).mul(100000)
+    );
+
+    // Send some more stablecoins to deployer
+    await stablecoin
+      .connect(account1)
+      .transfer(deployer.address, exp(18).mul(100000));
+
+    // Allow stability fee to accrue
+    await incrementTime(60 * 60 * 24, ethers.provider);
+    await feesEngine.updateAccumulatedRate(
+      "0x0000000000000000000000000000000000000000000000000000000000000001"
+    );
+
+    // Close position
+    const repayStablecoinData = await getTransactionData(
+      ProxyHelper,
+      "closePosition",
+      [
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        ledger.address,
+        stablecoinJoin.address,
+        collateralJoin.address,
+      ]
+    );
+    await deployerProxy["execute(address,bytes)"](
+      ProxyHelper.address,
+      repayStablecoinData
+    );
+
+    expect(
+      (
+        await ledger.positions(
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          deployerProxy.address
+        )
+      ).normalizedDebt
+    ).equal(0);
+
+    expect(await collateral.balanceOf(deployer.address)).to.equal(
+      exp(18).mul(1000)
+    );
+    removeCallback();
+  });
+
   it("should allow savings", async () => {
     const [deployer] = await ethers.getSigners();
     const { name, removeCallback } = dirSync({ unsafeCleanup: true });
@@ -323,7 +460,8 @@ describe("ProxyHelper", () => {
     await increaseTime(3600, ethers.provider);
     await osm.updatePriceFeed();
     await oracleRelayer.updateCollateralPrice(collateralType);
-    const { dsProxy } = await deployDsProxy();
+    const proxyRegistry = await deployProxyRegistry();
+    const { dsProxy } = await deployDsProxy(proxyRegistry, deployer);
     const ProxyHelper = await deployProxyHelper();
 
     await incrementTime(60 * 60, ethers.provider);

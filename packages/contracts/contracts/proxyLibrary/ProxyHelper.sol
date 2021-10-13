@@ -22,6 +22,11 @@ interface ILedger {
     int256 collateralDelta,
     int256 normalizedDebtDelta
   ) external;
+
+  function positions(bytes32 collateralType, address position)
+    external
+    view
+    returns (uint256 lockedCollateral, uint256 normalizedDebt);
 }
 
 interface ICollateralJoin {
@@ -149,5 +154,36 @@ contract ProxyHelper {
       savingsAccount.withdraw((uint256(-debtDelta) * RAY) / accumulatedRates);
       exitStablecoin(stablecoinJoinAddr, uint256(-debtDelta));
     }
+  }
+
+  function closePosition(
+    bytes32 collateralType,
+    address ledgerAddr,
+    address stablecoinJoinAddr,
+    address collateralJoinAddr
+  ) public {
+    ILedger ledger = ILedger(ledgerAddr);
+    (uint256 lockedCollateral, uint256 normalizedDebt) = ledger.positions(
+      collateralType,
+      address(this)
+    );
+    (, uint256 accumulatedRate, , , ) = ledger.collateralTypes(collateralType);
+
+    // Pay back debt
+    joinStablecoin(
+      stablecoinJoinAddr,
+      (normalizedDebt * accumulatedRate) / RAY + 1
+    );
+    // Modify ledger
+    ledger.modifyPositionCollateralization(
+      collateralType,
+      address(this),
+      address(this),
+      address(this),
+      -int256(lockedCollateral),
+      -int256(normalizedDebt)
+    );
+    // Withdraw collateral
+    exitCollateral(collateralJoinAddr, lockedCollateral);
   }
 }
