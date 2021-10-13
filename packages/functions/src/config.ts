@@ -40,9 +40,19 @@ const generateContracts = () => {
   if (!oracle) throw new Error("ORACLE_ADDRESS is not defined");
   const poker = process.env.POKER_ADDRESS;
   if (!poker) throw new Error("POKER_ADDRESS is not defined");
+  const osm = process.env.OSM_ADDRESS;
+  if (!osm) throw new Error("OSM_ADDRESS is not defined");
+  const ledger = process.env.LEDGER_ADDRESS;
+  if (!ledger) throw new Error("LEDGER_ADDRESS is not defined");
+  const accountingEngine = process.env.ACCOUNTING_ENGINE_ADDRESS;
+  if (!accountingEngine) throw new Error("ACCOUNTING_ENGINE_ADDRESS is not defined");
+
   return {
     oracle,
-    poker
+    poker,
+    ledger,
+    osm,
+    accountingEngine
   };
 };
 

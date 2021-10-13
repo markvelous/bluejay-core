@@ -6,12 +6,9 @@ import { getLogger } from "../../common/logger";
 import { getPricesFromMultipleSources } from "./getPricesFromMultipleSources";
 import { config } from "../../config";
 import { sendMessage } from "../../common/telegram";
+import { exp } from "../../common/numbers";
 
 const { info } = getLogger("updateOraclePrice");
-
-export const exp = (exponent: number) => {
-  return BigNumber.from(10).pow(exponent);
-};
 
 const provider = new providers.JsonRpcProvider(config.network.url, {
   name: config.network.name,

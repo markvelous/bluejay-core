@@ -39,6 +39,14 @@ functions:
           path: /updateInfrastructure
           method: get
           cors: true
+  reportSystemInfo:
+    handler: src/functionHandlers/reportSystemInfo/index.handler
+    events:
+      - schedule: rate(30 minutes)
+      - http:
+          path: /reportSystemInfo
+          method: get
+          cors: true
 custom:
   webpack:
     includeModules: true
