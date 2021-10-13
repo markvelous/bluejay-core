@@ -19,7 +19,8 @@ export const ReadyPositionManager: FunctionComponent<{
   positionManager: ReadyManagerStates;
   collateral: { name: string };
   handleTransferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
-}> = ({ positionManager, collateral, handleTransferCollateralAndDebt }) => {
+  handleClosePosition: () => void;
+}> = ({ positionManager, collateral, handleTransferCollateralAndDebt, handleClosePosition }) => {
   const [mintingState, setMintingState] = useState<MintingState>({
     collateralInput: "",
     debtInput: "",
@@ -113,6 +114,7 @@ export const ReadyPositionManager: FunctionComponent<{
             >
               Mint
             </Button>
+            <Button onClick={handleClosePosition}>Close Position</Button>
           </div>
         )}
       </div>
@@ -129,8 +131,11 @@ export const VaultPositionManagerContainer: FunctionComponent = () => {
 
   const handleTransferCollateralAndDebt = (collateralDelta: BigNumber, debtDelta: BigNumber): void => {
     if (positionManager.state !== "READY" && positionManager.state !== "TRANSFER_SUCCESS") return;
-    console.log(collateralDelta, debtDelta);
     positionManager.transferCollateralAndDebt(collateralDelta, debtDelta);
+  };
+  const handleClosePosition = (): void => {
+    if (positionManager.state !== "READY" && positionManager.state !== "TRANSFER_SUCCESS") return;
+    positionManager.closePosition();
   };
   if (positionManager.state === "UNCONNECTED") {
     return <div>Unconnected!</div>;
@@ -152,6 +157,7 @@ export const VaultPositionManagerContainer: FunctionComponent = () => {
         positionManager={positionManager}
         collateral={collateral}
         handleTransferCollateralAndDebt={handleTransferCollateralAndDebt}
+        handleClosePosition={handleClosePosition}
       />
     );
   }

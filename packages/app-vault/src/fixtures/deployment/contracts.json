@@ -42,7 +42,6 @@
     "ProxyLiquidationAuction": "0xCd7c00Ac6dc51e8dCc773971Ac9221cC582F3b1b",
     "ProxyDiscountCalculator": "0x8ac87219a0F5639BC01b470F87BA2b26356CB2B9",
     "Helper": "0xbe18A1B61ceaF59aEB6A9bC81AB4FB87D56Ba167",
-    "ProxyHelper": "0x25C0a2F0A077F537Bd11897F04946794c2f6f1Ef",
     "LogicOracle": "0x01cf58e264d7578D4C67022c58A24CbC4C4a304E",
     "OracleSecurityModule": "0x666432Ccb747B2220875cE185f487Ed53677faC9",
     "BeaconOracle": "0xF6a8aD553b265405526030c2102fda2bDcdDC177",
@@ -136,7 +135,6 @@
     "ProxyLiquidationEngine": "0x716bd2eC382FD6744c6e8849DcBfF2E229B32779",
     "ProxyLiquidationAuction": "0x14A6D8A141E4edC3D0072c4f791eeca3D1D1Fa65",
     "ProxyDiscountCalculator": "0x8e970704CB9Cdb8B2BDf39bEa0459FEfa871e4A8",
-    "ProxyHelper": "0x50FC1da39418BDA34b9b33F3146cdDb2f06bc38A",
     "Helper": "0xb640Ac7bC7a6834cC2E2CFa22De8f97e85301D61",
     "LogicOracle": "0xE11C6e607A0552364ACfa0E6aaaDFCf34d3d1a8d",
     "OracleSecurityModule": "0x5e679877ca38937cB0EF00c24ee2e26298642906",
@@ -145,6 +143,7 @@
     "ProxyOracle": "0x74Da54e4B1d456C6043e9B68bf7bbcE3E0c1cFB8",
     "ProxyOSM": "0xd7842652746557b07BFcBcf3a352Bc31b765e3bf",
     "Poker": "0x59Fd5d2D94Eea444968F8e9F34c010919047E5eB",
-    "ProxyRegistry": "0xBd8E45DEEe5722Be7890a9Dd603C583BA7c093f8"
+    "ProxyRegistry": "0xBd8E45DEEe5722Be7890a9Dd603C583BA7c093f8",
+    "ProxyHelper": "0xcfdb9549584F5fCA3285651e067E0Ae7677571D2"
   }
 }
