@@ -6,50 +6,67 @@ import "@nomiclabs/hardhat-waffle";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-watcher";
 import "hardhat-abi-exporter";
+import { ActionType } from "hardhat/types";
+import { utils, BigNumber } from "ethers";
 import { config } from "./src/config";
 import { deployInfrastructure } from "./tasks/deployInfrastructure";
 import { poke } from "./tasks/poke";
 import { debugInfrastructure } from "./tasks/debugInfrastructure";
 
-task(
-  "deployInfrastructure",
-  "Deploy entire infrastructure",
-  async (args: any, hre) => {
-    await deployInfrastructure(args, hre);
+export const deploymentTask = <
+  T extends {
+    transactionOverrides: { gasPrice: BigNumber };
+    deploymentCache: string;
+    transactionCache: string;
+    gasPrice: string;
   }
-)
-  .addParam(
-    "deploymentCache",
-    "Cache for deployed contracts",
-    undefined,
-    types.string
-  )
-  .addParam(
-    "transactionCache",
-    "Cache for executed transactions",
-    undefined,
-    types.string
-  );
+>(
+  name: string,
+  description: string,
+  action: ActionType<T>
+) => {
+  const withTransactionOverrides: ActionType<T> = async (
+    args,
+    hre,
+    runSuper
+  ) => {
+    const transactionOverrides = {
+      gasPrice: utils.parseUnits(args.gasPrice, "gwei"),
+    };
+    await action({ ...args, transactionOverrides }, hre, runSuper);
+  };
+  return task(name, description, withTransactionOverrides)
+    .addParam(
+      "deploymentCache",
+      "Cache for deployed contracts",
+      undefined,
+      types.string
+    )
+    .addParam(
+      "transactionCache",
+      "Cache for executed transactions",
+      undefined,
+      types.string
+    )
+    .addParam(
+      "gasPrice",
+      "Gas price used in transactions (in gwei)",
+      "30",
+      types.string
+    );
+};
 
-task(
+deploymentTask(
+  "deployInfrastructure",
+  "Deploys the infrastructure",
+  deployInfrastructure
+);
+
+deploymentTask(
   "debugInfrastructure",
   "Print debug information for entire infrastructure",
-  async (args: any, hre) => {
-    await debugInfrastructure(args, hre);
-  }
-)
-  .addParam(
-    "deploymentCache",
-    "Cache for deployed contracts",
-    undefined,
-    types.string
-  )
-  .addParam(
-    "transactionCache",
-    "Cache for executed transactions",
-    undefined,
-    types.string
-  );
+  debugInfrastructure
+);
 
 task("poke", "Use mega poke the infrastructure", async (args: any, hre) => {
   await poke(args, hre);

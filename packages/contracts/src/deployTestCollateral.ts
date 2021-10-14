@@ -2,7 +2,7 @@ import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { UseDeployment } from "./types";
 
-export const deployProxyHelper: UseDeployment<{}, { proxyHelper: Contract }> =
+export const deployTestCollateral: UseDeployment<{}, { collateral: Contract }> =
   async ({ deploymentCache, transactionCache, transactionOverrides }, hre) => {
     const { deployOrGetInstance } = buildCachedDeployments({
       network: hre.network.name,
@@ -13,11 +13,11 @@ export const deployProxyHelper: UseDeployment<{}, { proxyHelper: Contract }> =
       transactionOverrides,
       hre,
     });
-    const proxyHelper = await deployOrGetInstance({
-      key: "ProxyHelper",
-      factory: "ProxyHelper",
+    const collateral = await deployOrGetInstance({
+      key: "SimpleCollateral",
+      factory: "SimpleCollateral",
     });
     return {
-      proxyHelper,
+      collateral,
     };
   };

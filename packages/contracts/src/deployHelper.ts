@@ -1,18 +1,11 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { utils } from "ethers";
+import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
+import { UseDeployment } from "./types";
 
-export const deployHelper = async (
-  {
-    deploymentCache,
-    transactionCache,
-  }: {
-    deploymentCache: string;
-    transactionCache: string;
-  },
-  hre: HardhatRuntimeEnvironment
+export const deployHelper: UseDeployment<{}, { helper: Contract }> = async (
+  { deploymentCache, transactionCache, transactionOverrides },
+  hre
 ) => {
-  const transactionOverrides = { gasPrice: utils.parseUnits("30", "gwei") };
   const { deployOrGetInstance } = buildCachedDeployments({
     network: hre.network.name,
     deploymentCachePath: deploymentCache,

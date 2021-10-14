@@ -152,7 +152,7 @@ contract ProxyHelper {
     // If negative debtDelta withdraw stablecoin
     if (debtDelta < 0) {
       savingsAccount.withdraw((uint256(-debtDelta) * RAY) / accumulatedRates);
-      exitStablecoin(stablecoinJoinAddr, uint256(-debtDelta));
+      exitStablecoin(stablecoinJoinAddr, uint256(-debtDelta) - 1);
     }
   }
 

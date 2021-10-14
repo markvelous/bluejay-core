@@ -8,6 +8,10 @@ import { exp, increaseTime, incrementTime } from "../src/utils";
 
 ethers.utils.Logger.setLogLevel(ethers.utils.Logger.levels.ERROR);
 
+const transactionOverrides = {
+  gasPrice: ethers.utils.parseUnits("10", "gwei"),
+};
+
 const deployProxyRegistry = async () => {
   const ProxyRegistry = await ethers.getContractFactory("ProxyRegistry");
   const proxyRegistry = await ProxyRegistry.deploy();
@@ -62,6 +66,7 @@ describe("ProxyHelper", () => {
       {
         transactionCache: `${name}/tx.json`,
         deploymentCache: `${name}/deploy.json`,
+        transactionOverrides,
       },
       hre
     );
@@ -74,7 +79,7 @@ describe("ProxyHelper", () => {
     const { dsProxy } = await deployDsProxy(proxyRegistry, deployer);
     const ProxyHelper = await deployProxyHelper();
 
-    await collateral.mint(deployer.address, exp(18).mul(1000));
+    await collateral.mint(deployer.address, exp(18).mul(10000));
     await collateral.approve(dsProxy.address, constants.MaxUint256);
     await stablecoin.approve(dsProxy.address, constants.MaxUint256);
 
@@ -87,7 +92,7 @@ describe("ProxyHelper", () => {
         ledger.address,
         stablecoinJoin.address,
         collateralJoin.address,
-        exp(18).mul(1000),
+        exp(18).mul(10000),
         0,
       ]
     );
@@ -103,7 +108,7 @@ describe("ProxyHelper", () => {
           dsProxy.address
         )
       ).lockedCollateral
-    ).equal(exp(18).mul(1000));
+    ).equal(exp(18).mul(10000));
 
     // Draw out stablecoin
     const mintStablecoinData = await getTransactionData(
@@ -115,7 +120,7 @@ describe("ProxyHelper", () => {
         stablecoinJoin.address,
         collateralJoin.address,
         0,
-        exp(18).mul(100000),
+        exp(18).mul(5000000),
       ]
     );
     await dsProxy["execute(address,bytes)"](
@@ -129,9 +134,9 @@ describe("ProxyHelper", () => {
           dsProxy.address
         )
       ).normalizedDebt
-    ).equal(exp(18).mul(100000));
+    ).equal(exp(18).mul(5000000));
     expect(await stablecoin.balanceOf(deployer.address)).to.equal(
-      exp(18).mul(100000)
+      exp(18).mul(5000000)
     );
 
     // Allow stability fee to accrue
@@ -150,7 +155,7 @@ describe("ProxyHelper", () => {
         stablecoinJoin.address,
         collateralJoin.address,
         0,
-        BigNumber.from(0).sub(exp(18).mul(50000)),
+        BigNumber.from(0).sub(exp(18).mul(2500000)),
       ]
     );
     await dsProxy["execute(address,bytes)"](
@@ -165,9 +170,13 @@ describe("ProxyHelper", () => {
           dsProxy.address
         )
       ).normalizedDebt
-    ).equal(exp(18).mul(50000));
-    expect(await stablecoin.balanceOf(deployer.address)).lt(exp(18).mul(50000));
-    expect(await stablecoin.balanceOf(deployer.address)).gt(exp(18).mul(49900));
+    ).equal(exp(18).mul(2500000));
+    expect(await stablecoin.balanceOf(deployer.address)).lt(
+      exp(18).mul(2500000)
+    );
+    expect(await stablecoin.balanceOf(deployer.address)).gt(
+      exp(18).mul(2499000)
+    );
 
     // Withdraw collateral
     const withdrawCollateralData = await getTransactionData(
@@ -178,7 +187,7 @@ describe("ProxyHelper", () => {
         ledger.address,
         stablecoinJoin.address,
         collateralJoin.address,
-        BigNumber.from(0).sub(exp(18).mul(500)),
+        BigNumber.from(0).sub(exp(18).mul(5000)),
         0,
       ]
     );
@@ -187,7 +196,7 @@ describe("ProxyHelper", () => {
       withdrawCollateralData
     );
     expect(await collateral.balanceOf(deployer.address)).to.equal(
-      exp(18).mul(500)
+      exp(18).mul(5000)
     );
     removeCallback();
   });
@@ -209,6 +218,7 @@ describe("ProxyHelper", () => {
       {
         transactionCache: `${name}/tx.json`,
         deploymentCache: `${name}/deploy.json`,
+        transactionOverrides,
       },
       hre
     );
@@ -221,7 +231,7 @@ describe("ProxyHelper", () => {
     const { dsProxy } = await deployDsProxy(proxyRegistry, deployer);
     const ProxyHelper = await deployProxyHelper();
 
-    await collateral.mint(deployer.address, exp(18).mul(1000));
+    await collateral.mint(deployer.address, exp(18).mul(10000));
     await collateral.approve(dsProxy.address, constants.MaxUint256);
     await stablecoin.approve(dsProxy.address, constants.MaxUint256);
 
@@ -234,15 +244,14 @@ describe("ProxyHelper", () => {
         ledger.address,
         stablecoinJoin.address,
         collateralJoin.address,
-        exp(18).mul(1000),
-        exp(18).mul(100000),
+        exp(18).mul(10000),
+        exp(18).mul(5000000),
       ]
     );
     await dsProxy["execute(address,bytes)"](
       ProxyHelper.address,
       depositCollateralData
     );
-
     expect(
       (
         await ledger.positions(
@@ -250,7 +259,7 @@ describe("ProxyHelper", () => {
           dsProxy.address
         )
       ).lockedCollateral
-    ).equal(exp(18).mul(1000));
+    ).equal(exp(18).mul(10000));
     expect(
       (
         await ledger.positions(
@@ -258,9 +267,9 @@ describe("ProxyHelper", () => {
           dsProxy.address
         )
       ).normalizedDebt
-    ).equal(exp(18).mul(100000));
+    ).equal(exp(18).mul(5000000));
     expect(await stablecoin.balanceOf(deployer.address)).to.equal(
-      exp(18).mul(100000)
+      exp(18).mul(5000000)
     );
 
     // Allow stability fee to accrue
@@ -278,8 +287,8 @@ describe("ProxyHelper", () => {
         ledger.address,
         stablecoinJoin.address,
         collateralJoin.address,
-        BigNumber.from(0).sub(exp(18).mul(500)),
-        BigNumber.from(0).sub(exp(18).mul(50000)),
+        BigNumber.from(0).sub(exp(18).mul(5000)),
+        BigNumber.from(0).sub(exp(18).mul(2500000)),
       ]
     );
     await dsProxy["execute(address,bytes)"](
@@ -294,17 +303,21 @@ describe("ProxyHelper", () => {
           dsProxy.address
         )
       ).normalizedDebt
-    ).equal(exp(18).mul(50000));
-    expect(await stablecoin.balanceOf(deployer.address)).lt(exp(18).mul(50000));
-    expect(await stablecoin.balanceOf(deployer.address)).gt(exp(18).mul(49900));
+    ).equal(exp(18).mul(2500000));
+    expect(await stablecoin.balanceOf(deployer.address)).lt(
+      exp(18).mul(2500000)
+    );
+    expect(await stablecoin.balanceOf(deployer.address)).gt(
+      exp(18).mul(2490000)
+    );
 
     expect(await collateral.balanceOf(deployer.address)).to.equal(
-      exp(18).mul(500)
+      exp(18).mul(5000)
     );
     removeCallback();
   });
 
-  it.only("should allow closing of position", async () => {
+  it("should allow closing of position", async () => {
     const [deployer, account1] = await ethers.getSigners();
     const { name, removeCallback } = dirSync({ unsafeCleanup: true });
     const {
@@ -321,6 +334,7 @@ describe("ProxyHelper", () => {
       {
         transactionCache: `${name}/tx.json`,
         deploymentCache: `${name}/deploy.json`,
+        transactionOverrides,
       },
       hre
     );
@@ -340,11 +354,11 @@ describe("ProxyHelper", () => {
     );
     const ProxyHelper = await deployProxyHelper();
 
-    await collateral.mint(deployer.address, exp(18).mul(1000));
+    await collateral.mint(deployer.address, exp(18).mul(10000));
     await collateral.approve(deployerProxy.address, constants.MaxUint256);
     await stablecoin.approve(deployerProxy.address, constants.MaxUint256);
 
-    await collateral.mint(account1.address, exp(18).mul(1000));
+    await collateral.mint(account1.address, exp(18).mul(10000));
     await collateral
       .connect(account1)
       .approve(account1Proxy.address, constants.MaxUint256);
@@ -361,8 +375,8 @@ describe("ProxyHelper", () => {
         ledger.address,
         stablecoinJoin.address,
         collateralJoin.address,
-        exp(18).mul(1000),
-        exp(18).mul(100000),
+        exp(18).mul(10000),
+        exp(18).mul(5000000),
       ]
     );
     await deployerProxy["execute(address,bytes)"](
@@ -380,7 +394,7 @@ describe("ProxyHelper", () => {
           deployerProxy.address
         )
       ).lockedCollateral
-    ).equal(exp(18).mul(1000));
+    ).equal(exp(18).mul(10000));
     expect(
       (
         await ledger.positions(
@@ -388,15 +402,15 @@ describe("ProxyHelper", () => {
           deployerProxy.address
         )
       ).normalizedDebt
-    ).equal(exp(18).mul(100000));
+    ).equal(exp(18).mul(5000000));
     expect(await stablecoin.balanceOf(deployer.address)).to.equal(
-      exp(18).mul(100000)
+      exp(18).mul(5000000)
     );
 
     // Send some more stablecoins to deployer
     await stablecoin
       .connect(account1)
-      .transfer(deployer.address, exp(18).mul(100000));
+      .transfer(deployer.address, exp(18).mul(5000000));
 
     // Allow stability fee to accrue
     await incrementTime(60 * 60 * 24, ethers.provider);
@@ -430,7 +444,7 @@ describe("ProxyHelper", () => {
     ).equal(0);
 
     expect(await collateral.balanceOf(deployer.address)).to.equal(
-      exp(18).mul(1000)
+      exp(18).mul(10000)
     );
     removeCallback();
   });
@@ -452,6 +466,7 @@ describe("ProxyHelper", () => {
       {
         transactionCache: `${name}/tx.json`,
         deploymentCache: `${name}/deploy.json`,
+        transactionOverrides,
       },
       hre
     );
@@ -466,7 +481,7 @@ describe("ProxyHelper", () => {
 
     await incrementTime(60 * 60, ethers.provider);
 
-    await collateral.mint(deployer.address, exp(18).mul(1000));
+    await collateral.mint(deployer.address, exp(18).mul(10000));
     await collateral.approve(dsProxy.address, constants.MaxUint256);
     await stablecoin.approve(dsProxy.address, constants.MaxUint256);
 
@@ -479,8 +494,8 @@ describe("ProxyHelper", () => {
         ledger.address,
         stablecoinJoin.address,
         collateralJoin.address,
-        exp(18).mul(1000),
-        exp(18).mul(100000),
+        exp(18).mul(10000),
+        exp(18).mul(5000000),
       ]
     );
     await dsProxy["execute(address,bytes)"](
@@ -493,13 +508,11 @@ describe("ProxyHelper", () => {
     const depositData = await getTransactionData(
       ProxyHelper,
       "transferSavings",
-      [savingsAccount.address, stablecoinJoin.address, exp(18).mul(100000)]
+      [savingsAccount.address, stablecoinJoin.address, exp(18).mul(5000000 - 1)]
     );
     await dsProxy["execute(address,bytes)"](ProxyHelper.address, depositData);
-    expect(await stablecoin.balanceOf(deployer.address)).to.equal(0);
 
     const normalizedSavings = await savingsAccount.savings(dsProxy.address);
-
     await incrementTime(365 * 24 * 60 * 60, ethers.provider);
     await savingsAccount.updateAccumulatedRate();
 
@@ -520,7 +533,7 @@ describe("ProxyHelper", () => {
     await dsProxy["execute(address,bytes)"](ProxyHelper.address, withdrawData);
 
     expect(await stablecoin.balanceOf(deployer.address)).to.gt(
-      exp(18).mul(110000)
+      exp(18).mul(5300000)
     );
 
     removeCallback();
