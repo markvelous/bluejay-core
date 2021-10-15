@@ -5,14 +5,14 @@ export const contracts: { [network: string]: { [contract: string]: string } } = 
 
 export const proxyRegistryAddress = contracts[config.environment].ProxyRegistry;
 export const proxyHelperAddress = contracts[config.environment].ProxyHelper;
-export const ledgerAddress = contracts[config.environment].ProxyLedger;
-export const oracleRelayerAddress = contracts[config.environment].ProxyOracleRelayer;
-export const feesEngineAddress = contracts[config.environment].ProxyFeesEngine;
-export const savingsAccountAddress = contracts[config.environment].ProxySavingsAccount;
-export const collateralFaucetAddress = contracts[config.environment].SimpleCollateral;
-export const stablecoinJoinAddress = contracts[config.environment].ProxyStablecoinJoin;
-export const stablecoinAddress = contracts[config.environment].ProxyStablecoin;
-export const collateralJoinAddress = contracts[config.environment].ProxyCollateralJoin;
+export const ledgerAddress = contracts[config.environment]["[MMKT]ProxyLedger"];
+export const oracleRelayerAddress = contracts[config.environment]["[MMKT]ProxyOracleRelayer"];
+export const feesEngineAddress = contracts[config.environment]["[MMKT]ProxyFeesEngine"];
+export const savingsAccountAddress = contracts[config.environment]["[MMKT]ProxySavingsAccount"];
+export const collateralFaucetAddress = contracts[config.environment]["Collateral[USDT]"];
+export const stablecoinJoinAddress = contracts[config.environment]["[MMKT]ProxyStablecoinJoin"];
+export const stablecoinAddress = contracts[config.environment]["[MMKT]ProxyStablecoin"];
+export const collateralJoinAddress = contracts[config.environment]["[MMKT][USDT]ProxyCollateralJoin"];
 export const helperAddress = contracts[config.environment].Helper;
 
 interface Collateral {
@@ -24,7 +24,7 @@ interface Collateral {
 export const collaterals: Collateral[] = [
   {
     name: "USDT",
-    address: contracts[config.environment].SimpleCollateral,
+    address: contracts[config.environment]["Collateral[USDT]"],
     collateralType: "0x0000000000000000000000000000000000000000000000000000000000000001",
   },
 ];

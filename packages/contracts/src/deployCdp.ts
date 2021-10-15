@@ -56,6 +56,7 @@ export const ArchitectureRt = Record({
       liquidationMaxPriceDiscount: String,
       liquidationKeeperRewardFactor: String,
       liquidationKeeperIncentive: String,
+      osmPriceDelay: String,
     })
   ),
 });
@@ -521,6 +522,7 @@ export const deployCdp: UseDeployment<{ deploymentPlan: string }, DeployCore> =
         liquidationMaxPriceDiscount,
         liquidationKeeperRewardFactor,
         liquidationKeeperIncentive,
+        osmPriceDelay
       } = deploymentPlan.collaterals[i];
       const { osm, liquidationAuction } = collateralSpecificDeployment[key];
       await executeTransaction({
@@ -625,6 +627,12 @@ export const deployCdp: UseDeployment<{ deploymentPlan: string }, DeployCore> =
         method: "updateDiscountCalculator",
         args: [discountCalculator.address],
       });
+      await executeTransaction({
+        contract: osm,
+        key: `[${stablecoinContext}][${key}]OSM_UPDATE_PRICE_DELAY`,
+        method: "updatePriceDelay",
+        args: [BigNumber.from(osmPriceDelay)],
+      });
     }
     await executeTransaction({
       contract: ledger,
@@ -632,12 +640,6 @@ export const deployCdp: UseDeployment<{ deploymentPlan: string }, DeployCore> =
       method: "updateTotalDebtCeiling",
       args: [BigNumber.from(deploymentPlan.global.debtCeiling)],
     });
-    // await executeTransaction({
-    //   contract: oracleRelayer,
-    //   key: `[${stablecoinContext}]ORACLE_RELAYER_UPDATE_COLLATERAL_PRICE`,
-    //   method: "updateCollateralPrice",
-    //   args: [deploymentParameters.COLLATERAL_TYPE],
-    // });
     await executeTransaction({
       contract: savingsAccount,
       key: `[${stablecoinContext}]SAVINGS_ACCOUNT_UPDATE_SAVINGS_RATE`,

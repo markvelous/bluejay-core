@@ -35,7 +35,7 @@
       "liquidationMaxPriceDiscount": "400000000000000000000000000",
       "liquidationKeeperRewardFactor": "1000000000000000",
       "liquidationKeeperIncentive": "2000000000000000000000000000000000000000000000000",
-      "osmPriceDelay": "3600"
+      "osmPriceDelay": "1"
     }
   ]
 }

@@ -15,6 +15,9 @@ import { debugInfrastructure } from "./tasks/debugInfrastructure";
 import { deployTestCollateral } from "./src/deployTestCollateral";
 import { deployTestGovernanceToken } from "./src/deployTestGovernanceToken";
 import { deployCdp } from "./src/deployCdp";
+import { deployProxy } from "./src/deployProxy";
+import { deployHelper } from "./src/deployHelper";
+import { deployProxyHelper } from "./src/deployProxyHelper";
 
 export const deploymentTask = <
   T extends {
@@ -59,6 +62,13 @@ export const deploymentTask = <
     );
 };
 
+deploymentTask("deployProxy", "Deploy the proxy registry", deployProxy);
+deploymentTask("deployHelper", "Deploy the helper contract", deployHelper);
+deploymentTask(
+  "deployProxyHelper",
+  "Deploy the helper contracts for proxy",
+  deployProxyHelper
+);
 deploymentTask(
   "deployTestCollateral",
   "Deploy the test collateral contract",
