@@ -12,6 +12,9 @@ import { config } from "./src/config";
 import { deployInfrastructure } from "./tasks/deployInfrastructure";
 import { poke } from "./tasks/poke";
 import { debugInfrastructure } from "./tasks/debugInfrastructure";
+import { deployTestCollateral } from "./src/deployTestCollateral";
+import { deployTestGovernanceToken } from "./src/deployTestGovernanceToken";
+import { deployCdp } from "./src/deployCdp";
 
 export const deploymentTask = <
   T extends {
@@ -55,6 +58,24 @@ export const deploymentTask = <
       types.string
     );
 };
+
+deploymentTask(
+  "deployTestCollateral",
+  "Deploy the test collateral contract",
+  deployTestCollateral as any
+).addParam("name", "Name of Collateral", "FakeUSD", types.string);
+
+deploymentTask(
+  "deployTestGovernanceToken",
+  "Deploy the test governance token contract",
+  deployTestGovernanceToken
+);
+
+deploymentTask(
+  "deployCdp",
+  "Deploy the CDP for new stablecoin",
+  deployCdp as any
+).addParam("deploymentPlan", "Entire deployment plan", undefined, types.string);
 
 deploymentTask(
   "deployInfrastructure",

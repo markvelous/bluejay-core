@@ -6,7 +6,7 @@ import { deployPoker } from "../src/deployPoker";
 import { deployProxyHelper } from "../src/deployProxyHelper";
 import { UseDeployment } from "../src/types";
 
-export const deployInfrastructure: UseDeployment<{}, void> = async (
+export const deployInfrastructure: UseDeployment<{}, any> = async (
   args,
   hre
 ) => {

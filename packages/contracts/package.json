@@ -25,7 +25,8 @@
     "dotenv": "^10.0.0",
     "ethers": "^5.4.4",
     "hardhat": "^2.6.4",
-    "hardhat-watcher": "^2.1.1"
+    "hardhat-watcher": "^2.1.1",
+    "runtypes": "^6.4.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.15.7",

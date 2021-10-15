@@ -2,11 +2,11 @@ import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { UseDeployment } from "./types";
 
-export const deployTestCollateral: UseDeployment<
-  { name: string },
-  { collateral: Contract }
+export const deployTestGovernanceToken: UseDeployment<
+  {},
+  { governanceToken: Contract }
 > = async (
-  { deploymentCache, transactionCache, transactionOverrides, name },
+  { deploymentCache, transactionCache, transactionOverrides },
   hre
 ) => {
   const { deployOrGetInstance } = buildCachedDeployments({
@@ -18,11 +18,12 @@ export const deployTestCollateral: UseDeployment<
     transactionOverrides,
     hre,
   });
-  const collateral = await deployOrGetInstance({
-    key: `Collateral[${name}]`,
-    factory: "SimpleCollateral",
+  const governanceToken = await deployOrGetInstance({
+    key: "GovernanceToken",
+    factory: "SimpleGovernanceToken",
+    initArgs: [],
   });
   return {
-    collateral,
+    governanceToken,
   };
 };
