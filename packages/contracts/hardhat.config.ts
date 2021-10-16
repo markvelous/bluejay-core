@@ -11,6 +11,7 @@ import { utils, BigNumber } from "ethers";
 import { config } from "./src/config";
 import { deployInfrastructure } from "./tasks/deployInfrastructure";
 import { poke } from "./tasks/poke";
+import { updateOraclePrice } from "./tasks/updateOraclePrice";
 import { debugInfrastructure } from "./tasks/debugInfrastructure";
 import { deployTestCollateral } from "./src/deployTestCollateral";
 import { deployTestGovernanceToken } from "./src/deployTestGovernanceToken";
@@ -107,6 +108,21 @@ task("poke", "Use mega poke the infrastructure", async (args: any, hre) => {
   undefined,
   types.string
 );
+
+task(
+  "updateOraclePrice",
+  "Updates the oracle price",
+  async (args: any, hre) => {
+    await updateOraclePrice(args, hre);
+  }
+)
+  .addParam(
+    "oracleAddress",
+    "Address of SingleFeedOracle contract",
+    undefined,
+    types.string
+  )
+  .addParam("price", "Price in WAD", undefined, types.string);
 
 task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();

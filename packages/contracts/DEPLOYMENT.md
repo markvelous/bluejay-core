@@ -29,3 +29,9 @@ Note that the deployment cache need to have both the governance token and collat
   }
 }
 ```
+
+## Update Oracle Price
+
+```
+hh updateOraclePrice --oracle-address 0x984f797d26d3da2E9b9f8Ae4eeFEACC60fCAA90C --price 2000000000000000000000 --network local
+```
