@@ -19,6 +19,7 @@ import { deployCdp } from "./src/deployCdp";
 import { deployProxy } from "./src/deployProxy";
 import { deployPoker } from "./src/deployPoker";
 import { deployHelper } from "./src/deployHelper";
+import { debugVault } from "./src/debugVault";
 import { deployProxyHelper } from "./src/deployProxyHelper";
 
 export const deploymentTask = <
@@ -70,7 +71,14 @@ deploymentTask(
   "Deploy the poker contract",
   deployPoker as any
 ).addParam("deploymentPlan", "Entire deployment plan", undefined, types.string);
-
+deploymentTask("debugVault", "Print vault information", debugVault as any)
+  .addParam("vault", "Address of vault", undefined, types.string)
+  .addParam(
+    "deploymentPlan",
+    "Entire deployment plan",
+    undefined,
+    types.string
+  );
 deploymentTask("deployHelper", "Deploy the helper contract", deployHelper);
 deploymentTask(
   "deployProxyHelper",
