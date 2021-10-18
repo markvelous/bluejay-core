@@ -100,7 +100,7 @@
     "deploy:staging:poker": "cd ../contracts && hh deployPoker --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --deployment-plan ../app-vault/src/fixtures/deployment/plan.development.json --network staging",
     "deploy:staging:helper": "cd ../contracts && hh deployHelper --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging",
     "deploy:staging:proxyhelper": "cd ../contracts && hh deployProxyHelper --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging",
-    "debug:local": "cd ../contracts && hh debugInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging",
+    "debug:local": "cd ../contracts && hh debugInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network local",
     "debug:staging": "cd ../contracts && hh debugInfrastructure --deployment-cache ../app-vault/src/fixtures/deployment/contracts.json --transaction-cache ../app-vault/src/fixtures/deployment/transactions.json --network staging"
   },
   "config": {
