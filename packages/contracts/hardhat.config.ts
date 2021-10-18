@@ -17,6 +17,7 @@ import { deployTestCollateral } from "./src/deployTestCollateral";
 import { deployTestGovernanceToken } from "./src/deployTestGovernanceToken";
 import { deployCdp } from "./src/deployCdp";
 import { deployProxy } from "./src/deployProxy";
+import { deployPoker } from "./src/deployPoker";
 import { deployHelper } from "./src/deployHelper";
 import { deployProxyHelper } from "./src/deployProxyHelper";
 
@@ -64,6 +65,12 @@ export const deploymentTask = <
 };
 
 deploymentTask("deployProxy", "Deploy the proxy registry", deployProxy);
+deploymentTask(
+  "deployPoker",
+  "Deploy the poker contract",
+  deployPoker as any
+).addParam("deploymentPlan", "Entire deployment plan", undefined, types.string);
+
 deploymentTask("deployHelper", "Deploy the helper contract", deployHelper);
 deploymentTask(
   "deployProxyHelper",

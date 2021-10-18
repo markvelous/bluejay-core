@@ -1,11 +1,23 @@
+/* eslint-disable no-await-in-loop */
 import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { UseDeployment } from "./types";
+import { readDeploymentPlan } from "./deploymentPlan";
 
-export const deployPoker: UseDeployment<{}, { poker: Contract }> = async (
-  { deploymentCache, transactionCache, transactionOverrides },
+export const deployPoker: UseDeployment<
+  { deploymentPlan: string },
+  { poker: Contract }
+> = async (
+  {
+    deploymentPlan: deploymentPlanPath,
+    deploymentCache,
+    transactionCache,
+    transactionOverrides,
+  },
   hre
 ) => {
+  const deploymentPlan = readDeploymentPlan(deploymentPlanPath);
+  const stablecoinContext = deploymentPlan.stablecoin.symbol;
   const { deployOrGetInstance, getInstance, executeTransaction } =
     buildCachedDeployments({
       network: hre.network.name,
@@ -17,27 +29,23 @@ export const deployPoker: UseDeployment<{}, { poker: Contract }> = async (
       hre,
     });
   const oracleRelayer = await getInstance({
-    key: "ProxyOracleRelayer",
+    key: `[${stablecoinContext}]ProxyOracleRelayer`,
     factory: "OracleRelayer",
   });
   const feesEngine = await getInstance({
-    key: "ProxyFeesEngine",
+    key: `[${stablecoinContext}]ProxyFeesEngine`,
     factory: "FeesEngine",
   });
   const savingsAccount = await getInstance({
-    key: "ProxySavingsAccount",
+    key: `[${stablecoinContext}]ProxySavingsAccount`,
     factory: "SavingsAccount",
   });
   const accountingEngine = await getInstance({
-    key: "ProxyAccountingEngine",
+    key: `[${stablecoinContext}]ProxyAccountingEngine`,
     factory: "AccountingEngine",
   });
-  const osm = await getInstance({
-    key: "ProxyOSM",
-    factory: "OracleSecurityModule",
-  });
   const poker = await deployOrGetInstance({
-    key: "Poker",
+    key: `[${stablecoinContext}]Poker`,
     factory: "Poker",
     args: [
       oracleRelayer.address,
@@ -46,20 +54,26 @@ export const deployPoker: UseDeployment<{}, { poker: Contract }> = async (
       accountingEngine.address,
     ],
   });
-  await executeTransaction({
-    contract: poker,
-    key: "POKER_ADD_OSM",
-    method: "addOracleSecurityModule",
-    args: [osm.address],
-  });
-  await executeTransaction({
-    contract: poker,
-    key: "POKER_ADD_COLLATERAL_TYPE",
-    method: "addCollateralType",
-    args: [
-      "0x0000000000000000000000000000000000000000000000000000000000000001",
-    ],
-  });
+  for (let i = 0; i < deploymentPlan.collaterals.length; i += 1) {
+    const { key: collateral, collateralType } = deploymentPlan.collaterals[i];
+
+    const osm = await getInstance({
+      key: `[${stablecoinContext}][${collateral}]ProxyOSM`,
+      factory: "OracleSecurityModule",
+    });
+    await executeTransaction({
+      contract: poker,
+      key: `[${stablecoinContext}][${collateral}]POKER_ADD_OSM`,
+      method: "addOracleSecurityModule",
+      args: [osm.address],
+    });
+    await executeTransaction({
+      contract: poker,
+      key: `[${stablecoinContext}][${collateral}]POKER_ADD_COLLATERAL_TYPE`,
+      method: "addCollateralType",
+      args: [collateralType],
+    });
+  }
   return {
     poker,
   };

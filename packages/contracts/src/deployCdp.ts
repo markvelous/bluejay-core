@@ -1,9 +1,8 @@
 /* eslint-disable no-await-in-loop */
 import { Contract, constants, BigNumber } from "ethers";
-import { Record, String, Array, Boolean } from "runtypes";
-import { readFileSync } from "fs";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { UseDeployment } from "./types";
+import { readDeploymentPlan } from "./deploymentPlan";
 
 interface DeployCore {
   discountCalculator: Contract;
@@ -18,48 +17,6 @@ interface DeployCore {
   ledger: Contract;
   stablecoin: Contract;
 }
-
-export const ArchitectureRt = Record({
-  stablecoin: Record({
-    name: String,
-    symbol: String,
-  }),
-  governanceToken: Record({
-    grantMinterRole: Boolean,
-  }),
-  global: Record({
-    debtCeiling: String,
-    savingsRate: String,
-    stabilityFee: String,
-    debtDelay: String,
-    surplusLotSize: String,
-    surplusBuffer: String,
-    debtLotSize: String,
-    debtLotInitialBid: String,
-    maxDebtInActiveLiquidation: String,
-    discountCalculatorStep: String,
-    discountCalculatorFactorPerStep: String,
-  }),
-  collaterals: Array(
-    Record({
-      key: String,
-      name: String,
-      collateralType: String,
-      debtCeiling: String,
-      debtFloor: String,
-      collateralizationRatio: String,
-      stabilityFee: String,
-      liquidationPenalty: String,
-      maxDebtInActiveLiquidation: String,
-      liquidationStartingPriceMultiplier: String,
-      liquidationMaxDuration: String,
-      liquidationMaxPriceDiscount: String,
-      liquidationKeeperRewardFactor: String,
-      liquidationKeeperIncentive: String,
-      osmPriceDelay: String,
-    })
-  ),
-});
 
 type CollateralSpecificContracts = {
   oracle: Contract;
@@ -83,8 +40,7 @@ export const deployCdp: UseDeployment<{ deploymentPlan: string }, DeployCore> =
     },
     hre
   ) => {
-    const planText = JSON.parse(readFileSync(deploymentPlanPath).toString());
-    const deploymentPlan = ArchitectureRt.check(planText);
+    const deploymentPlan = readDeploymentPlan(deploymentPlanPath);
     const {
       getInstance,
       deployOrGetInstance,
@@ -522,7 +478,7 @@ export const deployCdp: UseDeployment<{ deploymentPlan: string }, DeployCore> =
         liquidationMaxPriceDiscount,
         liquidationKeeperRewardFactor,
         liquidationKeeperIncentive,
-        osmPriceDelay
+        osmPriceDelay,
       } = deploymentPlan.collaterals[i];
       const { osm, liquidationAuction } = collateralSpecificDeployment[key];
       await executeTransaction({
