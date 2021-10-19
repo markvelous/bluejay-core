@@ -13,7 +13,11 @@ export const collateralFaucetAddress = contracts[config.environment]["Collateral
 export const stablecoinJoinAddress = contracts[config.environment]["[MMKT]ProxyStablecoinJoin"];
 export const stablecoinAddress = contracts[config.environment]["[MMKT]ProxyStablecoin"];
 export const collateralJoinAddress = contracts[config.environment]["[MMKT][USDT]ProxyCollateralJoin"];
+export const liquidationEngineAddress = contracts[config.environment]["[MMKT]ProxyLiquidationEngine"];
 export const helperAddress = contracts[config.environment].Helper;
+
+export const getLiquidationAuctionAddress = (key: string): string =>
+  contracts[config.environment][`[MMKT][${key}]ProxyLiquidationAuction`];
 
 interface Collateral {
   name: string;

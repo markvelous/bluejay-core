@@ -7,6 +7,7 @@ import { bnToNum, toBigNumber } from "../../utils/number";
 import { Button } from "../Button/Button";
 import { usePositionManager, ReadyManagerStates } from "../../hooks/usePositionManager";
 import { BigNumber } from "ethers";
+import { useLiquidateVault } from "../../hooks/useLiquidateVault";
 
 interface MintingState {
   collateralInput: string;
@@ -16,11 +17,13 @@ interface MintingState {
 }
 
 export const ReadyPositionManager: FunctionComponent<{
+  vaultAddr: string;
   positionManager: ReadyManagerStates;
-  collateral: { name: string };
+  collateral: { name: string; collateralType: string; address: string };
   handleTransferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
   handleClosePosition: () => void;
-}> = ({ positionManager, collateral, handleTransferCollateralAndDebt, handleClosePosition }) => {
+}> = ({ vaultAddr, positionManager, collateral, handleTransferCollateralAndDebt, handleClosePosition }) => {
+  const liquidationState = useLiquidateVault({ collateral });
   const [mintingState, setMintingState] = useState<MintingState>({
     collateralInput: "",
     debtInput: "",
@@ -117,6 +120,9 @@ export const ReadyPositionManager: FunctionComponent<{
             <Button onClick={handleClosePosition}>Close Position</Button>
           </div>
         )}
+        {!isProxyOwner && liquidationState.state == "READY" && (
+          <Button onClick={() => liquidationState.liquidateVault(vaultAddr)}>Liquidate</Button>
+        )}
       </div>
     </Layout>
   );
@@ -154,6 +160,7 @@ export const VaultPositionManagerContainer: FunctionComponent = () => {
   ) {
     return (
       <ReadyPositionManager
+        vaultAddr={vaultAddr}
         positionManager={positionManager}
         collateral={collateral}
         handleTransferCollateralAndDebt={handleTransferCollateralAndDebt}

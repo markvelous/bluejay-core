@@ -2,6 +2,16 @@ pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface ILiquidationEngine {
+  function liquidatePosition(
+    bytes32 collateralType,
+    address position,
+    address keeper
+  ) external returns (uint256 auctionId);
+
+  function ledger() external returns (address);
+}
+
 interface ILedger {
   function collateralTypes(bytes32 collateralType)
     external
@@ -27,6 +37,8 @@ interface ILedger {
     external
     view
     returns (uint256 lockedCollateral, uint256 normalizedDebt);
+
+  function debt(address position) external view returns (uint256);
 }
 
 interface ICollateralJoin {
@@ -59,6 +71,7 @@ interface ISavingsAccount {
 
 contract ProxyHelper {
   uint256 constant RAY = 10**27;
+  uint256 constant WAD = 10**18;
 
   function joinStablecoin(address stablecoinJoinAddr, uint256 amount) public {
     IStablecoinJoin stablecoinJoin = IStablecoinJoin(stablecoinJoinAddr);
@@ -185,5 +198,23 @@ contract ProxyHelper {
     );
     // Withdraw collateral
     exitCollateral(collateralJoinAddr, lockedCollateral);
+  }
+
+  function liquidatePosition(
+    bytes32 collateralType,
+    address position,
+    address liquidationEngineAddr,
+    address stablecoinJoinAddr
+  ) public {
+    ILiquidationEngine liquidationEngine = ILiquidationEngine(
+      liquidationEngineAddr
+    );
+    liquidationEngine.liquidatePosition(
+      collateralType,
+      position,
+      address(this)
+    );
+    ILedger ledger = ILedger(liquidationEngine.ledger());
+    exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
   }
 }
