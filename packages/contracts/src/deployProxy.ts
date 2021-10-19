@@ -1,32 +1,23 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { utils } from "ethers";
+import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
+import { UseDeployment } from "./types";
 
-export const deployProxy = async (
-  {
-    deploymentCache,
-    transactionCache,
-  }: {
-    deploymentCache: string;
-    transactionCache: string;
-  },
-  hre: HardhatRuntimeEnvironment
-) => {
-  const transactionOverrides = { gasPrice: utils.parseUnits("30", "gwei") };
-  const { deployOrGetInstance } = buildCachedDeployments({
-    network: hre.network.name,
-    deploymentCachePath: deploymentCache,
-    transactionCachePath: transactionCache,
-    skipDeploymentCache: false,
-    skipTransactionCache: false,
-    transactionOverrides,
-    hre,
-  });
-  const proxyRegistry = await deployOrGetInstance({
-    key: "ProxyRegistry",
-    factory: "ProxyRegistry",
-  });
-  return {
-    proxyRegistry,
+export const deployProxy: UseDeployment<{}, { proxyRegistry: Contract }> =
+  async ({ deploymentCache, transactionCache, transactionOverrides }, hre) => {
+    const { deployOrGetInstance } = buildCachedDeployments({
+      network: hre.network.name,
+      deploymentCachePath: deploymentCache,
+      transactionCachePath: transactionCache,
+      skipDeploymentCache: false,
+      skipTransactionCache: false,
+      transactionOverrides,
+      hre,
+    });
+    const proxyRegistry = await deployOrGetInstance({
+      key: "ProxyRegistry",
+      factory: "ProxyRegistry",
+    });
+    return {
+      proxyRegistry,
+    };
   };
-};

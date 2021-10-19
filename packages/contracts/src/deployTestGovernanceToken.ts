@@ -2,7 +2,10 @@ import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { UseDeployment } from "./types";
 
-export const deployHelper: UseDeployment<{}, { helper: Contract }> = async (
+export const deployTestGovernanceToken: UseDeployment<
+  {},
+  { governanceToken: Contract }
+> = async (
   { deploymentCache, transactionCache, transactionOverrides },
   hre
 ) => {
@@ -15,11 +18,12 @@ export const deployHelper: UseDeployment<{}, { helper: Contract }> = async (
     transactionOverrides,
     hre,
   });
-  const helper = await deployOrGetInstance({
-    key: "Helper",
-    factory: "Helper",
+  const governanceToken = await deployOrGetInstance({
+    key: "GovernanceToken",
+    factory: "SimpleGovernanceToken",
+    initArgs: [],
   });
   return {
-    helper,
+    governanceToken,
   };
 };

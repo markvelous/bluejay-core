@@ -2,8 +2,11 @@ import { Contract } from "ethers";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { UseDeployment } from "./types";
 
-export const deployHelper: UseDeployment<{}, { helper: Contract }> = async (
-  { deploymentCache, transactionCache, transactionOverrides },
+export const deployTestCollateral: UseDeployment<
+  { name: string },
+  { collateral: Contract }
+> = async (
+  { deploymentCache, transactionCache, transactionOverrides, name },
   hre
 ) => {
   const { deployOrGetInstance } = buildCachedDeployments({
@@ -15,11 +18,11 @@ export const deployHelper: UseDeployment<{}, { helper: Contract }> = async (
     transactionOverrides,
     hre,
   });
-  const helper = await deployOrGetInstance({
-    key: "Helper",
-    factory: "Helper",
+  const collateral = await deployOrGetInstance({
+    key: `Collateral[${name}]`,
+    factory: "SimpleCollateral",
   });
   return {
-    helper,
+    collateral,
   };
 };

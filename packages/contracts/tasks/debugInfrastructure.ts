@@ -33,15 +33,15 @@ export const debugInfrastructure = async (
   const collateralType =
     "0x0000000000000000000000000000000000000000000000000000000000000001";
   const oracle = await getInstance({
-    key: "ProxyOracle",
+    key: "[MMKT][USDT]ProxyOracle",
     factory: "SingleFeedOracle",
   });
   const osm = await getInstance({
-    key: "ProxyOSM",
+    key: "[MMKT][USDT]ProxyOSM",
     factory: "OracleSecurityModule",
   });
   const oracleRelayer = await getInstance({
-    key: "ProxyOracleRelayer",
+    key: "[MMKT]ProxyOracleRelayer",
     factory: "OracleRelayer",
   });
 

@@ -1,23 +1,37 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { constants, utils } from "ethers";
+import { constants, Contract } from "ethers";
 import { deploymentParameters } from "./deploymentParameter";
 import { buildCachedDeployments } from "./cachedDeployments";
 import { exp } from "./utils";
+import { UseDeployment } from "./types";
 
 const MINTER_ROLE =
   "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
 
-export const deployCore = async (
-  {
-    deploymentCache,
-    transactionCache,
-  }: {
-    deploymentCache: string;
-    transactionCache: string;
-  },
-  hre: HardhatRuntimeEnvironment
+interface DeployCore {
+  collateralType: string;
+  collateral: Contract;
+  oracle: Contract;
+  osm: Contract;
+  governanceToken: Contract;
+  stablecoin: Contract;
+  collateralJoin: Contract;
+  stablecoinJoin: Contract;
+  ledger: Contract;
+  savingsAccount: Contract;
+  oracleRelayer: Contract;
+  feesEngine: Contract;
+  surplusAuction: Contract;
+  debtAuction: Contract;
+  accountingEngine: Contract;
+  liquidationEngine: Contract;
+  liquidationAuction: Contract;
+  discountCalculator: Contract;
+}
+
+export const deployCore: UseDeployment<{}, DeployCore> = async (
+  { deploymentCache, transactionCache, transactionOverrides },
+  hre
 ) => {
-  const transactionOverrides = { gasPrice: utils.parseUnits("30", "gwei") };
   const {
     deployBeaconOrGetInstance,
     deployBeaconProxyOrGetInsance,

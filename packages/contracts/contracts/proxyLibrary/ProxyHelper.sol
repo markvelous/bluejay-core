@@ -2,6 +2,32 @@ pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface ILiquidationAuction {
+  function restartAuction(uint256 auctionId, address keeper) external;
+
+  function bidOnAuction(
+    uint256 auctionId,
+    uint256 maxCollateralToBuy,
+    uint256 maxPrice,
+    address liquidatorAddress,
+    bytes calldata data
+  ) external;
+
+  function ledger() external returns (address);
+
+  function collateralType() external returns (bytes32);
+}
+
+interface ILiquidationEngine {
+  function liquidatePosition(
+    bytes32 collateralType,
+    address position,
+    address keeper
+  ) external returns (uint256 auctionId);
+
+  function ledger() external returns (address);
+}
+
 interface ILedger {
   function collateralTypes(bytes32 collateralType)
     external
@@ -27,6 +53,13 @@ interface ILedger {
     external
     view
     returns (uint256 lockedCollateral, uint256 normalizedDebt);
+
+  function debt(address position) external view returns (uint256);
+
+  function collateral(bytes32 collateralType, address position)
+    external
+    view
+    returns (uint256);
 }
 
 interface ICollateralJoin {
@@ -59,6 +92,7 @@ interface ISavingsAccount {
 
 contract ProxyHelper {
   uint256 constant RAY = 10**27;
+  uint256 constant WAD = 10**18;
 
   function joinStablecoin(address stablecoinJoinAddr, uint256 amount) public {
     IStablecoinJoin stablecoinJoin = IStablecoinJoin(stablecoinJoinAddr);
@@ -152,7 +186,7 @@ contract ProxyHelper {
     // If negative debtDelta withdraw stablecoin
     if (debtDelta < 0) {
       savingsAccount.withdraw((uint256(-debtDelta) * RAY) / accumulatedRates);
-      exitStablecoin(stablecoinJoinAddr, uint256(-debtDelta));
+      exitStablecoin(stablecoinJoinAddr, uint256(-debtDelta) - 1);
     }
   }
 
@@ -185,5 +219,63 @@ contract ProxyHelper {
     );
     // Withdraw collateral
     exitCollateral(collateralJoinAddr, lockedCollateral);
+  }
+
+  function liquidatePosition(
+    bytes32 collateralType,
+    address position,
+    address liquidationEngineAddr,
+    address stablecoinJoinAddr
+  ) public {
+    ILiquidationEngine liquidationEngine = ILiquidationEngine(
+      liquidationEngineAddr
+    );
+    liquidationEngine.liquidatePosition(
+      collateralType,
+      position,
+      address(this)
+    );
+    ILedger ledger = ILedger(liquidationEngine.ledger());
+    exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
+  }
+
+  function restartAuction(
+    uint256 auctionId,
+    address liquidationAuctionAddr,
+    address stablecoinJoinAddr
+  ) public {
+    ILiquidationAuction liquidationAuction = ILiquidationAuction(
+      liquidationAuctionAddr
+    );
+    liquidationAuction.restartAuction(auctionId, address(this));
+    ILedger ledger = ILedger(liquidationAuction.ledger());
+    exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
+  }
+
+  function bidOnLiquidationAuction(
+    uint256 auctionId,
+    uint256 maxCollateralToBuy,
+    uint256 maxPrice,
+    address liquidationAuctionAddr,
+    address stablecoinJoinAddr,
+    address collateralJoinAddr
+  ) public {
+    ILiquidationAuction liquidationAuction = ILiquidationAuction(
+      liquidationAuctionAddr
+    );
+    joinStablecoin(stablecoinJoinAddr, (maxCollateralToBuy * maxPrice) / RAY);
+    liquidationAuction.bidOnAuction(
+      auctionId,
+      maxCollateralToBuy,
+      maxPrice,
+      address(this),
+      new bytes(0)
+    );
+    ILedger ledger = ILedger(liquidationAuction.ledger());
+    exitCollateral(
+      collateralJoinAddr,
+      ledger.collateral(liquidationAuction.collateralType(), address(this))
+    );
+    exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
   }
 }
