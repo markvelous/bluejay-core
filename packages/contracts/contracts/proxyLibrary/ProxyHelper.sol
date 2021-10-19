@@ -2,6 +2,22 @@ pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface ILiquidationAuction {
+  function restartAuction(uint256 auctionId, address keeper) external;
+
+  function bidOnAuction(
+    uint256 auctionId,
+    uint256 maxCollateralToBuy,
+    uint256 maxPrice,
+    address liquidatorAddress,
+    bytes calldata data
+  ) external;
+
+  function ledger() external returns (address);
+
+  function collateralType() external returns (bytes32);
+}
+
 interface ILiquidationEngine {
   function liquidatePosition(
     bytes32 collateralType,
@@ -39,6 +55,11 @@ interface ILedger {
     returns (uint256 lockedCollateral, uint256 normalizedDebt);
 
   function debt(address position) external view returns (uint256);
+
+  function collateral(bytes32 collateralType, address position)
+    external
+    view
+    returns (uint256);
 }
 
 interface ICollateralJoin {
@@ -215,6 +236,46 @@ contract ProxyHelper {
       address(this)
     );
     ILedger ledger = ILedger(liquidationEngine.ledger());
+    exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
+  }
+
+  function restartAuction(
+    uint256 auctionId,
+    address liquidationAuctionAddr,
+    address stablecoinJoinAddr
+  ) public {
+    ILiquidationAuction liquidationAuction = ILiquidationAuction(
+      liquidationAuctionAddr
+    );
+    liquidationAuction.restartAuction(auctionId, address(this));
+    ILedger ledger = ILedger(liquidationAuction.ledger());
+    exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
+  }
+
+  function bidOnLiquidationAuction(
+    uint256 auctionId,
+    uint256 maxCollateralToBuy,
+    uint256 maxPrice,
+    address liquidationAuctionAddr,
+    address stablecoinJoinAddr,
+    address collateralJoinAddr
+  ) public {
+    ILiquidationAuction liquidationAuction = ILiquidationAuction(
+      liquidationAuctionAddr
+    );
+    joinStablecoin(stablecoinJoinAddr, (maxCollateralToBuy * maxPrice) / RAY);
+    liquidationAuction.bidOnAuction(
+      auctionId,
+      maxCollateralToBuy,
+      maxPrice,
+      address(this),
+      new bytes(0)
+    );
+    ILedger ledger = ILedger(liquidationAuction.ledger());
+    exitCollateral(
+      collateralJoinAddr,
+      ledger.collateral(liquidationAuction.collateralType(), address(this))
+    );
     exitStablecoin(stablecoinJoinAddr, ledger.debt(address(this)) / RAY);
   }
 }

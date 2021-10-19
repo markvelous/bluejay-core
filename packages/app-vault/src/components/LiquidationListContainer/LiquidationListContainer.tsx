@@ -9,11 +9,6 @@ import LiquidationAuctionAbi from "@bluejayfinance/contracts/abi/LiquidationAuct
 
 import { Layout } from "../Layout";
 import { bnToNum } from "../../utils/number";
-// import { bnToNum, toBigNumber } from "../../utils/number";
-// import { Button } from "../Button/Button";
-// import { usePositionManager, ReadyManagerStates } from "../../hooks/usePositionManager";
-// import { BigNumber } from "ethers";
-// import { useLiquidateVault } from "../../hooks/useLiquidateVault";
 
 type LoadingActiveAuctionState = {
   state: "LOADING_ACTIVE_AUCTIONS";

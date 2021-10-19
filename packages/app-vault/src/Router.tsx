@@ -8,6 +8,7 @@ import { VaultPositionManager } from "./views/VaultPositionManager";
 import { VaultSavingsManager } from "./views/VaultSavingsManager";
 import { VaultList } from "./views/VaultList";
 import { LiquidationList } from "./views/LiquidationList";
+import { LiquidationDetails } from "./views/LiquidationDetails";
 
 export const Router = (): ReactElement => {
   return (
@@ -36,6 +37,9 @@ export const Router = (): ReactElement => {
         </Route>
         <Route exact path="/vault/liquidation/:collateralType">
           <LiquidationList />
+        </Route>
+        <Route exact path="/vault/liquidation/:collateralType/:auctionId">
+          <LiquidationDetails />
         </Route>
       </Switch>
     </BrowserRouter>
