@@ -6,6 +6,7 @@ import { ChainId, DAppProvider } from "@usedapp/core";
 import "./index.css";
 import { App } from "./App";
 import { config } from "./config";
+import { UserContextProvider } from "./context/UserContext";
 
 const dappConfig = {
   readOnlyChainId: config.network.chainId,
@@ -25,7 +26,9 @@ const dappConfig = {
 ReactDOM.render(
   <React.StrictMode>
     <DAppProvider config={dappConfig}>
-      <App />
+      <UserContextProvider>
+        <App />
+      </UserContextProvider>
     </DAppProvider>
   </React.StrictMode>,
   document.getElementById("root")
