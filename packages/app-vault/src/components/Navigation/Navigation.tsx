@@ -15,6 +15,12 @@ export const UserProfile: FunctionComponent = () => {
     setShowMenu(!showMenu);
   };
 
+  const disconnect = (): void => {
+    if (!hasWalletAddress(userContext)) return;
+    setShowMenu(false);
+    userContext.deactivate();
+  };
+
   const getButtonContent = (): string => {
     switch (true) {
       case userContext.state === "UNCONNECTED":
@@ -32,7 +38,7 @@ export const UserProfile: FunctionComponent = () => {
         {getButtonContent()}
       </div>
       <div
-        className={`absolute top-20 right-0 bg-white border-blue-400 text-blue-600 p-2 border rounded ${
+        className={`absolute z-20 top-20 right-0 bg-white border-blue-400 text-blue-600 p-2 border rounded ${
           showMenu ? "block" : "hidden"
         }`}
       >
@@ -51,7 +57,7 @@ export const UserProfile: FunctionComponent = () => {
           <div className="mt-2 mb-2 text-center border-t border-blue-200 pt-4">
             <span
               className="text-sm cursor-pointer rounded w-auto font-bold text-center text-red-500 py-2 px-4 border border-gray-400"
-              onClick={userContext.deactivate}
+              onClick={disconnect}
             >
               Disconnect
             </span>
