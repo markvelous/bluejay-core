@@ -71,7 +71,7 @@ export const UserProfile: FunctionComponent = () => {
 export const Navigation: FunctionComponent = () => {
   return (
     <Popover as="header" className="relative">
-      <div className="bg-blue-600 pt-6 pb-4">
+      <div className="bg-blue-600 pt-2 pb-2">
         <nav className="relative max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6" aria-label="Global">
           <div className="flex items-center flex-1">
             <div className="flex items-center justify-between w-full">
