@@ -2,14 +2,79 @@ import React, { Fragment, FunctionComponent } from "react";
 import { Popover, Transition } from "@headlessui/react";
 import { MenuIcon, XIcon } from "@heroicons/react/outline";
 import logo from "./logo-400.png";
+import { useUserContext, hasWalletAddress } from "../../context/UserContext";
+import { useState } from "react";
+
+export const UserProfile: FunctionComponent = () => {
+  const [showMenu, setShowMenu] = useState(false);
+  const userContext = useUserContext();
+
+  const handleButtonClick = (): void => {
+    if (userContext.state === "UNCONNECTED") return userContext.activateBrowserWallet();
+    if (userContext.state === "WRONG_NETWORK") return userContext.switchNetwork();
+    setShowMenu(!showMenu);
+  };
+
+  const disconnect = (): void => {
+    if (!hasWalletAddress(userContext)) return;
+    setShowMenu(false);
+    userContext.deactivate();
+  };
+
+  const getButtonContent = (): string => {
+    switch (true) {
+      case userContext.state === "UNCONNECTED":
+        return "Connect Wallet";
+      case userContext.state === "WRONG_NETWORK":
+        return "Switch Network";
+      default:
+        return "Wallet";
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-white rounded p-2 text-blue-600 font-semibold cursor-pointer" onClick={handleButtonClick}>
+        {getButtonContent()}
+      </div>
+      <div
+        className={`absolute z-20 top-20 right-0 bg-white border-blue-400 text-blue-600 p-2 border rounded ${
+          showMenu ? "block" : "hidden"
+        }`}
+      >
+        <div className="text-sm font-bold">Wallet Address:</div>
+        {hasWalletAddress(userContext) && <div className="text-xs">{userContext.walletAddress}</div>}
+        {!hasWalletAddress(userContext) && <div className="text-xs">Wallet Not Connected</div>}
+
+        <div className="text-sm font-bold mt-2">Vault Address:</div>
+        {userContext.state === "READY" && <div className="text-xs">{userContext.proxyAddress}</div>}
+        {userContext.state === "DEPLOYING_PROXY" && <div className="text-xs">Deploying...</div>}
+        {userContext.state !== "READY" && userContext.state !== "DEPLOYING_PROXY" && (
+          <div className="text-xs">No Vault Found</div>
+        )}
+
+        {hasWalletAddress(userContext) && (
+          <div className="mt-2 mb-2 text-center border-t border-blue-200 pt-4">
+            <span
+              className="text-sm cursor-pointer rounded w-auto font-bold text-center text-red-500 py-2 px-4 border border-gray-400"
+              onClick={disconnect}
+            >
+              Disconnect
+            </span>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
 
 export const Navigation: FunctionComponent = () => {
   return (
     <Popover as="header" className="relative">
-      <div className="bg-blue-600 pt-6 pb-4">
+      <div className="bg-blue-600 pt-2 pb-2">
         <nav className="relative max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6" aria-label="Global">
           <div className="flex items-center flex-1">
-            <div className="flex items-center justify-between w-full md:w-auto">
+            <div className="flex items-center justify-between w-full">
               <a href="/">
                 <span className="sr-only">Workflow</span>
                 <img className="h-10 w-auto sm:h-14" src={logo} alt="" />
@@ -19,6 +84,9 @@ export const Navigation: FunctionComponent = () => {
                   <span className="sr-only">Open main menu</span>
                   <MenuIcon className="h-6 w-6" aria-hidden="true" />
                 </Popover.Button>
+              </div>
+              <div className="-mr-2 items-center hidden md:flex">
+                <UserProfile />
               </div>
             </div>
           </div>

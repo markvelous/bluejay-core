@@ -32,10 +32,16 @@ export const ButtonStory: React.FunctionComponent = () => {
   };
   const size = select("Size", sizeOpts, "sm") as ButtonProp["btnSize"];
 
+  const schemeOpts = {
+    Primary: "primary",
+    Secondary: "secondary",
+  };
+  const scheme = select("Scheme", schemeOpts, "primary") as ButtonProp["scheme"];
+
   return (
     <div className={`${background} p-6`}>
       <h1 className="storybook-title text-white">Blue Background</h1>
-      <Button btnWidth={width} btnSize={size}>
+      <Button btnWidth={width} btnSize={size} scheme={scheme}>
         Click Me
       </Button>
     </div>

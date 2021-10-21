@@ -8,7 +8,7 @@ export const VaultContainer: FunctionComponent = () => {
   const vaultState = useVault();
   return (
     <Layout>
-      <div className="pt-10 bg-blue-600 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">Vault</div>
+      <div className="pt-10 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">Vault</div>
       {vaultState.state === "FETCHING_VAULT" && "Loading..."}
       {vaultState.state === "DEPLOYING_VAULT" && `Deploying: ${vaultState.hash}`}
       {vaultState.state === "UNCONNECTED" && <Button onClick={vaultState.activateBrowserWallet}>Connect</Button>}
