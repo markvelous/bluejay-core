@@ -254,6 +254,7 @@ export const ReadyPositionManager: FunctionComponent<{
                 <Button
                   scheme="secondary"
                   btnSize="lg"
+                  btnWidth="full"
                   onClick={() => handleTransferCollateralAndDebt(mintingState.collateralDelta, mintingState.debtDelta)}
                 >
                   Deposit {collateral.name} &amp; Mint MMKT
