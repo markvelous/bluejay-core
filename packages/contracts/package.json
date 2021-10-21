@@ -17,8 +17,7 @@
     "clean:build": "rm -rf ./dist && rm -rf artifacts && rm -rf ./src/contracts",
     "lint": "eslint . --ext js,ts,tsx",
     "test": "hardhat test",
-    "watch:e2e": "nodemon --exec \"hh test test/E2E.test.ts\" -e \"ts sol\"",
-    "postinstall": "npm run build"
+    "watch:e2e": "nodemon --exec \"hh test test/E2E.test.ts\" -e \"ts sol\""
   },
   "dependencies": {
     "debug": "^4.3.2",

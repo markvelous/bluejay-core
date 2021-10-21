@@ -32,6 +32,9 @@ jobs:
 
       - name: bootstrap project
         run: npx lerna bootstrap
+      
+      - name: build contracts
+        run: cd packages/contracts/ && npm run build
 
       - name: Hardhat Test
         run: npm run test
