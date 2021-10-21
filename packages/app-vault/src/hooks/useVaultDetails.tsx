@@ -116,7 +116,7 @@ export const useVaultDetails = ({
       const [collateralStabilityFee] = states.result[index * 4 + 3 + OFFSET_COLLATERALS];
       const debt = normalizedDebt.mul(accumulatedRate).div(exp(27));
       const oraclePrice = safetyPrice.mul(collateralizationRatio).div(exp(27));
-      const annualStabilityFee = collateralStabilityFee.add(globalStabilityFee);
+      const annualStabilityFee = collateralStabilityFee;
       collaterals[collateralType] = {
         debt,
         annualStabilityFee,

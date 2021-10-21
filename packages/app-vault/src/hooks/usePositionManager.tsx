@@ -1,4 +1,4 @@
-import { useEthers, useContractFunction } from "@usedapp/core";
+import { useContractFunction } from "@usedapp/core";
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
 import LedgerAbi from "@bluejayfinance/contracts/abi/Ledger.json";
 import OracleRelayerAbi from "@bluejayfinance/contracts/abi/OracleRelayer.json";
@@ -18,8 +18,6 @@ import {
   helperAddress,
   stablecoinAddress,
 } from "../fixtures/deployments";
-import { config } from "../config";
-import { switchNetwork } from "../utils/metamask";
 import { useTypedContractCalls } from "./utils";
 import { exp } from "../utils/number";
 import { useContractFunctionCustom } from "./useContractFunctionCustom";
@@ -32,7 +30,6 @@ export interface StateWithQueryResults {
   isProxyOwner: boolean;
   isGrantedCollateralAllowance: boolean;
   isGrantedStablecoinAllowance: boolean;
-  account: string;
   debt: BigNumber;
   lockedCollateral: BigNumber;
   normalizedDebt: BigNumber;
@@ -50,14 +47,6 @@ export interface StateWithQueryResults {
   positionCollateralizationRatio: BigNumber;
 }
 
-export interface UnconnectedState {
-  state: "UNCONNECTED";
-  activateBrowserWallet: () => void;
-}
-export interface WrongNetworkState {
-  state: "WRONG_NETWORK";
-  switchNetwork: () => void;
-}
 export interface ErrorState {
   state: "ERROR";
 }
@@ -86,8 +75,6 @@ export interface SuccessfulTransferState extends StateWithQueryResults {
 }
 export type ReadyManagerStates = ReadyState | PendingApprovalState | PendingTransferState | SuccessfulTransferState;
 export type ManagerState =
-  | UnconnectedState
-  | WrongNetworkState
   | ErrorState
   | ReadyState
   | PendingApprovalState
@@ -96,6 +83,7 @@ export type ManagerState =
   | PendingMulticallState;
 
 export const usePositionManager = ({
+  userAddr,
   vaultAddr,
   collateral: { address: collateralAddress, collateralType } = {
     address: constants.AddressZero,
@@ -103,13 +91,13 @@ export const usePositionManager = ({
     name: "",
   },
 }: {
+  userAddr: string;
   vaultAddr: string;
   collateral?: { name: string; address: string; collateralType: string };
 }): ManagerState => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proxyContract = new Contract(vaultAddr, DSProxyAbi) as any;
 
-  const { account, chainId, activateBrowserWallet } = useEthers();
   const { state: transferCollateralAndDebtState, send: sendTransferCollateralAndDebt } = useContractFunctionCustom(
     proxyContract,
     "execute(address,bytes)"
@@ -169,25 +157,25 @@ export const usePositionManager = ({
       abi: new utils.Interface(TokenAbi),
       address: collateralAddress,
       method: "balanceOf",
-      args: [account],
+      args: [userAddr],
     },
     {
       abi: new utils.Interface(TokenAbi),
       address: stablecoinAddress,
       method: "balanceOf",
-      args: [account],
+      args: [userAddr],
     },
     {
       abi: new utils.Interface(TokenAbi),
       address: collateralAddress,
       method: "allowance",
-      args: [account, vaultAddr],
+      args: [userAddr, vaultAddr],
     },
     {
       abi: new utils.Interface(TokenAbi),
       address: stablecoinAddress,
       method: "allowance",
-      args: [account, vaultAddr],
+      args: [userAddr, vaultAddr],
     },
     {
       abi: new utils.Interface(HelperAbi),
@@ -229,18 +217,7 @@ export const usePositionManager = ({
 
   const multicallResolved = queries.state == "RESOLVED" && queries.result.every((r) => !!r);
 
-  if (!account) {
-    return {
-      state: "UNCONNECTED",
-      activateBrowserWallet,
-    };
-  }
-
-  if (chainId !== config.network.chainId) {
-    return { state: "WRONG_NETWORK", switchNetwork };
-  }
-
-  if (queries.state != "RESOLVED" || !multicallResolved || !account) {
+  if (queries.state != "RESOLVED" || !multicallResolved) {
     return { state: "PENDING_MULTICALL" };
   }
 
@@ -260,7 +237,6 @@ export const usePositionManager = ({
   const positionCollateralizationRatio = debt.gt(0) ? lockedCollateral.mul(oraclePrice).div(debt) : BigNumber.from(0);
   const queryResult = {
     proxyOwner,
-    account,
     debt,
     lockedCollateral,
     normalizedDebt,
@@ -276,7 +252,7 @@ export const usePositionManager = ({
     annualStabilityFee,
     positionCollateralizationRatio,
     oraclePrice,
-    isProxyOwner: proxyOwner.toLowerCase() === account.toLowerCase(),
+    isProxyOwner: proxyOwner.toLowerCase() === userAddr.toLowerCase(),
     isGrantedCollateralAllowance: collateralAllowance.gt(exp(27)),
     isGrantedStablecoinAllowance: stablecoinAllowance.gt(exp(27)),
   };

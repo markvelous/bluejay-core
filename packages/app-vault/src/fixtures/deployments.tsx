@@ -38,3 +38,7 @@ export const collaterals: Collateral[] = [
 export const getCollateral = (collateralType: string): Collateral | undefined => {
   return collaterals.find((c) => c.collateralType.toLowerCase() === collateralType.toLowerCase());
 };
+
+export const getCollateralFromName = (name: string): Collateral | undefined => {
+  return collaterals.find((c) => c.name.toLowerCase() === name.toLowerCase());
+};

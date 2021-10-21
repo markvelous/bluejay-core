@@ -13,7 +13,7 @@ const CollateralSection: FunctionComponent<{
 }> = ({ collateral, collateralDetails, vaultAddr }) => {
   const { debt, lockedCollateral, collateralizationRatio, oraclePrice, annualStabilityFee } = collateralDetails;
   return (
-    <Link to={`/vault/position/${vaultAddr}/${collateral.collateralType}`}>
+    <Link to={`/vault/position/${vaultAddr}/${collateral.name}`}>
       <div className="bg-white rounded-md p-2 w-60">
         <img src={collateral.logo} className="w-20 m-auto my-6" />
         <h3 className="text-xl text-blue-600 my-6">{collateral.name}</h3>
@@ -24,7 +24,7 @@ const CollateralSection: FunctionComponent<{
           </div>
 
           <div className="text-blue-600 text-xs font-bold mt-3">Stability Fee:</div>
-          <div className="text-blue-600 text-sm">{((bnToNum(annualStabilityFee, 27) - 1) * 100).toFixed(2)}%</div>
+          <div className="text-blue-600 text-sm">{((bnToNum(annualStabilityFee, 27, 4) - 1) * 100).toFixed(2)}%</div>
 
           <div className="text-blue-600 text-xs font-bold mt-3">Required Collaterals:</div>
           <div className="text-blue-600 text-sm">{bnToNum(collateralizationRatio, 27) * 100}%</div>
