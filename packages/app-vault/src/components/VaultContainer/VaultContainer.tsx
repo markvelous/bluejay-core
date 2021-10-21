@@ -1,20 +1,51 @@
 import React, { FunctionComponent } from "react";
-import { Redirect } from "react-router";
-import { useVault } from "../../hooks/useVault";
+import { Link } from "react-router-dom";
+import { useUserContext } from "../../context/UserContext";
 import { Button } from "../Button/Button";
-import { Layout } from "../Layout";
+import { Content, Layout } from "../Layout";
 
 export const VaultContainer: FunctionComponent = () => {
-  const vaultState = useVault();
+  const userContext = useUserContext();
   return (
     <Layout>
-      <div className="pt-10 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">Vault</div>
-      {vaultState.state === "FETCHING_VAULT" && "Loading..."}
-      {vaultState.state === "DEPLOYING_VAULT" && `Deploying: ${vaultState.hash}`}
-      {vaultState.state === "UNCONNECTED" && <Button onClick={vaultState.activateBrowserWallet}>Connect</Button>}
-      {vaultState.state === "WRONG_NETWORK" && <Button onClick={vaultState.switchNetwork}>Switch Network</Button>}
-      {vaultState.state === "VAULT_MISSING" && <Button onClick={vaultState.deployVault}>Deploy Vault</Button>}
-      {vaultState.state === "VAULT_FOUND" && <Redirect to={`/vault/summary/${vaultState.vault}`} />}
+      <Content>
+        <div className="text-center mt-28 flex flex-col items-center text-gray-800">
+          <h1 className="text-3xl text-blue-600">Create Bluejay Vault</h1>
+          <div className="mt-16 max-w-3xl">
+            In order to start minting stablecoins (eg. MMKT), you need to create a vault to manage your locked
+            collaterals and stablecoin debts. Only one vault is required across the entire Bluejay ecosystem.
+          </div>
+          <div className="mt-12">
+            {userContext.state === "WRONG_NETWORK" && (
+              <Button scheme="secondary" btnSize="lg" onClick={userContext.switchNetwork}>
+                Switch to Polygon
+              </Button>
+            )}
+            {userContext.state === "UNCONNECTED" && (
+              <Button scheme="secondary" btnSize="lg" onClick={userContext.activateBrowserWallet}>
+                Connect Wallet
+              </Button>
+            )}
+            {userContext.state === "PROXY_UNDEPLOYED" && (
+              <Button scheme="secondary" btnSize="lg" onClick={userContext.deployVault}>
+                Create Vault
+              </Button>
+            )}
+            {userContext.state === "DEPLOYING_PROXY" && (
+              <Button scheme="secondary" btnSize="lg">
+                Deploying Vault...
+              </Button>
+            )}
+            {userContext.state === "READY" && (
+              <Link to={`/vault/summary/${userContext.proxyAddress}`}>
+                <Button scheme="secondary" btnSize="lg">
+                  Visit Vault
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </Content>
     </Layout>
   );
 };
