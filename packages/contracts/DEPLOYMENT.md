@@ -33,5 +33,5 @@ Note that the deployment cache need to have both the governance token and collat
 ## Update Oracle Price
 
 ```
-hh updateOraclePrice --oracle-address 0x984f797d26d3da2E9b9f8Ae4eeFEACC60fCAA90C --price 2000000000000000000000 --network local
+hh updateOraclePrice --oracle-address 0xc351628EB244ec633d5f21fBD6621e1a683B1181 --price 2000000000000000000000 --network local
 ```

@@ -1,50 +1,44 @@
 import React, { FunctionComponent } from "react";
-import { Button } from "../Button/Button";
 import { Link } from "react-router-dom";
-import { Layout } from "../Layout";
-import { collaterals, getCollateral } from "../../fixtures/deployments";
+import { Content, Layout } from "../Layout";
+import { collaterals, getCollateral, Collateral } from "../../fixtures/deployments";
 import { useParams } from "react-router-dom";
-import { BigNumber } from "ethers";
 import { bnToNum } from "../../utils/number";
 import { useVaultDetails, CollateralDetails } from "../../hooks/useVaultDetails";
-import { addToken } from "../../utils/metamask";
-import { stablecoinAddress } from "../../fixtures/deployments";
 
 const CollateralSection: FunctionComponent<{
   vaultAddr: string;
   collateralDetails: CollateralDetails;
-  collateral: { name: string; address: string; collateralType: string };
+  collateral: Collateral;
 }> = ({ collateral, collateralDetails, vaultAddr }) => {
-  const { debt, lockedCollateral, collateralizationRatio, oraclePrice } = collateralDetails;
+  const { debt, lockedCollateral, collateralizationRatio, oraclePrice, annualStabilityFee } = collateralDetails;
   return (
-    <div>
-      <h3>Collateral Type: {collateral.name}</h3>
-      <div>
-        <div>
-          <div>
-            <h4>Debt</h4>
-            <div>{bnToNum(debt, 18, 2)} MMKT</div>
+    <Link to={`/vault/position/${vaultAddr}/${collateral.collateralType}`}>
+      <div className="bg-white rounded-md p-2 w-60">
+        <img src={collateral.logo} className="w-20 m-auto my-6" />
+        <h3 className="text-xl text-blue-600 my-6">{collateral.name}</h3>
+        <div className="text-left">
+          <div className="text-blue-600 text-xs font-bold mt-3">Oracle Price:</div>
+          <div className="text-blue-600 text-sm">
+            {bnToNum(oraclePrice, 27)} MMKT/{collateral.name}
           </div>
-          <div>
-            <h4>Locked Collateral</h4>
-            <div>
-              {bnToNum(lockedCollateral, 18, 2)} {collateral.name}
-            </div>
+
+          <div className="text-blue-600 text-xs font-bold mt-3">Stability Fee:</div>
+          <div className="text-blue-600 text-sm">{((bnToNum(annualStabilityFee, 27) - 1) * 100).toFixed(2)}%</div>
+
+          <div className="text-blue-600 text-xs font-bold mt-3">Required Collaterals:</div>
+          <div className="text-blue-600 text-sm">{bnToNum(collateralizationRatio, 27) * 100}%</div>
+
+          <div className="text-blue-600 text-xs font-bold mt-3">Locked Collaterals:</div>
+          <div className="text-blue-600 text-sm">
+            {bnToNum(lockedCollateral, 18, 2)} {collateral.name}
           </div>
-          <div>
-            <h4>Collateralization Ratio</h4>
-            <div>{bnToNum(collateralizationRatio, 27) * 100}%</div>
-          </div>
-          <div>
-            <h4>Oracle Price</h4>
-            <div>{bnToNum(oraclePrice, 27, 4)}</div>
-          </div>
-          <Link to={`/vault/position/${vaultAddr}/${collateral.collateralType}`}>
-            <Button>Manage Position</Button>
-          </Link>
+
+          <div className="text-blue-600 text-xs font-bold mt-3">Outstanding Debt:</div>
+          <div className="text-blue-600 text-sm">{bnToNum(debt, 18, 2)} MMKT</div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
@@ -52,35 +46,14 @@ export const VaultDetailsContainer: FunctionComponent = () => {
   const { vaultAddr } = useParams<{ vaultAddr: string; stablecoinAddr: string }>();
   const states = useVaultDetails({ proxy: vaultAddr, collateralTypes: collaterals.map((c) => c.collateralType) });
   if (states.state === "RESOLVED") {
-    const { savings, collaterals } = states;
-    const totalDebt = Object.keys(collaterals).reduce((sum, current) => {
-      return sum.add(collaterals[current].debt);
-    }, BigNumber.from(0));
+    const { collaterals } = states;
     return (
       <Layout>
-        <h1 className="pt-6 pb-4">Vault Details</h1>
-        <Button
-          onClick={() => addToken({ tokenAddress: stablecoinAddress, tokenDecimals: 18, tokenSymbol: "FakeMMKT" })}
-        >
-          Add MMKT Token
-        </Button>
-        <Link to={`/vault/savings/${vaultAddr}`}>
-          <Button>Manage Savings</Button>
-        </Link>
-        <div>
-          <div>
-            <div>
-              <h2>Total Savings</h2>
-              <div>{bnToNum(savings)} MMKT</div>
-            </div>
-            <div>
-              <h2>Total Debt</h2>
-              <div>{bnToNum(totalDebt, 18, 2)} MMKT</div>
-            </div>
-          </div>
-          <div>
-            <h2 className="pt-6 pb-4">Collaterals</h2>
-            <div>
+        <Content>
+          <div className="text-center mt-28 flex flex-col items-center text-gray-800">
+            <h2 className="text-blue-600 text-3xl">Select Collateral</h2>
+            <div className="my-8">Select the collateral you to mint or repay the stablecoin</div>
+            <div className="grid grid-cols-4 gap-4">
               {collaterals &&
                 Object.keys(collaterals).map((collateralType) => {
                   const collateral = getCollateral(collateralType);
@@ -96,7 +69,7 @@ export const VaultDetailsContainer: FunctionComponent = () => {
                 })}
             </div>
           </div>
-        </div>
+        </Content>
       </Layout>
     );
   }

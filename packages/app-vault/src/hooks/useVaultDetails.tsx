@@ -1,9 +1,16 @@
-import { savingsAccountAddress, ledgerAddress, oracleRelayerAddress, feesEngineAddress } from "../fixtures/deployments";
 import { utils, BigNumber } from "ethers";
 import LedgerAbi from "@bluejayfinance/contracts/abi/Ledger.json";
 import OracleRelayerAbi from "@bluejayfinance/contracts/abi/OracleRelayer.json";
 import FeesEngineAbi from "@bluejayfinance/contracts/abi/FeesEngine.json";
 import SavingsAccountAbi from "@bluejayfinance/contracts/abi/SavingsAccount.json";
+import HelperAbi from "@bluejayfinance/contracts/abi/Helper.json";
+import {
+  savingsAccountAddress,
+  ledgerAddress,
+  oracleRelayerAddress,
+  feesEngineAddress,
+  helperAddress,
+} from "../fixtures/deployments";
 import { exp } from "../utils/number";
 import { useTypedContractCalls } from "./utils";
 
@@ -18,7 +25,7 @@ export interface CollateralDetails {
   debtFloor: BigNumber;
   collateralizationRatio: BigNumber;
   oraclePrice: BigNumber;
-  stabilityFee: BigNumber;
+  annualStabilityFee: BigNumber;
   globalStabilityFee: BigNumber;
   collateralStabilityFee: BigNumber;
 }
@@ -65,10 +72,10 @@ export const useVaultDetails = ({
         args: [collateralType],
       },
       {
-        abi: new utils.Interface(FeesEngineAbi),
-        address: feesEngineAddress,
-        method: "collateralTypes",
-        args: [collateralType],
+        abi: new utils.Interface(HelperAbi),
+        address: helperAddress,
+        method: "getStabilityFee",
+        args: [feesEngineAddress, collateralType, 365 * 24 * 60 * 60],
       },
     ];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -109,10 +116,10 @@ export const useVaultDetails = ({
       const [collateralStabilityFee] = states.result[index * 4 + 3 + OFFSET_COLLATERALS];
       const debt = normalizedDebt.mul(accumulatedRate).div(exp(27));
       const oraclePrice = safetyPrice.mul(collateralizationRatio).div(exp(27));
-      const stabilityFee = collateralStabilityFee.add(globalStabilityFee);
+      const annualStabilityFee = collateralStabilityFee.add(globalStabilityFee);
       collaterals[collateralType] = {
         debt,
-        stabilityFee,
+        annualStabilityFee,
         globalStabilityFee,
         collateralStabilityFee,
         collateralizationRatio,

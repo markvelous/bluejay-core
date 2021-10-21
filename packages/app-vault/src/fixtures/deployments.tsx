@@ -19,10 +19,11 @@ export const helperAddress = contracts[config.environment].Helper;
 export const getLiquidationAuctionAddress = (key: string): string =>
   contracts[config.environment][`[MMKT][${key}]ProxyLiquidationAuction`];
 
-interface Collateral {
+export interface Collateral {
   name: string;
   address: string;
   collateralType: string;
+  logo: string;
 }
 
 export const collaterals: Collateral[] = [
@@ -30,6 +31,7 @@ export const collaterals: Collateral[] = [
     name: "USDT",
     address: contracts[config.environment]["Collateral[USDT]"],
     collateralType: "0x0000000000000000000000000000000000000000000000000000000000000001",
+    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/assets/0xc2132D05D31c914a87C6611C10748AEb04B58e8F/logo.png",
   },
 ];
 
