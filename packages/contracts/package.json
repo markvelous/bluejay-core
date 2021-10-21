@@ -6,7 +6,9 @@
   "types": "dist/src/index.d.ts",
   "files": [
     "src",
-    "scipts"
+    "scipts",
+    "abi",
+    "dist"
   ],
   "scripts": {
     "build": "npm run clean:build && npm run build:contract && npm run build:js",
