@@ -319,6 +319,18 @@ export const usePositionManager = ({
       approveStablecoinSpendByProxy,
     };
   }
+  if (closePositionState.status === "Fail" || closePositionState.status === "Exception") {
+    return {
+      state: "ERROR_READY",
+      errorMessage: cleanErrorMessage(closePositionState.errorMessage),
+      ...queryResult,
+      closePosition,
+      transferCollateralAndDebt,
+      approveCollateralSpendByProxy,
+      approveStablecoinSpendByProxy,
+    };
+  }
+
   if (approvalForStablecoinState.status === "Fail" || approvalForStablecoinState.status === "Exception") {
     return {
       state: "ERROR_READY",

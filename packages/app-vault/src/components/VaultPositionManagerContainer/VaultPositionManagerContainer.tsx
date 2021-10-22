@@ -11,7 +11,7 @@ import { BigNumber } from "ethers";
 import { useLiquidateVault } from "../../hooks/useLiquidateVault";
 import { hasWalletAddress, useUserContext } from "../../context/UserContext";
 import { WalletConnectionRequired } from "../WalletConnectionRequired";
-import { BasicAlert } from "../Feedback";
+import { BasicAlert, BasicWarning } from "../Feedback";
 
 interface MintingState {
   collateralInput: string;
@@ -135,6 +135,8 @@ const InputWithPercentage: FunctionComponent<{
     </div>
   );
 };
+const negativeString = (input: string): string =>
+  input[0] === "-" || input.length === 0 ? input.substr(1) : `-${input}`;
 
 export const ReadyPositionManager: FunctionComponent<{
   vaultAddr: string;
@@ -143,6 +145,7 @@ export const ReadyPositionManager: FunctionComponent<{
   handleTransferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
 }> = ({ vaultAddr, positionManager, collateral, handleTransferCollateralAndDebt }) => {
   const liquidationState = useLiquidateVault({ collateral });
+  const [showMinting, setShowMinting] = useState(true);
   const [mintingState, setMintingState] = useState<MintingState>({
     collateralInput: "",
     debtInput: "",
@@ -167,6 +170,7 @@ export const ReadyPositionManager: FunctionComponent<{
     lockedCollateral,
     debt,
     collateralBalance,
+    stablecoinBalance,
     positionCollateralizationRatio,
     annualStabilityFee,
     collateralizationRatio,
@@ -272,35 +276,102 @@ export const ReadyPositionManager: FunctionComponent<{
             <div className="w-full">
               <h2 className="text-3xl text-blue-600 mb-4">Manage Your Vault</h2>
               <div className="border rounded-lg border-gray-300 bg-white p-4">
+                <div className="flex">
+                  <div
+                    className={
+                      showMinting
+                        ? "bg-gray-200 p-2 mr-2 my-2 rounded cursor-pointer text-blue-600"
+                        : "p-2 mr-2 my-2 rounded cursor-pointer"
+                    }
+                    onClick={() => setShowMinting(true)}
+                  >
+                    Deposit &amp; Mint
+                  </div>
+                  <div
+                    className={
+                      !showMinting
+                        ? "bg-gray-200 p-2 mr-2 my-2 rounded cursor-pointer text-blue-600"
+                        : "p-2 mr-2 my-2 rounded cursor-pointer"
+                    }
+                    onClick={() => setShowMinting(false)}
+                  >
+                    Withdraw &amp; Repay
+                  </div>
+                </div>
                 {positionManager.state === "ERROR_READY" && (
                   <div className="mb-2">
                     <BasicAlert title={positionManager.errorMessage || "An unexpected error has occured"} />
                   </div>
                 )}
-                <div className="flex justify-between items-end mb-2">
-                  <div>Deposit Collateral ({collateral.name})</div>
-                  <div className="text-sm text-gray-400">
-                    Balance: {bnToNum(collateralBalance, 18, 4).toLocaleString()} {collateral.name}
+                {shouldClosePosition && (
+                  <div className="mb-2">
+                    <BasicWarning title="Resulting vault will have debt below the minimum debt requirement. You may choose to close the position by repaying all the stablecoin debt and withdrawing all your collaterals. You may only do this when you have enough stablecoin balance." />
                   </div>
-                </div>
-                <InputWithPercentage
-                  value={mintingState.collateralInput}
-                  onInputChange={(input) => updateMintingState(input, mintingState.debtInput)}
-                  maxValue={bnToNum(collateralBalance, 18, 4)}
-                />
+                )}
+                {showMinting && (
+                  <>
+                    <div className="flex justify-between items-end mb-2">
+                      <div>Deposit Collateral ({collateral.name})</div>
+                      <div className="text-sm text-gray-400">
+                        Wallet Balance: {bnToNum(collateralBalance, 18, 4).toLocaleString()} {collateral.name}
+                      </div>
+                    </div>
+                    <InputWithPercentage
+                      value={mintingState.collateralInput}
+                      onInputChange={(input) => updateMintingState(input, mintingState.debtInput)}
+                      maxValue={bnToNum(collateralBalance, 18, 4)}
+                    />
+                  </>
+                )}
 
-                <div className="flex justify-between items-end mb-2 mt-4">
-                  <div>MMKT to Mint</div>
-                  <div className="text-sm text-gray-400">
-                    Max Mintable: {bnToNum(maxStablecoinMintable, 18, 4).toLocaleString()} MMKT
-                  </div>
-                </div>
-                <InputWithPercentage
-                  value={mintingState.debtInput}
-                  onInputChange={(input) => updateMintingState(mintingState.collateralInput, input)}
-                  maxValue={bnToNum(maxStablecoinMintable, 18, 4)}
-                  steps={[95, 75, 50, 25, 0]}
-                />
+                {!showMinting && (
+                  <>
+                    <div className="flex justify-between items-end mb-2">
+                      <div>Withdraw Collateral ({collateral.name})</div>
+                      <div className="text-sm text-gray-400">
+                        Vault Balance: {bnToNum(lockedCollateral, 18, 4).toLocaleString()} {collateral.name}
+                      </div>
+                    </div>
+                    <InputWithPercentage
+                      value={negativeString(mintingState.collateralInput)}
+                      onInputChange={(input) => updateMintingState(negativeString(input), mintingState.debtInput)}
+                      maxValue={bnToNum(lockedCollateral, 18, 4)}
+                    />
+                  </>
+                )}
+
+                {showMinting && (
+                  <>
+                    <div className="flex justify-between items-end mb-2 mt-4">
+                      <div>MMKT to Mint</div>
+                      <div className="text-sm text-gray-400">
+                        Max Mintable: {bnToNum(maxStablecoinMintable, 18, 4).toLocaleString()} MMKT
+                      </div>
+                    </div>
+                    <InputWithPercentage
+                      value={mintingState.debtInput}
+                      onInputChange={(input) => updateMintingState(mintingState.collateralInput, input)}
+                      maxValue={bnToNum(maxStablecoinMintable, 18, 4)}
+                      steps={[95, 75, 50, 25, 0]}
+                    />
+                  </>
+                )}
+
+                {!showMinting && (
+                  <>
+                    <div className="flex justify-between items-end mb-2 mt-4">
+                      <div>MMKT to Repay</div>
+                      <div className="text-sm text-gray-400">
+                        Wallet Balance: {bnToNum(stablecoinBalance, 18, 4).toLocaleString()} MMKT
+                      </div>
+                    </div>
+                    <InputWithPercentage
+                      value={negativeString(mintingState.debtInput)}
+                      onInputChange={(input) => updateMintingState(mintingState.collateralInput, negativeString(input))}
+                      maxValue={bnToNum(stablecoinBalance, 18, 4)}
+                    />
+                  </>
+                )}
 
                 <div className="mt-6">Simulation</div>
 
@@ -403,7 +474,16 @@ export const ReadyPositionManager: FunctionComponent<{
                   label="Current Collateralization Ratio"
                   info="This is the value of the collateral divided by the debt. You may liquidate this vault if this falls below the minimum liquidation ratio."
                 />
-                {simTotalCollateralValue.lt(collateralizationRatio) ? (
+                {!isGrantedStablecoinAllowance && (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleStablecoinApproval}>
+                      {positionManager.state !== "PENDING_APPROVAL"
+                        ? "Approve MMKT for Liquidation"
+                        : "Pending approval..."}
+                    </Button>
+                  </div>
+                )}
+                {simTotalCollateralValue.lt(collateralizationRatio) && isGrantedStablecoinAllowance && (
                   <div className="mt-3 text-center">
                     <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleLiquidatePosition}>
                       {liquidationState.state !== "PENDING"
@@ -411,7 +491,8 @@ export const ReadyPositionManager: FunctionComponent<{
                         : "Waiting for transaction to be confirmed..."}
                     </Button>
                   </div>
-                ) : (
+                )}
+                {simTotalCollateralValue.gte(collateralizationRatio) && (
                   <div className="mt-3 text-center">
                     <Button scheme="secondary" btnSize="lg" btnWidth="full">
                       Vault Cannot be Liquidated
