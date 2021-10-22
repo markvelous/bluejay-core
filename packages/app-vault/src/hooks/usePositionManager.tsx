@@ -47,14 +47,20 @@ export interface StateWithQueryResults {
   positionCollateralizationRatio: BigNumber;
 }
 
-export interface ErrorState {
-  state: "ERROR";
-}
 export interface PendingMulticallState {
   state: "PENDING_MULTICALL";
 }
 export interface ReadyState extends StateWithQueryResults {
   state: "READY";
+  transferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
+  closePosition: () => void;
+  approveCollateralSpendByProxy: () => void;
+  approveStablecoinSpendByProxy: () => void;
+}
+
+export interface ErrorState extends StateWithQueryResults {
+  state: "ERROR_READY";
+  errorMessage?: string;
   transferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
   closePosition: () => void;
   approveCollateralSpendByProxy: () => void;
@@ -73,7 +79,12 @@ export interface SuccessfulTransferState extends StateWithQueryResults {
   approveCollateralSpendByProxy: () => void;
   approveStablecoinSpendByProxy: () => void;
 }
-export type ReadyManagerStates = ReadyState | PendingApprovalState | PendingTransferState | SuccessfulTransferState;
+export type ReadyManagerStates =
+  | ReadyState
+  | PendingApprovalState
+  | PendingTransferState
+  | SuccessfulTransferState
+  | ErrorState;
 export type ManagerState =
   | ErrorState
   | ReadyState
@@ -81,6 +92,13 @@ export type ManagerState =
   | PendingTransferState
   | SuccessfulTransferState
   | PendingMulticallState;
+
+const cleanErrorMessage = (message?: string): string | undefined => {
+  if (!message) return message;
+  const regex = /(Error: VM Exception while processing transaction: reverted with reason string ')+(.*)('$)+/;
+  const res = regex.exec(message);
+  return res?.length === 4 ? res[2] : message;
+};
 
 export const usePositionManager = ({
   userAddr,
@@ -279,12 +297,38 @@ export const usePositionManager = ({
       approveStablecoinSpendByProxy,
     };
   }
-  if (
-    approvalForCollateralState.status === "Fail" ||
-    transferCollateralAndDebtState.status === "Fail" ||
-    approvalForStablecoinState.status === "Fail"
-  ) {
-    return { state: "ERROR" };
+  if (approvalForCollateralState.status === "Fail" || approvalForCollateralState.status === "Exception") {
+    return {
+      state: "ERROR_READY",
+      errorMessage: cleanErrorMessage(approvalForCollateralState.errorMessage),
+      ...queryResult,
+      closePosition,
+      transferCollateralAndDebt,
+      approveCollateralSpendByProxy,
+      approveStablecoinSpendByProxy,
+    };
+  }
+  if (transferCollateralAndDebtState.status === "Fail" || transferCollateralAndDebtState.status === "Exception") {
+    return {
+      state: "ERROR_READY",
+      errorMessage: cleanErrorMessage(transferCollateralAndDebtState.errorMessage),
+      ...queryResult,
+      closePosition,
+      transferCollateralAndDebt,
+      approveCollateralSpendByProxy,
+      approveStablecoinSpendByProxy,
+    };
+  }
+  if (approvalForStablecoinState.status === "Fail" || approvalForStablecoinState.status === "Exception") {
+    return {
+      state: "ERROR_READY",
+      errorMessage: cleanErrorMessage(approvalForStablecoinState.errorMessage),
+      ...queryResult,
+      closePosition,
+      transferCollateralAndDebt,
+      approveCollateralSpendByProxy,
+      approveStablecoinSpendByProxy,
+    };
   }
   return {
     ...queryResult,

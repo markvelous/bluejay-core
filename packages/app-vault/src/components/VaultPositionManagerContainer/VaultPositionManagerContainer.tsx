@@ -11,6 +11,7 @@ import { BigNumber } from "ethers";
 import { useLiquidateVault } from "../../hooks/useLiquidateVault";
 import { hasWalletAddress, useUserContext } from "../../context/UserContext";
 import { WalletConnectionRequired } from "../WalletConnectionRequired";
+import { BasicAlert } from "../Feedback";
 
 interface MintingState {
   collateralInput: string;
@@ -31,19 +32,21 @@ interface InfoPanelProp {
 
 const InfoPanel: FunctionComponent<InfoPanelProp> = ({ value, label, info }) => {
   return (
-    <div className="flex bg-white rounded-md border border-gray-300 px-4 py-2 w-60 justify-between text-gray-600">
+    <div className="bg-white rounded-md border border-gray-300 px-4 py-2 w-60 text-gray-600">
+      <div className="flex justify-between">
+        <span className="text-sm">{label}</span>
+        {info && (
+          <Popover>
+            <Popover.Button>ⓘ</Popover.Button>
+            <Popover.Panel className="absolute z-10">
+              <div className="bg-white border border-gray-300 rounded-sm py-1 px-2 text-xs max-w-md">{info}</div>
+            </Popover.Panel>
+          </Popover>
+        )}
+      </div>
       <div>
         <span className="mr-2 text-gray-800">{value}</span>
-        <span className="text-sm">{label}</span>
       </div>
-      {info && (
-        <Popover>
-          <Popover.Button>ⓘ</Popover.Button>
-          <Popover.Panel className="absolute z-10">
-            <div className="bg-white border border-gray-300 rounded-sm py-1 px-2 text-xs max-w-md">{info}</div>
-          </Popover.Panel>
-        </Popover>
-      )}
     </div>
   );
 };
@@ -97,7 +100,7 @@ const InputWithPercentage: FunctionComponent<{
   onInputChange: (_input: string) => void;
 }> = ({ value, maxValue, onInputChange, steps = [100, 75, 50, 25, 0] }) => {
   const [showSteps, setShowSteps] = useState(false);
-  const [stepText, setStepText] = useState(steps[0].toString());
+  const [stepText, setStepText] = useState(`${steps[0]}%`);
 
   const setStep = (step: number): void => {
     onInputChange(`${((maxValue * step) / 100).toFixed()}`);
@@ -138,8 +141,7 @@ export const ReadyPositionManager: FunctionComponent<{
   positionManager: ReadyManagerStates;
   collateral: { name: string; collateralType: string; address: string };
   handleTransferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
-  handleClosePosition: () => void;
-}> = ({ vaultAddr, positionManager, collateral, handleTransferCollateralAndDebt, handleClosePosition }) => {
+}> = ({ vaultAddr, positionManager, collateral, handleTransferCollateralAndDebt }) => {
   const liquidationState = useLiquidateVault({ collateral });
   const [mintingState, setMintingState] = useState<MintingState>({
     collateralInput: "",
@@ -165,36 +167,80 @@ export const ReadyPositionManager: FunctionComponent<{
     lockedCollateral,
     debt,
     collateralBalance,
-    stablecoinBalance,
     positionCollateralizationRatio,
     annualStabilityFee,
     collateralizationRatio,
     isGrantedCollateralAllowance,
     isGrantedStablecoinAllowance,
     isProxyOwner,
+    debtFloor,
   } = positionManager;
-  const maxStablecoinMintable = oraclePrice
-    .mul(lockedCollateral.add(mintingState.collateralDelta))
-    .div(exp(27))
-    .sub(debt);
+
+  const simTotalCollateralLocked = lockedCollateral.add(mintingState.collateralDelta);
+  const simTotalCollateralValue = oraclePrice.mul(simTotalCollateralLocked);
+  const maxStablecoinMintable = simTotalCollateralValue.div(collateralizationRatio).sub(debt);
+  const simTotalDebtDrawn = debt.add(mintingState.debtDelta);
+  const simCollateralizationRatio = simTotalDebtDrawn.gt(0)
+    ? simTotalCollateralValue.div(simTotalDebtDrawn)
+    : BigNumber.from(0);
+  const simLiquidationPrice = simTotalCollateralLocked.gt(0)
+    ? simTotalDebtDrawn.mul(collateralizationRatio).div(simTotalCollateralLocked)
+    : BigNumber.from(0);
+
+  const handleCollateralApproval = (): void => {
+    if (positionManager.state === "READY" || positionManager.state === "ERROR_READY") {
+      positionManager.approveCollateralSpendByProxy();
+    }
+  };
+
+  const handleStablecoinApproval = (): void => {
+    if (positionManager.state === "READY" || positionManager.state === "ERROR_READY") {
+      positionManager.approveStablecoinSpendByProxy();
+    }
+  };
+
+  const handleClosePosition = (): void => {
+    if (positionManager.state === "READY" || positionManager.state === "ERROR_READY") {
+      positionManager.closePosition();
+    }
+  };
+
+  const handleLiquidatePosition = (): void => {
+    if (liquidationState.state === "READY") {
+      liquidationState.liquidateVault(vaultAddr);
+    }
+  };
+
+  const shouldClosePosition = simTotalDebtDrawn.lt(debtFloor.div(exp(27))) && debt.gt(0);
+
   return (
     <Layout>
       <Content>
         <div className="text-blue-600 text-3xl">Vault @ {truncateAddress(vaultAddr)}</div>
-        <div className="flex gap-4 mt-6">
+        <div className="mt-6">
+          <CollateralSelector selectedCollateral={collateral.name} vaultAddr={vaultAddr} />
+        </div>
+        <div className="flex gap-4 mt-10">
+          <InfoPanel
+            label="Oracle Price"
+            value={`${bnToNum(oraclePrice, 27, 2)} MMKT`}
+            info="This is the current price of collateral against the stablecoin on the system's oracle."
+          />
           <InfoPanel
             label="Stability Fee"
             value={`${((bnToNum(annualStabilityFee, 27, 4) - 1) * 100).toFixed(2)}%`}
             info="Stability fee is the interest charged for minting the stablecoin. It's accrued automatically as part of your debt drawn."
           />
           <InfoPanel
-            label="Collateral Ratio"
+            label="Collateralization Ratio"
             value={`${bnToNum(collateralizationRatio, 27, 2) * 100}%`}
             info="Collateralization ratio is the amount of collateral required to mint the stablecoin. This value is above 100% to ensure that the value of each stablecoin is backed by more collateral value. Collaterals with more price volatility command higher collateralization ratio. Values with ratio lower than the required risk being liquidated by keepers."
           />
-        </div>
-        <div className="mt-10">
-          <CollateralSelector selectedCollateral={collateral.name} vaultAddr={vaultAddr} />
+          <InfoPanel
+            label="Min. Debt"
+            value={`${bnToNum(debtFloor, 45, 2).toLocaleString()} MMKT`}
+            info="The vault cannot have debt less than the debt floor to prevent creation of small vaults that will be costly for keepers to liquidate."
+          />
         </div>
         <div className="grid grid-cols-2 mt-8 gap-4">
           <div className="w-full">
@@ -222,114 +268,161 @@ export const ReadyPositionManager: FunctionComponent<{
               />
             </div>
           </div>
-          <div className="w-full">
-            <h2 className="text-3xl text-blue-600 mb-4">Manage Your Vault</h2>
-            <div className="border rounded-lg border-gray-300 bg-white p-4">
-              <div className="flex justify-between items-end mb-2">
-                <div>Deposit Collateral ({collateral.name})</div>
-                <div className="text-sm text-gray-400">
-                  Balance: {bnToNum(collateralBalance, 18, 4).toLocaleString()} {collateral.name}
+          {isProxyOwner && (
+            <div className="w-full">
+              <h2 className="text-3xl text-blue-600 mb-4">Manage Your Vault</h2>
+              <div className="border rounded-lg border-gray-300 bg-white p-4">
+                {positionManager.state === "ERROR_READY" && (
+                  <div className="mb-2">
+                    <BasicAlert title={positionManager.errorMessage || "An unexpected error has occured"} />
+                  </div>
+                )}
+                <div className="flex justify-between items-end mb-2">
+                  <div>Deposit Collateral ({collateral.name})</div>
+                  <div className="text-sm text-gray-400">
+                    Balance: {bnToNum(collateralBalance, 18, 4).toLocaleString()} {collateral.name}
+                  </div>
                 </div>
-              </div>
-              <InputWithPercentage
-                value={mintingState.collateralInput}
-                onInputChange={(input) => updateMintingState(input, mintingState.debtInput)}
-                maxValue={bnToNum(collateralBalance, 18, 4)}
-              />
+                <InputWithPercentage
+                  value={mintingState.collateralInput}
+                  onInputChange={(input) => updateMintingState(input, mintingState.debtInput)}
+                  maxValue={bnToNum(collateralBalance, 18, 4)}
+                />
 
-              <div className="flex justify-between items-end mb-2 mt-4">
-                <div>MMKT to Mint</div>
-                <div className="text-sm text-gray-400">
-                  Max Mintable: {bnToNum(maxStablecoinMintable, 18, 4).toLocaleString()} MMKT
+                <div className="flex justify-between items-end mb-2 mt-4">
+                  <div>MMKT to Mint</div>
+                  <div className="text-sm text-gray-400">
+                    Max Mintable: {bnToNum(maxStablecoinMintable, 18, 4).toLocaleString()} MMKT
+                  </div>
                 </div>
-              </div>
-              <InputWithPercentage
-                value={mintingState.debtInput}
-                onInputChange={(input) => updateMintingState(mintingState.collateralInput, input)}
-                maxValue={bnToNum(maxStablecoinMintable, 18, 4)}
-                steps={[95, 75, 50, 25, 0]}
-              />
+                <InputWithPercentage
+                  value={mintingState.debtInput}
+                  onInputChange={(input) => updateMintingState(mintingState.collateralInput, input)}
+                  maxValue={bnToNum(maxStablecoinMintable, 18, 4)}
+                  steps={[95, 75, 50, 25, 0]}
+                />
 
-              <div className="mt-6 text-center">
-                <Button
-                  scheme="secondary"
-                  btnSize="lg"
-                  btnWidth="full"
-                  onClick={() => handleTransferCollateralAndDebt(mintingState.collateralDelta, mintingState.debtDelta)}
-                >
-                  Deposit {collateral.name} &amp; Mint MMKT
-                </Button>
+                <div className="mt-6">Simulation</div>
+
+                <VaultLineInfo
+                  value={`${bnToNum(simTotalCollateralLocked, 18, 4).toLocaleString()} ${collateral.name}`}
+                  label="Total Collateral Locked"
+                  info="This is the total amount of collaterals locked up after this transaction."
+                />
+
+                <VaultLineInfo
+                  value={`${bnToNum(simTotalCollateralValue, 45, 4).toLocaleString()} MMKT`}
+                  label="Total Collateral Value"
+                  info="This is the value of the collaterals after this transaction, using the current oracle price."
+                />
+
+                <VaultLineInfo
+                  value={`${bnToNum(simTotalDebtDrawn, 18, 4).toLocaleString()} MMKT`}
+                  label="Total Debt Drawn"
+                  info="This is the total stablecoin you owe to the system after this transaction."
+                />
+
+                <VaultLineInfo
+                  value={`${bnToNum(simCollateralizationRatio, 25, 4).toLocaleString()}%`}
+                  label="Collateralization Ratio"
+                  info="This is the value of your collateral divided by the debt. It needs to be above the minimum collateralization ratio to prevent your vault from being liquidated."
+                />
+
+                <VaultLineInfo
+                  value={`${bnToNum(simLiquidationPrice, 27, 4).toLocaleString()} MMKT/${collateral.name}`}
+                  label="Liquidation Price"
+                  info="This is the price of the collateral that your vault will risk being liquidated as it has fallen below the required collateralization ratio."
+                />
+
+                {!isGrantedStablecoinAllowance && (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleStablecoinApproval}>
+                      {positionManager.state !== "PENDING_APPROVAL"
+                        ? "Approve Vault to Use MMKT"
+                        : "Pending approval..."}
+                    </Button>
+                  </div>
+                )}
+
+                {!isGrantedCollateralAllowance && (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleCollateralApproval}>
+                      {positionManager.state !== "PENDING_APPROVAL"
+                        ? `Approve Vault to Use ${collateral.name}`
+                        : "Pending approval..."}
+                    </Button>
+                  </div>
+                )}
+
+                {isGrantedCollateralAllowance && isGrantedStablecoinAllowance && !shouldClosePosition && (
+                  <div className="mt-3 text-center">
+                    <Button
+                      scheme="secondary"
+                      btnSize="lg"
+                      btnWidth="full"
+                      onClick={() =>
+                        handleTransferCollateralAndDebt(mintingState.collateralDelta, mintingState.debtDelta)
+                      }
+                    >
+                      {positionManager.state !== "PENDING_TRANSFER"
+                        ? `Deposit ${collateral.name} & Mint MMKT`
+                        : "Waiting for transaction to be confirmed..."}
+                    </Button>
+                  </div>
+                )}
+
+                {shouldClosePosition && (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleClosePosition}>
+                      {positionManager.state !== "PENDING_TRANSFER"
+                        ? `Close Position`
+                        : "Waiting for transaction to be confirmed..."}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
+          {!isProxyOwner && (
+            <div className="w-full">
+              <h2 className="text-3xl text-blue-600 mb-4">Vault Keeping</h2>
+              <div className="border rounded-lg border-gray-300 bg-white p-4">
+                {positionManager.state === "ERROR_READY" && (
+                  <div className="mb-2">
+                    <BasicAlert title={positionManager.errorMessage || "An unexpected error has occured"} />
+                  </div>
+                )}
+                <div>Vault Health</div>
+                <VaultLineInfo
+                  value={`${bnToNum(collateralizationRatio, 25, 4).toLocaleString()}%`}
+                  label="Required Collateralization Ratio"
+                  info="This is required collateralization ratio for this type of collateral. "
+                />
+                <VaultLineInfo
+                  value={`${bnToNum(simCollateralizationRatio, 25, 4).toLocaleString()}%`}
+                  label="Current Collateralization Ratio"
+                  info="This is the value of the collateral divided by the debt. You may liquidate this vault if this falls below the minimum liquidation ratio."
+                />
+                {simTotalCollateralValue.lt(collateralizationRatio) ? (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleLiquidatePosition}>
+                      {liquidationState.state !== "PENDING"
+                        ? `Liquidate Position`
+                        : "Waiting for transaction to be confirmed..."}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full">
+                      Vault Cannot be Liquidated
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </Content>
-      <div className="pt-10 bg-blue-600 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden">
-        <h1>Position Manager</h1>
-
-        <div className="mt-6">System Info</div>
-        <div>
-          Oracle Price: {bnToNum(oraclePrice, 27, 2)} MMKT/{collateral.name}{" "}
-        </div>
-        <div>Stability Fee: {((bnToNum(annualStabilityFee, 27, 4) - 1) * 100).toFixed(2)}%</div>
-        <div>Minimum Collateralization Ratio: {bnToNum(collateralizationRatio, 27, 2) * 100}%</div>
-
-        <div className="mt-6">Wallet</div>
-        <div>
-          {collateral.name} Balance: {bnToNum(collateralBalance, 18, 4)}
-        </div>
-        <div>MMKT Balance: {bnToNum(stablecoinBalance, 18, 4)}</div>
-
-        <div className="mt-6">Vault</div>
-        <div>
-          Locked Collateral: {bnToNum(lockedCollateral, 18, 4)} {collateral.name}
-        </div>
-        <div>Debt: {bnToNum(debt, 18, 4)} MMKT</div>
-        <div>Ratio: {bnToNum(positionCollateralizationRatio, 27, 4) * 100}%</div>
-
-        {!isProxyOwner && <div>Not vault owner!</div>}
-        {isProxyOwner && !isGrantedCollateralAllowance && (
-          <Button
-            onClick={() => {
-              if (positionManager.state == "READY") positionManager.approveCollateralSpendByProxy();
-            }}
-          >
-            Approve Collateral Spend
-          </Button>
-        )}
-        {isProxyOwner && !isGrantedStablecoinAllowance && (
-          <Button
-            onClick={() => {
-              if (positionManager.state == "READY") positionManager.approveStablecoinSpendByProxy();
-            }}
-          >
-            Approve Stablecoin Spend
-          </Button>
-        )}
-        {isProxyOwner && isGrantedCollateralAllowance && (
-          <div>
-            <div>Collateral Delta</div>
-            <input
-              value={mintingState.collateralInput}
-              onChange={(e) => updateMintingState(e.target.value, mintingState.debtInput)}
-            />
-            <div>Debt Delta</div>
-            <input
-              value={mintingState.debtInput}
-              onChange={(e) => updateMintingState(mintingState.collateralInput, e.target.value)}
-            />
-            <Button
-              onClick={() => handleTransferCollateralAndDebt(mintingState.collateralDelta, mintingState.debtDelta)}
-            >
-              Mint
-            </Button>
-            <Button onClick={handleClosePosition}>Close Position</Button>
-          </div>
-        )}
-        {!isProxyOwner && liquidationState.state == "READY" && (
-          <Button onClick={() => liquidationState.liquidateVault(vaultAddr)}>Liquidate</Button>
-        )}
-      </div>
     </Layout>
   );
 };
@@ -378,13 +471,15 @@ const ConnectedVaultPositionManager: FunctionComponent<{ userAddr: string }> = (
   if (!collateral) return <InvalidCollateralPositionManager />;
 
   const handleTransferCollateralAndDebt = (collateralDelta: BigNumber, debtDelta: BigNumber): void => {
-    if (positionManager.state !== "READY" && positionManager.state !== "TRANSFER_SUCCESS") return;
+    if (
+      positionManager.state !== "READY" &&
+      positionManager.state !== "TRANSFER_SUCCESS" &&
+      positionManager.state !== "ERROR_READY"
+    )
+      return;
     positionManager.transferCollateralAndDebt(collateralDelta, debtDelta);
   };
-  const handleClosePosition = (): void => {
-    if (positionManager.state !== "READY" && positionManager.state !== "TRANSFER_SUCCESS") return;
-    positionManager.closePosition();
-  };
+
   if (positionManager.state === "PENDING_MULTICALL") {
     return <LoadingPositionManager />;
   }
@@ -392,7 +487,8 @@ const ConnectedVaultPositionManager: FunctionComponent<{ userAddr: string }> = (
     positionManager.state === "READY" ||
     positionManager.state === "TRANSFER_SUCCESS" ||
     positionManager.state === "PENDING_TRANSFER" ||
-    positionManager.state === "PENDING_APPROVAL"
+    positionManager.state === "PENDING_APPROVAL" ||
+    positionManager.state === "ERROR_READY"
   ) {
     return (
       <ReadyPositionManager
@@ -400,7 +496,6 @@ const ConnectedVaultPositionManager: FunctionComponent<{ userAddr: string }> = (
         positionManager={positionManager}
         collateral={collateral}
         handleTransferCollateralAndDebt={handleTransferCollateralAndDebt}
-        handleClosePosition={handleClosePosition}
       />
     );
   }
