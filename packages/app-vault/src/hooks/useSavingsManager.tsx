@@ -1,4 +1,4 @@
-import { useEthers, useContractFunction } from "@usedapp/core";
+import { useContractFunction } from "@usedapp/core";
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
 import HelperAbi from "@bluejayfinance/contracts/abi/Helper.json";
 import SavingsAccountAbi from "@bluejayfinance/contracts/abi/SavingsAccount.json";
@@ -14,8 +14,6 @@ import {
   savingsAccountAddress,
   proxyHelperAddress,
 } from "../fixtures/deployments";
-import { config } from "../config";
-import { switchNetwork } from "../utils/metamask";
 import { useTypedContractCalls } from "./utils";
 import { exp } from "../utils/number";
 import { useContractFunctionCustom } from "./useContractFunctionCustom";
@@ -31,15 +29,7 @@ export interface StateWithQueryResults {
   accumulatedSavingsRate: BigNumber;
   annualSavingsRate: BigNumber;
   savings: BigNumber;
-}
-
-export interface UnconnectedState {
-  state: "UNCONNECTED";
-  activateBrowserWallet: () => void;
-}
-export interface WrongNetworkState {
-  state: "WRONG_NETWORK";
-  switchNetwork: () => void;
+  walletStablecoinBalance: BigNumber;
 }
 export interface ErrorState {
   state: "ERROR";
@@ -63,10 +53,9 @@ export interface SuccessfulTransferState extends StateWithQueryResults {
   approveStablecoinSpendByProxy: () => void;
   transferSavings: (_debtDelta: BigNumber) => void;
 }
+
 export type ReadyManagerStates = ReadyState | PendingApprovalState | PendingTransferState | SuccessfulTransferState;
 export type ManagerState =
-  | UnconnectedState
-  | WrongNetworkState
   | ErrorState
   | ReadyState
   | PendingApprovalState
@@ -74,11 +63,14 @@ export type ManagerState =
   | SuccessfulTransferState
   | PendingMulticallState;
 
-export const useSavingsManager = ({ vaultAddr }: { vaultAddr: string }): ManagerState => {
+export const hasQueryResults = (state: ManagerState): state is ReadyManagerStates => {
+  return ["READY", "PENDING_APPROVAL", "PENDING_TRANSFER", "TRANSFER_SUCCESS"].includes(state.state);
+};
+
+export const useSavingsManager = ({ vaultAddr, userAddr }: { vaultAddr: string; userAddr: string }): ManagerState => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proxyContract = new Contract(vaultAddr, DSProxyAbi) as any;
 
-  const { account, chainId, activateBrowserWallet } = useEthers();
   const { state: transferSavingsState, send: sendTransferSavings } = useContractFunctionCustom(
     proxyContract,
     "execute(address,bytes)"
@@ -88,7 +80,7 @@ export const useSavingsManager = ({ vaultAddr }: { vaultAddr: string }): Manager
     new Contract(stablecoinAddress, TokenAbi) as any,
     "approve"
   );
-  const queries = useTypedContractCalls<[[string], [BigNumber], [BigNumber], [BigNumber], [BigNumber]]>([
+  const queries = useTypedContractCalls<[[string], [BigNumber], [BigNumber], [BigNumber], [BigNumber], [BigNumber]]>([
     {
       abi: new utils.Interface(DSProxyAbi),
       address: vaultAddr,
@@ -117,7 +109,13 @@ export const useSavingsManager = ({ vaultAddr }: { vaultAddr: string }): Manager
       abi: new utils.Interface(TokenAbi),
       address: stablecoinAddress,
       method: "allowance",
-      args: [account, vaultAddr],
+      args: [userAddr, vaultAddr],
+    },
+    {
+      abi: new utils.Interface(TokenAbi),
+      address: stablecoinAddress,
+      method: "balanceOf",
+      args: [userAddr],
     },
   ]);
 
@@ -135,32 +133,28 @@ export const useSavingsManager = ({ vaultAddr }: { vaultAddr: string }): Manager
 
   const multicallResolved = queries.state == "RESOLVED" && queries.result.every((r) => !!r);
 
-  if (!account) {
-    return {
-      state: "UNCONNECTED",
-      activateBrowserWallet,
-    };
-  }
-
-  if (chainId !== config.network.chainId) {
-    return { state: "WRONG_NETWORK", switchNetwork };
-  }
-
-  if (queries.state != "RESOLVED" || !multicallResolved || !account) {
+  if (queries.state != "RESOLVED" || !multicallResolved) {
     return { state: "PENDING_MULTICALL" };
   }
 
-  const [[proxyOwner], [normalizedSavings], [accumulatedSavingsRate], [annualSavingsRate], [stablecoinAllowance]] =
-    queries.result;
+  const [
+    [proxyOwner],
+    [normalizedSavings],
+    [accumulatedSavingsRate],
+    [annualSavingsRate],
+    [stablecoinAllowance],
+    [walletStablecoinBalance],
+  ] = queries.result;
   const savings = normalizedSavings.mul(accumulatedSavingsRate).div(exp(27));
   const queryResult = {
     proxyOwner,
-    isProxyOwner: proxyOwner.toLowerCase() === account.toLowerCase(),
+    isProxyOwner: proxyOwner.toLowerCase() === userAddr.toLowerCase(),
     isGrantedStablecoinAllowance: stablecoinAllowance.gt(exp(27)),
     normalizedSavings,
     accumulatedSavingsRate,
     annualSavingsRate,
     savings,
+    walletStablecoinBalance,
   };
 
   if (approvalForStablecoinState.status === "Mining") {

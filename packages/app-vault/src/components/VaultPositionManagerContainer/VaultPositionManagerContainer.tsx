@@ -1,6 +1,5 @@
 import React, { FunctionComponent, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Popover } from "@headlessui/react";
 
 import { getCollateralFromName, collaterals } from "../../fixtures/deployments";
 import { Layout, Content } from "../Layout";
@@ -12,6 +11,8 @@ import { useLiquidateVault } from "../../hooks/useLiquidateVault";
 import { hasWalletAddress, useUserContext } from "../../context/UserContext";
 import { WalletConnectionRequired } from "../WalletConnectionRequired";
 import { BasicAlert, BasicWarning } from "../Feedback";
+import { truncateAddress, negativeString } from "../../utils/strings";
+import { InfoLine, InfoPanel, InputWithPercentage } from "../Forms";
 
 interface MintingState {
   collateralInput: string;
@@ -19,54 +20,6 @@ interface MintingState {
   collateralDelta: BigNumber;
   debtDelta: BigNumber;
 }
-
-const truncateAddress = (address: string): string => {
-  return address.substr(0, 6) + "..." + address.substr(address.length - 5);
-};
-
-interface InfoPanelProp {
-  value: string | number;
-  label: string;
-  info?: string;
-}
-
-const InfoPanel: FunctionComponent<InfoPanelProp> = ({ value, label, info }) => {
-  return (
-    <div className="bg-white rounded-md border border-gray-300 px-4 py-2 w-60 text-gray-600">
-      <div className="flex justify-between">
-        <span className="text-sm">{label}</span>
-        {info && (
-          <Popover>
-            <Popover.Button>ⓘ</Popover.Button>
-            <Popover.Panel className="absolute z-10">
-              <div className="bg-white border border-gray-300 rounded-sm py-1 px-2 text-xs max-w-md">{info}</div>
-            </Popover.Panel>
-          </Popover>
-        )}
-      </div>
-      <div>
-        <span className="mr-2 text-gray-800">{value}</span>
-      </div>
-    </div>
-  );
-};
-
-const VaultLineInfo: FunctionComponent<InfoPanelProp> = ({ value, label, info }) => {
-  return (
-    <Popover>
-      <div className="flex justify-between text-sm">
-        <div className="text-gray-700">
-          {label}
-          {info ? <Popover.Button className="mx-2 font-bold">ⓘ</Popover.Button> : null}
-        </div>
-        <div className="text-blue-700">{value}</div>
-        <Popover.Panel className="absolute z-10">
-          <div className="bg-white border border-gray-300 rounded-sm py-1 px-2 text-xs max-w-md">{info}</div>
-        </Popover.Panel>
-      </div>
-    </Popover>
-  );
-};
 
 const CollateralSelector: FunctionComponent<{ vaultAddr: string; selectedCollateral: string }> = ({
   selectedCollateral,
@@ -92,51 +45,6 @@ const CollateralSelector: FunctionComponent<{ vaultAddr: string; selectedCollate
     </div>
   );
 };
-
-const InputWithPercentage: FunctionComponent<{
-  steps?: number[];
-  value: string;
-  maxValue: number;
-  onInputChange: (_input: string) => void;
-}> = ({ value, maxValue, onInputChange, steps = [100, 75, 50, 25, 0] }) => {
-  const [showSteps, setShowSteps] = useState(false);
-  const [stepText, setStepText] = useState(`${steps[0]}%`);
-
-  const setStep = (step: number): void => {
-    onInputChange(`${((maxValue * step) / 100).toFixed()}`);
-    setShowSteps(false);
-    setStepText(`${step}%`);
-  };
-
-  const handleInputChange = (input: string): void => {
-    onInputChange(input);
-  };
-  return (
-    <div className="flex w-full border border-gray-600 rounded-lg items-center">
-      <input
-        className="rounded-l-lg flex-grow h-10 outline-none px-4"
-        value={value}
-        onChange={(e) => handleInputChange(e.target.value)}
-      />
-      <div className="bg-blue-600 text-white rounded-lg m-1 w-24 text-center" onClick={() => setShowSteps(!showSteps)}>
-        {showSteps && (
-          <div className="absolute grid-cols-1 bg-blue-600 w-24 p-2 rounded-lg divide-y divide-blue-500" style={{}}>
-            {steps.map((step) => (
-              <div key={step} className="p-1 text-center" onClick={() => setStep(step)}>
-                {step}%
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="p-2">
-          {stepText} <span className="text-sm">▼</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-const negativeString = (input: string): string =>
-  input[0] === "-" || input.length === 0 ? input.substr(1) : `-${input}`;
 
 export const ReadyPositionManager: FunctionComponent<{
   vaultAddr: string;
@@ -255,17 +163,17 @@ export const ReadyPositionManager: FunctionComponent<{
                 {bnToNum(lockedCollateral, 18, 4)} <span className="text-2xl">{collateral.name}</span>
               </div>
               <div className="border-t border border-blue-300 my-6" />
-              <VaultLineInfo
+              <InfoLine
                 label="MMKT Debt"
                 value={`${bnToNum(debt, 18, 4).toLocaleString()} MMKT`}
                 info="Amount of MMKT owed to the system. Stability fee will be imposed on this number."
               />
-              <VaultLineInfo
+              <InfoLine
                 label="Value of Collateral"
                 value={`${bnToNum(lockedCollateral.mul(oraclePrice), 45, 4).toLocaleString()} MMKT`}
                 info="This is the value of the collateral relative to the stablecoin. It is calculated using the oracle price."
               />
-              <VaultLineInfo
+              <InfoLine
                 label="Collateralization Ratio"
                 value={`${(bnToNum(positionCollateralizationRatio, 27, 4) * 100).toFixed(2)}%`}
                 info="This is your vault's current collateralization ratio, if it falls below the required minimum collateralization ratio, your vault is at risk of being liquidated"
@@ -375,31 +283,31 @@ export const ReadyPositionManager: FunctionComponent<{
 
                 <div className="mt-6">Simulation</div>
 
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(simTotalCollateralLocked, 18, 4).toLocaleString()} ${collateral.name}`}
                   label="Total Collateral Locked"
                   info="This is the total amount of collaterals locked up after this transaction."
                 />
 
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(simTotalCollateralValue, 45, 4).toLocaleString()} MMKT`}
                   label="Total Collateral Value"
                   info="This is the value of the collaterals after this transaction, using the current oracle price."
                 />
 
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(simTotalDebtDrawn, 18, 4).toLocaleString()} MMKT`}
                   label="Total Debt Drawn"
                   info="This is the total stablecoin you owe to the system after this transaction."
                 />
 
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(simCollateralizationRatio, 25, 4).toLocaleString()}%`}
                   label="Collateralization Ratio"
                   info="This is the value of your collateral divided by the debt. It needs to be above the minimum collateralization ratio to prevent your vault from being liquidated."
                 />
 
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(simLiquidationPrice, 27, 4).toLocaleString()} MMKT/${collateral.name}`}
                   label="Liquidation Price"
                   info="This is the price of the collateral that your vault will risk being liquidated as it has fallen below the required collateralization ratio."
@@ -464,12 +372,12 @@ export const ReadyPositionManager: FunctionComponent<{
                   </div>
                 )}
                 <div>Vault Health</div>
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(collateralizationRatio, 25, 4).toLocaleString()}%`}
                   label="Required Collateralization Ratio"
                   info="This is required collateralization ratio for this type of collateral. "
                 />
-                <VaultLineInfo
+                <InfoLine
                   value={`${bnToNum(simCollateralizationRatio, 25, 4).toLocaleString()}%`}
                   label="Current Collateralization Ratio"
                   info="This is the value of the collateral divided by the debt. You may liquidate this vault if this falls below the minimum liquidation ratio."
