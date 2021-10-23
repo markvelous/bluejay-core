@@ -13,6 +13,7 @@ import { WalletConnectionRequired } from "../WalletConnectionRequired";
 import { BasicAlert, BasicWarning } from "../Feedback";
 import { truncateAddress, negativeString } from "../../utils/strings";
 import { InfoLine, InfoPanel, InputWithPercentage } from "../Forms";
+import { LoaderContent } from "../Loader";
 
 interface MintingState {
   collateralInput: string;
@@ -419,11 +420,7 @@ export const ReadyPositionManager: FunctionComponent<{
 const LoadingPositionManager: FunctionComponent = () => {
   return (
     <Layout>
-      <Content>
-        <div className="text-center mt-28 flex flex-col items-center text-gray-800">
-          <h2 className="my-16 text-blue-600 text-2xl">Loading Vault Information...</h2>
-        </div>
-      </Content>
+      <LoaderContent>Loading Vault Information...</LoaderContent>
     </Layout>
   );
 };
