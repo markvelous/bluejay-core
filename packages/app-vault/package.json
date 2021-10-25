@@ -1,6 +1,6 @@
 {
   "name": "@bluejayfinance/app-vault",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "dependencies": {
     "@bluejayfinance/contracts": "^0.1.5",
