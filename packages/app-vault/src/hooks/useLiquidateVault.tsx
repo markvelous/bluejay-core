@@ -5,7 +5,7 @@ import { Contract, constants } from "ethers";
 
 import { proxyHelperAddress, stablecoinJoinAddress, liquidationEngineAddress } from "../fixtures/deployments";
 import { useContractFunctionCustom } from "./useContractFunctionCustom";
-import { useVault } from "./useVault";
+import { useUserContext } from "../context/UserContext";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProxyHelperContract = new Contract(proxyHelperAddress, ProxyHelperAbi) as any;
@@ -44,9 +44,9 @@ export const useLiquidateVault = ({
 }: {
   collateral?: { name: string; address: string; collateralType: string };
 }): LiquidationState => {
-  const vaultState = useVault();
+  const userContext = useUserContext();
   const proxyContract = new Contract(
-    vaultState.state === "VAULT_FOUND" ? vaultState.vault : constants.AddressZero,
+    userContext.state === "READY" ? userContext.proxyAddress : constants.AddressZero,
     DSProxyAbi
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as any;
@@ -56,7 +56,7 @@ export const useLiquidateVault = ({
     "execute(address,bytes)"
   );
 
-  if (vaultState.state != "VAULT_FOUND") return { state: "NOT_READY" };
+  if (userContext.state != "READY") return { state: "NOT_READY" };
   const liquidateVault = async (vaultToLiquidate: string): Promise<void> => {
     const tx = await ProxyHelperContract.populateTransaction.liquidatePosition(
       collateralType,

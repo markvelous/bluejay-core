@@ -1,20 +1,17 @@
-import { utils, BigNumber, Contract, constants } from "ethers";
-import { useState } from "react";
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
+import LiquidationAuctionAbi from "@bluejayfinance/contracts/abi/LiquidationAuction.json";
 import ProxyHelperAbi from "@bluejayfinance/contracts/abi/ProxyHelper.json";
-
+import { BigNumber, constants, Contract, utils } from "ethers";
+import { useState } from "react";
+import { useUserContext } from "../context/UserContext";
 import {
   collateralJoinAddress,
   getLiquidationAuctionAddress,
   proxyHelperAddress,
-  stablecoinJoinAddress,
+  stablecoinJoinAddress
 } from "../fixtures/deployments";
-import { useTypedContractCall } from "./utils";
-
-import LiquidationAuctionAbi from "@bluejayfinance/contracts/abi/LiquidationAuction.json";
-
 import { useContractFunctionCustom } from "./useContractFunctionCustom";
-import { useVault } from "./useVault";
+import { useTypedContractCall } from "./utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProxyHelperContract = new Contract(proxyHelperAddress, ProxyHelperAbi) as any;
@@ -73,9 +70,9 @@ export const hasAuctionActions = (
 };
 
 export const useVaultsOnAuction = ({ name, auctionId }: { name: string; auctionId: number }): VaultsOnAuctionState => {
-  const vaultState = useVault();
+  const userContext = useUserContext();
   const proxyContract = new Contract(
-    vaultState.state === "VAULT_FOUND" ? vaultState.vault : constants.AddressZero,
+    userContext.state === "READY" ? userContext.proxyAddress : constants.AddressZero,
     DSProxyAbi
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as any;
@@ -96,7 +93,7 @@ export const useVaultsOnAuction = ({ name, auctionId }: { name: string; auctionI
   const { state: executeState, send: sendExecute } = useContractFunctionCustom(proxyContract, "execute(address,bytes)");
 
   const restartAuction = async (): Promise<void> => {
-    if (vaultState.state !== "VAULT_FOUND") throw new Error("No vault address");
+    if (userContext.state !== "READY") throw new Error("No vault address");
     const tx = await ProxyHelperContract.populateTransaction.restartAuction(
       auctionId,
       getLiquidationAuctionAddress(name),
@@ -107,7 +104,7 @@ export const useVaultsOnAuction = ({ name, auctionId }: { name: string; auctionI
   };
 
   const bidOnAuction = async (collateralAmount: BigNumber): Promise<void> => {
-    if (vaultState.state !== "VAULT_FOUND") throw new Error("No vault address");
+    if (userContext.state !== "READY") throw new Error("No vault address");
     if (auctionDetailsState.state !== "RESOLVED") throw new Error("No price");
     const tx = await ProxyHelperContract.populateTransaction.bidOnLiquidationAuction(
       auctionId,
@@ -121,7 +118,7 @@ export const useVaultsOnAuction = ({ name, auctionId }: { name: string; auctionI
     sendExecute(proxyHelperAddress, tx.data);
   };
 
-  if (vaultState.state !== "VAULT_FOUND") return { state: "LOADING_VAULT" };
+  if (userContext.state !== "READY") return { state: "LOADING_VAULT" };
   if (auctionDetailsState.state == "UNRESOLVED") return { state: "LOADING_AUCTIONS_DETAIL" };
 
   const { needsRedo, price, collateralToSell, debtToRaise } = auctionDetailsState.result;
