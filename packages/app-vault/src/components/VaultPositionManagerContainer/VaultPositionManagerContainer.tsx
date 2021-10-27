@@ -1,19 +1,18 @@
+import { BigNumber } from "ethers";
 import React, { FunctionComponent, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-
-import { getCollateralFromName, collaterals } from "../../fixtures/deployments";
-import { Layout, Content } from "../Layout";
-import { bnToNum, exp, toBigNumber } from "../../utils/number";
-import { Button } from "../Button/Button";
-import { usePositionManager, ReadyManagerStates } from "../../hooks/usePositionManager";
-import { BigNumber } from "ethers";
-import { useLiquidateVault } from "../../hooks/useLiquidateVault";
 import { hasWalletAddress, useUserContext } from "../../context/UserContext";
-import { WalletConnectionRequired } from "../WalletConnectionRequired";
+import { Collateral, collaterals, getCollateralFromName } from "../../fixtures/deployments";
+import { LiquidationState, useLiquidateVault } from "../../hooks/useLiquidateVault";
+import { ReadyManagerStates, usePositionManager, ManagerState } from "../../hooks/usePositionManager";
+import { bnToNum, exp, toBigNumber } from "../../utils/number";
+import { negativeString, truncateAddress } from "../../utils/strings";
+import { Button } from "../Button/Button";
 import { BasicAlert, BasicWarning } from "../Feedback";
-import { truncateAddress, negativeString } from "../../utils/strings";
 import { InfoLine, InfoPanel, InputWithPercentage } from "../Forms";
+import { Content, Layout } from "../Layout";
 import { LoaderContent } from "../Loader";
+import { WalletConnectionRequired } from "../WalletConnectionRequired";
 
 interface MintingState {
   collateralInput: string;
@@ -50,10 +49,10 @@ const CollateralSelector: FunctionComponent<{ vaultAddr: string; selectedCollate
 export const ReadyPositionManager: FunctionComponent<{
   vaultAddr: string;
   positionManager: ReadyManagerStates;
+  liquidateVault: LiquidationState;
   collateral: { name: string; collateralType: string; address: string };
   handleTransferCollateralAndDebt: (_collateralDelta: BigNumber, _debtDelta: BigNumber) => void;
-}> = ({ vaultAddr, positionManager, collateral, handleTransferCollateralAndDebt }) => {
-  const liquidationState = useLiquidateVault({ collateral });
+}> = ({ vaultAddr, positionManager, collateral, handleTransferCollateralAndDebt, liquidateVault }) => {
   const [showMinting, setShowMinting] = useState(true);
   const [mintingState, setMintingState] = useState<MintingState>({
     collateralInput: "",
@@ -91,7 +90,9 @@ export const ReadyPositionManager: FunctionComponent<{
 
   const simTotalCollateralLocked = lockedCollateral.add(mintingState.collateralDelta);
   const simTotalCollateralValue = oraclePrice.mul(simTotalCollateralLocked);
-  const maxStablecoinMintable = simTotalCollateralValue.div(collateralizationRatio).sub(debt);
+  const maxStablecoinMintable = collateralizationRatio.gt(0)
+    ? simTotalCollateralValue.div(collateralizationRatio).sub(debt)
+    : BigNumber.from(0);
   const simTotalDebtDrawn = debt.add(mintingState.debtDelta);
   const simCollateralizationRatio = simTotalDebtDrawn.gt(0)
     ? simTotalCollateralValue.div(simTotalDebtDrawn)
@@ -119,12 +120,13 @@ export const ReadyPositionManager: FunctionComponent<{
   };
 
   const handleLiquidatePosition = (): void => {
-    if (liquidationState.state === "READY") {
-      liquidationState.liquidateVault(vaultAddr);
+    if (liquidateVault.state === "READY") {
+      liquidateVault.liquidateVault(vaultAddr);
     }
   };
 
   const shouldClosePosition = simTotalDebtDrawn.lt(debtFloor.div(exp(27))) && debt.gt(0);
+  const canLiquidateVault = simTotalCollateralValue.div(simTotalDebtDrawn).lt(collateralizationRatio);
 
   return (
     <Layout>
@@ -392,16 +394,16 @@ export const ReadyPositionManager: FunctionComponent<{
                     </Button>
                   </div>
                 )}
-                {simTotalCollateralValue.lt(collateralizationRatio) && isGrantedStablecoinAllowance && (
+                {canLiquidateVault && isGrantedStablecoinAllowance && (
                   <div className="mt-3 text-center">
                     <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleLiquidatePosition}>
-                      {liquidationState.state !== "PENDING"
+                      {liquidateVault.state !== "PENDING"
                         ? `Liquidate Position`
                         : "Waiting for transaction to be confirmed..."}
                     </Button>
                   </div>
                 )}
-                {simTotalCollateralValue.gte(collateralizationRatio) && (
+                {!canLiquidateVault && (
                   <div className="mt-3 text-center">
                     <Button scheme="secondary" btnSize="lg" btnWidth="full">
                       Vault Cannot be Liquidated
@@ -449,11 +451,12 @@ const ErrorPositionManager: FunctionComponent = () => {
   );
 };
 
-const ConnectedVaultPositionManager: FunctionComponent<{ userAddr: string }> = ({ userAddr }) => {
-  const { vaultAddr, collateralType } = useParams<{ vaultAddr: string; collateralType: string }>();
-  const collateral = getCollateralFromName(collateralType);
-  const positionManager = usePositionManager({ vaultAddr, collateral, userAddr });
-
+export const VaultPositionManager: FunctionComponent<{
+  positionManager: ManagerState;
+  vaultAddr: string;
+  liquidateVault: LiquidationState;
+  collateral?: Collateral;
+}> = ({ liquidateVault, positionManager, vaultAddr, collateral }) => {
   if (!collateral) return <InvalidCollateralPositionManager />;
 
   const handleTransferCollateralAndDebt = (collateralDelta: BigNumber, debtDelta: BigNumber): void => {
@@ -480,12 +483,29 @@ const ConnectedVaultPositionManager: FunctionComponent<{ userAddr: string }> = (
       <ReadyPositionManager
         vaultAddr={vaultAddr}
         positionManager={positionManager}
+        liquidateVault={liquidateVault}
         collateral={collateral}
         handleTransferCollateralAndDebt={handleTransferCollateralAndDebt}
       />
     );
   }
   return <ErrorPositionManager />;
+};
+
+const ConnectedVaultPositionManager: FunctionComponent<{ userAddr: string }> = ({ userAddr }) => {
+  const { vaultAddr, collateralType } = useParams<{ vaultAddr: string; collateralType: string }>();
+  const collateral = getCollateralFromName(collateralType);
+  const positionManager = usePositionManager({ vaultAddr, collateral, userAddr });
+  const liquidateVault = useLiquidateVault({ collateral });
+
+  return (
+    <VaultPositionManager
+      positionManager={positionManager}
+      liquidateVault={liquidateVault}
+      collateral={collateral}
+      vaultAddr={vaultAddr}
+    />
+  );
 };
 
 export const VaultPositionManagerContainer: FunctionComponent = () => {

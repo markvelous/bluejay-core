@@ -31,7 +31,12 @@ type ErrorState = {
   liquidateVault: (_vault: string) => void;
 };
 
-type LiquidationState = NotReadyState | PendingLiquidationState | LiquidationSuccessState | ReadyState | ErrorState;
+export type LiquidationState =
+  | NotReadyState
+  | PendingLiquidationState
+  | LiquidationSuccessState
+  | ReadyState
+  | ErrorState;
 
 export const useLiquidateVault = ({
   collateral: { collateralType } = {
