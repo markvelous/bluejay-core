@@ -8,7 +8,7 @@ import {
   collateralJoinAddress,
   getLiquidationAuctionAddress,
   proxyHelperAddress,
-  stablecoinJoinAddress
+  stablecoinJoinAddress,
 } from "../fixtures/deployments";
 import { useContractFunctionCustom } from "./useContractFunctionCustom";
 import { useTypedContractCall } from "./utils";
