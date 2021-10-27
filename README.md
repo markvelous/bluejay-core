@@ -39,6 +39,10 @@ Go to the `app-vault` directory by running `cd packages/app-vault`.
 
 Run the deployment script by running `npm deploy:local:fresh`. This will deploy all the necessary contracts for the web app. You may find the deployed contract addresses in the file `src/fixtures/deployment/contracts.json`.
 
+### Update oracle price
+
+Follow the instructions in the [@bluejayfinance/contracts README](packages/contracts/README.md) to update the oracle price for the assets.
+
 ### Get started
 
 You are now ready to develop in the different projects!

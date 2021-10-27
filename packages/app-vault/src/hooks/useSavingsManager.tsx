@@ -1,22 +1,19 @@
-import { useContractFunction } from "@usedapp/core";
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
 import HelperAbi from "@bluejayfinance/contracts/abi/Helper.json";
-import SavingsAccountAbi from "@bluejayfinance/contracts/abi/SavingsAccount.json";
 import TokenAbi from "@bluejayfinance/contracts/abi/IERC20.json";
 import ProxyHelperAbi from "@bluejayfinance/contracts/abi/ProxyHelper.json";
-
-import { Contract, BigNumber, utils, constants } from "ethers";
-
+import SavingsAccountAbi from "@bluejayfinance/contracts/abi/SavingsAccount.json";
+import { useContractFunction } from "@usedapp/core";
+import { BigNumber, constants, Contract, utils } from "ethers";
 import {
   helperAddress,
+  proxyHelperAddress,
+  savingsAccountAddress,
   stablecoinAddress,
   stablecoinJoinAddress,
-  savingsAccountAddress,
-  proxyHelperAddress,
 } from "../fixtures/deployments";
-import { useTypedContractCalls } from "./utils";
 import { exp } from "../utils/number";
-import { useContractFunctionCustom } from "./useContractFunctionCustom";
+import { useTypedContractCalls } from "./utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProxyHelperContract = new Contract(proxyHelperAddress, ProxyHelperAbi) as any;
@@ -71,7 +68,7 @@ export const useSavingsManager = ({ vaultAddr, userAddr }: { vaultAddr: string; 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proxyContract = new Contract(vaultAddr, DSProxyAbi) as any;
 
-  const { state: transferSavingsState, send: sendTransferSavings } = useContractFunctionCustom(
+  const { state: transferSavingsState, send: sendTransferSavings } = useContractFunction(
     proxyContract,
     "execute(address,bytes)"
   );
