@@ -1,26 +1,23 @@
-import { useContractFunction } from "@usedapp/core";
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
+import HelperAbi from "@bluejayfinance/contracts/abi/Helper.json";
+import TokenAbi from "@bluejayfinance/contracts/abi/IERC20.json";
 import LedgerAbi from "@bluejayfinance/contracts/abi/Ledger.json";
 import OracleRelayerAbi from "@bluejayfinance/contracts/abi/OracleRelayer.json";
 import ProxyHelperAbi from "@bluejayfinance/contracts/abi/ProxyHelper.json";
-import TokenAbi from "@bluejayfinance/contracts/abi/IERC20.json";
-import HelperAbi from "@bluejayfinance/contracts/abi/Helper.json";
-
-import { Contract, BigNumber, utils, constants } from "ethers";
-
+import { useContractFunction } from "@usedapp/core";
+import { BigNumber, constants, Contract, utils } from "ethers";
 import {
+  collateralJoinAddress,
+  feesEngineAddress,
+  helperAddress,
   ledgerAddress,
   oracleRelayerAddress,
-  feesEngineAddress,
   proxyHelperAddress,
-  stablecoinJoinAddress,
-  collateralJoinAddress,
-  helperAddress,
   stablecoinAddress,
+  stablecoinJoinAddress,
 } from "../fixtures/deployments";
-import { useTypedContractCalls } from "./utils";
 import { exp } from "../utils/number";
-import { useContractFunctionCustom } from "./useContractFunctionCustom";
+import { useTypedContractCalls } from "./utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProxyHelperContract = new Contract(proxyHelperAddress, ProxyHelperAbi) as any;
@@ -116,11 +113,11 @@ export const usePositionManager = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proxyContract = new Contract(vaultAddr, DSProxyAbi) as any;
 
-  const { state: transferCollateralAndDebtState, send: sendTransferCollateralAndDebt } = useContractFunctionCustom(
+  const { state: transferCollateralAndDebtState, send: sendTransferCollateralAndDebt } = useContractFunction(
     proxyContract,
     "execute(address,bytes)"
   );
-  const { state: closePositionState, send: sendClosePosition } = useContractFunctionCustom(
+  const { state: closePositionState, send: sendClosePosition } = useContractFunction(
     proxyContract,
     "execute(address,bytes)"
   );

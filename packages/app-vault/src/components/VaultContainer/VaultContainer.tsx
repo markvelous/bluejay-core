@@ -1,11 +1,10 @@
 import React, { FunctionComponent } from "react";
 import { Link } from "react-router-dom";
-import { useUserContext } from "../../context/UserContext";
+import { useUserContext, UserStates } from "../../context/UserContext";
 import { Button } from "../Button/Button";
 import { Content, Layout } from "../Layout";
 
-export const VaultContainer: FunctionComponent = () => {
-  const userContext = useUserContext();
+export const Vault: FunctionComponent<{ userContext: UserStates }> = ({ userContext }) => {
   return (
     <Layout>
       <Content>
@@ -48,4 +47,9 @@ export const VaultContainer: FunctionComponent = () => {
       </Content>
     </Layout>
   );
+};
+
+export const VaultContainer: FunctionComponent = () => {
+  const userContext = useUserContext();
+  return <Vault userContext={userContext} />;
 };

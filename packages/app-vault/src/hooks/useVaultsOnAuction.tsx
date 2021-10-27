@@ -1,6 +1,7 @@
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
 import LiquidationAuctionAbi from "@bluejayfinance/contracts/abi/LiquidationAuction.json";
 import ProxyHelperAbi from "@bluejayfinance/contracts/abi/ProxyHelper.json";
+import { useContractFunction } from "@usedapp/core";
 import { BigNumber, constants, Contract, utils } from "ethers";
 import { useState } from "react";
 import { useUserContext } from "../context/UserContext";
@@ -10,7 +11,6 @@ import {
   proxyHelperAddress,
   stablecoinJoinAddress,
 } from "../fixtures/deployments";
-import { useContractFunctionCustom } from "./useContractFunctionCustom";
 import { useTypedContractCall } from "./utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,7 +90,7 @@ export const useVaultsOnAuction = ({ name, auctionId }: { name: string; auctionI
     args: [auctionId],
   });
   const [executeType, setExecuteType] = useState<"BID_AUCTION" | "RESTART_AUCTION">("BID_AUCTION");
-  const { state: executeState, send: sendExecute } = useContractFunctionCustom(proxyContract, "execute(address,bytes)");
+  const { state: executeState, send: sendExecute } = useContractFunction(proxyContract, "execute(address,bytes)");
 
   const restartAuction = async (): Promise<void> => {
     if (userContext.state !== "READY") throw new Error("No vault address");

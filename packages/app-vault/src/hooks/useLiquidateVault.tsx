@@ -1,11 +1,9 @@
 import DSProxyAbi from "@bluejayfinance/contracts/abi/DSProxy.json";
 import ProxyHelperAbi from "@bluejayfinance/contracts/abi/ProxyHelper.json";
-
-import { Contract, constants } from "ethers";
-
-import { proxyHelperAddress, stablecoinJoinAddress, liquidationEngineAddress } from "../fixtures/deployments";
-import { useContractFunctionCustom } from "./useContractFunctionCustom";
+import { useContractFunction } from "@usedapp/core";
+import { constants, Contract } from "ethers";
 import { useUserContext } from "../context/UserContext";
+import { liquidationEngineAddress, proxyHelperAddress, stablecoinJoinAddress } from "../fixtures/deployments";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProxyHelperContract = new Contract(proxyHelperAddress, ProxyHelperAbi) as any;
@@ -51,7 +49,7 @@ export const useLiquidateVault = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as any;
 
-  const { state: liquidationState, send: sendLiquidation } = useContractFunctionCustom(
+  const { state: liquidationState, send: sendLiquidation } = useContractFunction(
     proxyContract,
     "execute(address,bytes)"
   );
