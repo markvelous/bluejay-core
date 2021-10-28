@@ -126,8 +126,8 @@ export const ReadyPositionManager: FunctionComponent<{
   };
 
   const shouldClosePosition = simTotalDebtDrawn.lt(debtFloor.div(exp(27))) && debt.gt(0);
-  const canLiquidateVault = simTotalCollateralValue.div(simTotalDebtDrawn).lt(collateralizationRatio);
-
+  const canLiquidateVault =
+    simTotalDebtDrawn.gt(0) && simTotalCollateralValue.div(simTotalDebtDrawn).lt(collateralizationRatio);
   return (
     <Layout>
       <Content>
