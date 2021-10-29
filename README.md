@@ -37,7 +37,7 @@ Leave the terminal running and take note of the first private key printed on the
 
 Go to the `app-vault` directory by running `cd packages/app-vault`.
 
-Run the deployment script by running `npm deploy:local:fresh`. This will deploy all the necessary contracts for the web app. You may find the deployed contract addresses in the file `src/fixtures/deployment/contracts.json`.
+Run the deployment script by running `npm run deploy:local:fresh`. This will deploy all the necessary contracts for the web app. You may find the deployed contract addresses in the file `src/fixtures/deployment/contracts.json`.
 
 ### Update oracle price
 

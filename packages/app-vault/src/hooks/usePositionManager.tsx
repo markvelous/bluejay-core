@@ -17,7 +17,7 @@ import {
   stablecoinJoinAddress,
 } from "../fixtures/deployments";
 import { exp } from "../utils/number";
-import { useTypedContractCalls } from "./utils";
+import { cleanErrorMessage, useTypedContractCalls } from "./utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ProxyHelperContract = new Contract(proxyHelperAddress, ProxyHelperAbi) as any;
@@ -89,13 +89,6 @@ export type ManagerState =
   | PendingTransferState
   | SuccessfulTransferState
   | PendingMulticallState;
-
-const cleanErrorMessage = (message?: string): string | undefined => {
-  if (!message) return message;
-  const regex = /(Error: VM Exception while processing transaction: reverted with reason string ')+(.*)('$)+/;
-  const res = regex.exec(message);
-  return res?.length === 4 ? res[2] : message;
-};
 
 export const usePositionManager = ({
   userAddr,

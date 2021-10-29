@@ -41,3 +41,10 @@ export const useTypedContractCall = <T extends any[]>(call: ContractCall): Typed
     return { state: "RESOLVED", result: results as T };
   }
 };
+
+export const cleanErrorMessage = (message?: string): string | undefined => {
+  if (!message) return message;
+  const regex = /(Error: VM Exception while processing transaction: reverted with reason string ')+(.*)('$)+/;
+  const res = regex.exec(message);
+  return res?.length === 4 ? res[2] : message;
+};

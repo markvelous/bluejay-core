@@ -119,12 +119,6 @@ export const ReadyPositionManager: FunctionComponent<{
     }
   };
 
-  const handleLiquidatePosition = (): void => {
-    if (liquidateVault.state === "READY") {
-      liquidateVault.liquidateVault(vaultAddr);
-    }
-  };
-
   const shouldClosePosition = simTotalDebtDrawn.lt(debtFloor.div(exp(27))) && debt.gt(0);
   const canLiquidateVault =
     simTotalDebtDrawn.gt(0) && simTotalCollateralValue.div(simTotalDebtDrawn).lt(collateralizationRatio);
@@ -374,6 +368,11 @@ export const ReadyPositionManager: FunctionComponent<{
                     <BasicAlert title={positionManager.errorMessage || "An unexpected error has occured"} />
                   </div>
                 )}
+                {liquidateVault.state === "ERROR" && (
+                  <div className="mb-2">
+                    <BasicAlert title={liquidateVault.errorMessage || "An unexpected error has occured"} />
+                  </div>
+                )}
                 <div>Vault Health</div>
                 <InfoLine
                   value={`${bnToNum(collateralizationRatio, 25, 4).toLocaleString()}%`}
@@ -385,21 +384,41 @@ export const ReadyPositionManager: FunctionComponent<{
                   label="Current Collateralization Ratio"
                   info="This is the value of the collateral divided by the debt. You may liquidate this vault if this falls below the minimum liquidation ratio."
                 />
-                {!isGrantedStablecoinAllowance && (
+                {canLiquidateVault && liquidateVault.state == "PENDING" && (
                   <div className="mt-3 text-center">
-                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleStablecoinApproval}>
-                      {positionManager.state !== "PENDING_APPROVAL"
-                        ? "Approve MMKT for Liquidation"
-                        : "Pending approval..."}
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full">
+                      Waiting for transaction to be confirmed...
                     </Button>
                   </div>
                 )}
-                {canLiquidateVault && isGrantedStablecoinAllowance && (
+                {canLiquidateVault && liquidateVault.state == "READY" && (
                   <div className="mt-3 text-center">
-                    <Button scheme="secondary" btnSize="lg" btnWidth="full" onClick={handleLiquidatePosition}>
-                      {liquidateVault.state !== "PENDING"
-                        ? `Liquidate Position`
-                        : "Waiting for transaction to be confirmed..."}
+                    <Button
+                      scheme="secondary"
+                      btnSize="lg"
+                      btnWidth="full"
+                      onClick={() => liquidateVault.liquidateVault(vaultAddr)}
+                    >
+                      Liquidate Position
+                    </Button>
+                  </div>
+                )}
+                {canLiquidateVault && liquidateVault.state == "NO_PROXY" && (
+                  <div className="mt-3 text-center">
+                    <Button
+                      scheme="secondary"
+                      btnSize="lg"
+                      btnWidth="full"
+                      onClick={() => liquidateVault.deployVault()}
+                    >
+                      Deploy Vault (Required for Liquidation)
+                    </Button>
+                  </div>
+                )}
+                {canLiquidateVault && liquidateVault.state == "DEPLOYING_PROXY" && (
+                  <div className="mt-3 text-center">
+                    <Button scheme="secondary" btnSize="lg" btnWidth="full">
+                      Waiting for Vault Deployment...
                     </Button>
                   </div>
                 )}
