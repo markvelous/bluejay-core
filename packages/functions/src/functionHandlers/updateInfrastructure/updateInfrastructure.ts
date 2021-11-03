@@ -16,7 +16,7 @@ const wallet = new Wallet(config.wallets.poker, provider) as any;
 const PokerContract = Poker__factory.connect(config.contracts.poker, wallet);
 
 const handleUpdateInfrastructure = async () => {
-  const receipt = await PokerContract.poke({ gasPrice: utils.parseUnits("30", "gwei"), gasLimit: 300000 });
+  const receipt = await PokerContract.poke({ gasPrice: utils.parseUnits("30", "gwei"), gasLimit: 350000 });
   info(`Waiting to be mined: ${receipt.hash}`);
 
   return { hash: receipt.hash };
