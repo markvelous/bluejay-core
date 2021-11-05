@@ -45,7 +45,7 @@ interface SuccessState {
   hash: string;
 }
 
-type VaultState =
+export type VaultState =
   | UnconnectedState
   | WrongNetworkState
   | ErrorState
