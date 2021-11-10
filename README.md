@@ -1,28 +1,30 @@
 # Bluejay Monorepo
 
-This repository is a monorepo for Bleujay Finance. It's organized using [Lerna](https://github.com/lerna/lerna). Different projects can be found in the `/packages/` folder. 
+This repository is a monorepo for Bleujay Finance. It's organized using [Lerna](https://github.com/lerna/lerna). Different projects can be found under the `/packages/` folder. 
 
-Below are packages available in this repository:
+>Below are packages available in this repository:
 
 - [@bluejayfinance/contracts](packages/contracts/README.md)
 - [@bluejayfinance/app-vault](packages/app-vault/README.md)
 - [@bluejayfinance/functions](packages/functions/README.md)
 
-# Developer
+# Install the Monorepo
 
-To get started, you will need to install lerna by running `npm i -g lerna`.
+To get started, you will need to install lerna by running `npm i -g lerna` or `yarn add lerna`.
+
+>For Windows environment, install WSL(Ubintu) extension in VS Code to run Linux commands. 
 
 Once lerna is installed, install project dependencies by running `lerna bootstrap`.
 
 Finally, since most project depends on the `contract` dependency, build the projects by running `lerna run build`.
 
+>You may encounter errors on roject dependency. Go to [@bluejayfinance/app-vault](packages/app-vault), and copy the .env.example into a new .env file. This will enable you to skip the preflight check. Do not attempt to individually fix the dependency in the monorepo as it will lead to other errors.
+
 Now that you've setup the dependencies for the project, you can add start developing in the different packages. 
 
-## Developing with local blockchain
+## Establish a local blockchain using Hardhat
 
 To speed up development feedback loop, you should use a local blockchain during development. To setup the local blockchain environment:
-
-### Running the local blockchain using Hardhat
 
 Go to the `contracts` directory by running `cd packages/contracts`.
 
@@ -33,32 +35,33 @@ Leave the terminal running and take note of the first private key printed on the
 - URL: http://localhost:8545
 - Chain ID: 31337
 
-### Deploying the local stack
+### Deploy the local stack
 
 Go to the `app-vault` directory by running `cd packages/app-vault`.
 
-Run the deployment script by running `npm run deploy:local:fresh`. This will deploy all the necessary contracts for the web app. You may find the deployed contract addresses in the file `src/fixtures/deployment/contracts.json`.
+Run the deployment script by running `npm run deploy:local:fresh`. This will deploy all the necessary contracts for the web app. You may find the deployed contract addresses in the file `packages/app-vault/src/fixtures/deployment/contracts.json`.
 
-### Update oracle price
+### Update the oracle price
 
 Follow the instructions in the [@bluejayfinance/contracts README](packages/contracts/README.md) to update the oracle price for the assets.
 
-### Get started
+## All set to go!
 
-You are now ready to develop in the different projects!
+That's it! You are now ready to develop in the different projects.
 
-Check out the project's readme to get started:
+Check out the project's readme files to get started:
 
 - [@bluejayfinance/contracts](packages/contracts/README.md)
 - [@bluejayfinance/app-vault](packages/app-vault/README.md)
 - [@bluejayfinance/functions](packages/functions/README.md)
 
-## Recommended VS Code Plugins
+### Recommended VS Code plugins
 
-You may wish to install the following plugins if you are using VS Code to have a more plesant developer experience.
+Install some useful plugins for a better coding experience in VS Code.
 
 - Prettier
 - Tailwind CSS IntelliSense
 - ESLint
 - Solidity
 - Gitlens
+- Remote-WSL (for developers using Windows env)
