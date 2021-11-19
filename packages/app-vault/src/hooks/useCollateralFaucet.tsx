@@ -43,6 +43,8 @@ interface SuccessState {
   state: "SUCCESS";
   account: string;
   hash: string;
+  balance: BigNumber;
+  mintToken: (_amount: number) => void;
 }
 
 export type VaultState =
@@ -90,7 +92,14 @@ export const useCollateralFaucet = (): VaultState => {
     case faucetMint.status == "Success":
       if (!account) throw new Error("Account not found");
       if (!faucetMint.transaction) throw new Error("Deploy transaction not found");
-      return { state: "SUCCESS", account, hash: faucetMint.transaction.hash };
+      if (balanceState.state !== "RESOLVED") throw new Error("Account not found");
+      return {
+        state: "SUCCESS",
+        account,
+        hash: faucetMint.transaction.hash,
+        balance: balanceState.result[0],
+        mintToken,
+      };
 
     case faucetMint.status == "Mining":
       if (!account) throw new Error("Account not found");

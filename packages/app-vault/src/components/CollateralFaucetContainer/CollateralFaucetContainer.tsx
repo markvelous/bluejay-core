@@ -1,10 +1,11 @@
 import React, { FunctionComponent, useState } from "react";
 import { useCollateralFaucet, VaultState } from "../../hooks/useCollateralFaucet";
 import { Button } from "../Button/Button";
-import { Layout } from "../Layout";
+import { Content, Layout } from "../Layout";
 import { addToken } from "../../utils/metamask";
 import { collateralFaucetAddress } from "../../fixtures/deployments";
 import { bnToNum } from "../../utils/number";
+import { BasicAlert, BasicSuccess, BasicWarning } from "../Feedback";
 
 export const CollateralFaucet: FunctionComponent<{ faucetState: VaultState }> = ({ faucetState }) => {
   // added mintAmt and mintAmtChangeHanlder
@@ -13,36 +14,61 @@ export const CollateralFaucet: FunctionComponent<{ faucetState: VaultState }> = 
   const mintAmtChangehandler = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setMintAmt(parseFloat(event.target.value));
   };
-  console.log(faucetState);
   return (
     <Layout>
-      <div className="pt-10 bg-blue-600 sm:pt-16 lg:pt-8 lg:pb-14 lg:overflow-hidden text-blue-200 font-bold">
-        Faucet
-      </div>
-      {faucetState.state === "PENDING" && `Deploying: ${faucetState.hash}`}
-      {faucetState.state === "UNCONNECTED" && <Button onClick={faucetState.activateBrowserWallet}>Connect</Button>}
-      {faucetState.state === "WRONG_NETWORK" && <Button onClick={faucetState.switchNetwork}>Switch Network</Button>}
-      {faucetState.state === "READY" && (
-        <div className="p-4">
-          <h3>MINT (Fake USD) Amount</h3>
-          <input className="shadow-md rounded-lg" type="number" placeholder="1000" onChange={mintAmtChangehandler} />
-          <div>Balance: {bnToNum(faucetState.balance)} FakeUSD</div>
-          <Button onClick={() => faucetState.mintToken(mintAmt)}>Mint Token</Button>
+      <Content>
+        <div className="text-blue-600 text-3xl">Faucet</div>
+        {/*match mt-6 USDT button from Vault Position*/}
+        <div className="mt-6">
+          {faucetState.state === "SUCCESS" && <BasicSuccess title="Transaction successful" />}
+          {faucetState.state === "PENDING" && `Deploying: ${faucetState.hash}`}
+          {faucetState.state === "UNCONNECTED" && (
+            <Button scheme="secondary" btnSize="lg" onClick={faucetState.activateBrowserWallet}>
+              Connect
+            </Button>
+          )}
+          {faucetState.state === "WRONG_NETWORK" && (
+            <Button scheme="secondary" btnSize="lg" onClick={faucetState.switchNetwork}>
+              Switch Network
+            </Button>
+          )}
+          {(faucetState.state === "READY" || faucetState.state === "SUCCESS") && (
+            <div className="my-6 w-96">
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <div>MINT (Fake USD)</div>
+                  <div className="text-sm text-gray-400">Wallet Balance: {bnToNum(faucetState.balance)} Fake USD</div>
+                </div>
+                <input
+                  className="shadow-md rounded-lg mb-2 text-blue-900 w-full"
+                  type="number"
+                  placeholder="1000"
+                  onChange={mintAmtChangehandler}
+                />
+                <Button scheme="secondary" btnSize="lg" onClick={() => faucetState.mintToken(mintAmt)}>
+                  Mint Token
+                </Button>
+              </div>
+            </div>
+          )}
+          {faucetState.state === "UNSUPPORTED_FAUCET" && <BasicWarning title="Faucet not available on this network" />}
+          {(faucetState.state === "READY" || faucetState.state === "SUCCESS" || faucetState.state === "PENDING") && (
+            // wrapped div with p-4
+            <div className="mt-6">
+              <Button
+                scheme="secondary"
+                btnSize="lg"
+                onClick={() =>
+                  addToken({ tokenAddress: collateralFaucetAddress, tokenDecimals: 18, tokenSymbol: "FakeUSD" })
+                }
+              >
+                Add Fake USD Token
+              </Button>
+            </div>
+          )}
+          {faucetState.state === "ERROR" && <BasicAlert title="There was an unexpected error" />}
         </div>
-      )}
-      {faucetState.state === "UNSUPPORTED_FAUCET" && "Faucet not available on this network"}
-      {faucetState.state !== "UNSUPPORTED_FAUCET" && (
-        // wrapped div with p-4
-        <div className="p-4">
-          <Button
-            onClick={() =>
-              addToken({ tokenAddress: collateralFaucetAddress, tokenDecimals: 18, tokenSymbol: "FakeUSD" })
-            }
-          >
-            Add Fake USD Token
-          </Button>
-        </div>
-      )}
+      </Content>
     </Layout>
   );
 };
