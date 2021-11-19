@@ -40,7 +40,7 @@ export const ButtonStory: React.FunctionComponent = () => {
 
   return (
     <div className={`${background} p-6`}>
-      <h1 className="storybook-title text-white">Blue Background</h1>
+      <h1 className="storybook-title text-white">Background color is {background}</h1>
       <Button btnWidth={width} btnSize={size} scheme={scheme}>
         Click Me
       </Button>
