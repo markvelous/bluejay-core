@@ -18,7 +18,7 @@ Once lerna is installed, install project dependencies by running `lerna bootstra
 
 Finally, since most project depends on the `contract` dependency, build the projects by running `lerna run build`.
 
->You may encounter errors on roject dependency. Go to [@bluejayfinance/app-vault](packages/app-vault), and copy the .env.example into a new .env file. This will enable you to skip the preflight check. Do not attempt to individually fix the dependency in the monorepo as it will lead to other errors.
+>You may encounter errors on project dependency that prompt you to resolve the issues individually. Do not attempt to fix errors independently in the monorepo as it may lead to other errors. Instead, go to [@bluejayfinance/app-vault](packages/app-vault), and copy the .env.example into a new .env file in app-vault. This will enable you to skip the preflight check. 
 
 Now that you've setup the dependencies for the project, you can add start developing in the different packages. 
 
@@ -26,20 +26,27 @@ Now that you've setup the dependencies for the project, you can add start develo
 
 To speed up development feedback loop, you should use a local blockchain during development. To setup the local blockchain environment:
 
-Go to the `contracts` directory by running `cd packages/contracts`.
+Run `cd packages/contracts` to go into the contract directory.
 
-Run the a local node using hardhat `hh node`. This assumes you have hardhat installed. Alternatively you can change `hh` to `npx hardhat`. 
+Start a local node using `hh node` or `npx hardhat node`. 
 
-Leave the terminal running and take note of the first private key printed on the console, you can use that on your browser's metamask account with the following settings:
+Leave the terminal with the local node running. 
+
+Pick one of the private keys from the list and use it to create an account in Metamask. 
+
+Next, create a custom RPC using the following network setting:
 
 - URL: http://localhost:8545
 - Chain ID: 31337
 
+In Metamask, go to `Settings > Advanced > Reset Account`, this will clear all previous transactions and reset the nonce to zero. 
 ### Deploy the local stack
 
-Go to the `app-vault` directory by running `cd packages/app-vault`.
+Open a new terminal. Go to the `app-vault` directory by running `cd packages/app-vault`.
 
-Run the deployment script by running `npm run deploy:local:fresh`. This will deploy all the necessary contracts for the web app. You may find the deployed contract addresses in the file `packages/app-vault/src/fixtures/deployment/contracts.json`.
+Run the deployment script by running `npm run deploy:local:fresh`. This will deploy all the contracts for the app. You can find the list of these contract addresses in the file `packages/app-vault/src/fixtures/deployment/contracts.json`.
+
+Congratulations! You've just deployed all the smart contracts for Bluejay.Finance.
 
 ### Update the oracle price
 
@@ -55,9 +62,11 @@ Check out the project's readme files to get started:
 - [@bluejayfinance/app-vault](packages/app-vault/README.md)
 - [@bluejayfinance/functions](packages/functions/README.md)
 
-### Recommended VS Code plugins
+Start by copying the `.env example` files under these folders into `.env`, respectively.
 
-Install some useful plugins for a better coding experience in VS Code.
+### Recommended plugins
+
+Install some useful plugins for a better coding experience in VSCode.
 
 - Prettier
 - Tailwind CSS IntelliSense
