@@ -84,10 +84,10 @@ export const useCollateralFaucet = (): VaultState => {
     case chainId !== config.network.chainId:
       return { state: "WRONG_NETWORK", switchNetwork };
 
-    case !!account && balanceState.state === "RESOLVED":
+    case faucetMint.status == "Mining":
       if (!account) throw new Error("Account not found");
-      if (balanceState.state !== "RESOLVED") throw new Error("Account not found");
-      return { state: "READY", account, mintToken, balance: balanceState.result[0] };
+      if (!faucetMint.transaction) throw new Error("Deploy transaction not found");
+      return { state: "PENDING", account, hash: faucetMint.transaction.hash };
 
     case faucetMint.status == "Success":
       if (!account) throw new Error("Account not found");
@@ -101,10 +101,10 @@ export const useCollateralFaucet = (): VaultState => {
         mintToken,
       };
 
-    case faucetMint.status == "Mining":
+    case !!account && balanceState.state === "RESOLVED":
       if (!account) throw new Error("Account not found");
-      if (!faucetMint.transaction) throw new Error("Deploy transaction not found");
-      return { state: "PENDING", account, hash: faucetMint.transaction.hash };
+      if (balanceState.state !== "RESOLVED") throw new Error("Account not found");
+      return { state: "READY", account, mintToken, balance: balanceState.result[0] };
 
     default:
       return { state: "ERROR" };

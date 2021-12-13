@@ -6,6 +6,7 @@ import { addToken } from "../../utils/metamask";
 import { collateralFaucetAddress } from "../../fixtures/deployments";
 import { bnToNum } from "../../utils/number";
 import { BasicAlert, BasicSuccess, BasicWarning } from "../Feedback";
+import { LoaderContent } from "../Loader";
 
 export const CollateralFaucet: FunctionComponent<{ faucetState: VaultState }> = ({ faucetState }) => {
   // added mintAmt and mintAmtChangeHanlder
@@ -21,7 +22,7 @@ export const CollateralFaucet: FunctionComponent<{ faucetState: VaultState }> = 
         {/*match mt-6 USDT button from Vault Position*/}
         <div className="mt-6">
           {faucetState.state === "SUCCESS" && <BasicSuccess title="Transaction successful" />}
-          {faucetState.state === "PENDING" && `Deploying: ${faucetState.hash}`}
+          {faucetState.state === "PENDING" && <LoaderContent>Deploying: {faucetState.hash}</LoaderContent>}
           {faucetState.state === "UNCONNECTED" && (
             <Button scheme="secondary" btnSize="lg" onClick={faucetState.activateBrowserWallet}>
               Connect
