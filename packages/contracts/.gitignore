@@ -2,3 +2,4 @@
 dist/
 abi/
 src/contracts
+deployments/localhost

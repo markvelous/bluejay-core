@@ -34,7 +34,8 @@ jobs:
         run: npx lerna bootstrap
       
       - name: build contracts
-        run: cd packages/contracts/ && npm run build
+        run: npm run build
+        working-directory: ./packages/contracts
 
       - name: Hardhat Test
         run: npm run test
