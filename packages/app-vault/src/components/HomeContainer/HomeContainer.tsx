@@ -22,20 +22,10 @@ export const HomeContainer: FunctionComponent = () => {
           <div>
             {userContext.state === "READY" && (
               <>
-                <Link className="mr-3" to={`/vault/summary/${userContext.proxyAddress}`}>
-                  <Button btnSize="lg">Mint Stablecoin</Button>
-                </Link>
-                <Link to={`/vault/savings/${userContext.proxyAddress}`}>
-                  <Button btnSize="lg" scheme="secondary">
-                    Save Stablecoin
-                  </Button>
+                <Link className="mr-3" to={`/control-panel`}>
+                  <Button btnSize="lg">Control Panel</Button>
                 </Link>
               </>
-            )}
-            {userContext.state === "PROXY_UNDEPLOYED" && (
-              <Link to={`/vault`}>
-                <Button btnSize="lg">Open A Vault</Button>
-              </Link>
             )}
             {userContext.state === "UNCONNECTED" && (
               <Button btnSize="lg" onClick={userContext.activateBrowserWallet}>

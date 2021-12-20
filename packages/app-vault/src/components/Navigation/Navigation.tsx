@@ -46,13 +46,6 @@ export const UserProfile: FunctionComponent = () => {
         {hasWalletAddress(userContext) && <div className="text-xs">{userContext.walletAddress}</div>}
         {!hasWalletAddress(userContext) && <div className="text-xs">Wallet Not Connected</div>}
 
-        <div className="text-sm font-bold mt-2">Vault Address:</div>
-        {userContext.state === "READY" && <div className="text-xs">{userContext.proxyAddress}</div>}
-        {userContext.state === "DEPLOYING_PROXY" && <div className="text-xs">Deploying...</div>}
-        {userContext.state !== "READY" && userContext.state !== "DEPLOYING_PROXY" && (
-          <div className="text-xs">No Vault Found</div>
-        )}
-
         {hasWalletAddress(userContext) && (
           <div className="mt-2 mb-2 text-center border-t border-blue-200 pt-4">
             <span
