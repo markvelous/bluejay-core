@@ -31,7 +31,7 @@ interface IBondGovernor {
 //   - Can potentially add scaling factor in purchase to add decimals to `amount`
 // TODO
 // - Add auto stake function
-contract BondDepository is
+contract TreasuryBondDepository is
   Initializable,
   OwnableUpgradeable,
   UUPSUpgradeable,
