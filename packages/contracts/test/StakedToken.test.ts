@@ -16,7 +16,7 @@ const whenDeployed = deployments.createFixture(
     const user1 = await ethers.getSigner(user1Address);
 
     const { address: governanceTokenAddress } = await deployments.get(
-      "BluejayTokenProxy"
+      "BluejayTokenImpl"
     );
     const BluejayToken = await ethers.getContractAt(
       "BluejayToken",
@@ -25,7 +25,7 @@ const whenDeployed = deployments.createFixture(
     );
 
     const { address: stakedBluejayTokenAddress } = await deployments.get(
-      "StakedTokenProxy"
+      "StakedToken"
     );
     const StakedToken = await ethers.getContractAt(
       "StakedToken",

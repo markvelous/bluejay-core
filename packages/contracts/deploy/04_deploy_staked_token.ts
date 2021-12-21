@@ -1,7 +1,6 @@
 /* eslint-disable import/no-default-export */
 /* eslint-disable import/no-extraneous-dependencies */
 import { DeployFunction } from "hardhat-deploy/types";
-import { deployUupsProxy } from "../src/deploy/utils";
 
 const interestRate = "1000000124049443431959642954"; // 5000% APY
 const MINTER_ROLE =
@@ -9,14 +8,13 @@ const MINTER_ROLE =
 
 const deploymentScript: DeployFunction = async (hre) => {
   const { getNamedAccounts, deployments } = hre;
-  const { get, execute } = deployments;
+  const { get, execute, deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
   const { address: governanceTokenAddress } = await get("BluejayTokenImpl");
   const { address: treasuryAddress } = await get("TreasuryImpl");
-  const { address: stakingProxyAddress } = await deployUupsProxy({
-    factory: "StakedToken",
-    hre,
+
+  const tx = await deploy("StakedToken", {
     from: deployer,
     args: [
       "Staked BLU",
@@ -25,6 +23,7 @@ const deploymentScript: DeployFunction = async (hre) => {
       treasuryAddress,
       interestRate,
     ],
+    log: true,
   });
 
   // Give permission to staking contract to mint on treasury
@@ -33,7 +32,7 @@ const deploymentScript: DeployFunction = async (hre) => {
     { from: deployer, log: true },
     "grantRole",
     MINTER_ROLE,
-    stakingProxyAddress
+    tx.address
   );
 };
 

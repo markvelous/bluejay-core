@@ -29,7 +29,7 @@ const whenDeployed = deployments.createFixture(
     );
 
     const { address: stakedBluejayTokenAddress } = await deployments.get(
-      "StakedTokenProxy"
+      "StakedToken"
     );
     const StakedToken = await ethers.getContractAt(
       "StakedToken",

@@ -2,21 +2,15 @@
 pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface ITreasury {
   function mint(address to, uint256 amount) external;
 }
 
-contract StakedToken is
-  Initializable,
-  OwnableUpgradeable,
-  UUPSUpgradeable,
-  IERC20
-{
+// TODO lock for staking and withdrawing
+contract StakedToken is Ownable, IERC20 {
   using SafeERC20 for IERC20;
   uint256 constant WAD = 10**18;
   uint256 constant RAY = 10**27;
@@ -41,16 +35,13 @@ contract StakedToken is
   // Denormalized states
   mapping(address => mapping(address => uint256)) private allowances;
 
-  function initialize(
+  constructor(
     string memory _name,
     string memory _symbol,
     address _BLU,
     address _treasury,
     uint256 _interestRate
-  ) public initializer {
-    __UUPSUpgradeable_init();
-    __Ownable_init();
-
+  ) public {
     name = _name;
     symbol = _symbol;
     BLU = IERC20(_BLU);
@@ -292,13 +283,6 @@ contract StakedToken is
     require(_minimumNormalizedBalance <= WAD, "Minimum balance greater than 1");
     minimumNormalizedBalance = _minimumNormalizedBalance;
   }
-
-  // Required overrides
-  function _authorizeUpgrade(address newImplementation)
-    internal
-    override
-    onlyOwner
-  {}
 
   // Math
   function rpow(

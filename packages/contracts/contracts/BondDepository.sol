@@ -13,7 +13,7 @@ interface ITreasury {
 }
 
 interface IBondGovernor {
-  function getPolicy(address asset)
+  function getPolicy(address reserve)
     external
     view
     returns (
@@ -27,7 +27,7 @@ interface IBondGovernor {
 }
 
 // Assumptions
-// - Reserve assets / LP tokens will have 1e18 decimal place (untrue for USDC)
+// - Reserve reserves / LP tokens will have 1e18 decimal place (untrue for USDC)
 //   - Can potentially add scaling factor in purchase to add decimals to `amount`
 // TODO
 // - Add auto stake function
@@ -45,7 +45,7 @@ contract BondDepository is
 
   // Immutables - set in initializer only
   IERC20 public BLU;
-  IERC20 public asset;
+  IERC20 public reserve;
   ITreasury public treasury;
   address public dao;
 
@@ -56,7 +56,7 @@ contract BondDepository is
 
   function initialize(
     address _bondGovernor,
-    address _asset,
+    address _reserve,
     address _BLU,
     address _treasury,
     address _dao,
@@ -66,7 +66,7 @@ contract BondDepository is
     __UUPSUpgradeable_init();
 
     bondGovernor = IBondGovernor(_bondGovernor);
-    asset = IERC20(_asset);
+    reserve = IERC20(_reserve);
     BLU = IERC20(_BLU);
     treasury = ITreasury(_treasury);
     dao = _dao;
@@ -85,7 +85,7 @@ contract BondDepository is
       uint256 minimumSize,
       uint256 maximumSize,
       uint256 fees
-    ) = bondGovernor.getPolicy(address(asset));
+    ) = bondGovernor.getPolicy(address(reserve));
     require(recipient != address(0), "Invalid address");
 
     decayDebt();
@@ -98,8 +98,8 @@ contract BondDepository is
     require(payout <= maximumSize, "Bond size too big");
 
     uint256 revenue = (payout * fees) / WAD;
-    asset.safeTransferFrom(msg.sender, address(this), amount);
-    asset.safeTransfer(address(treasury), amount);
+    reserve.safeTransferFrom(msg.sender, address(this), amount);
+    reserve.safeTransfer(address(treasury), amount);
     treasury.mint(address(this), payout + revenue);
 
     if (revenue > 0) {
@@ -155,7 +155,7 @@ contract BondDepository is
 
   function bondPrice() public view returns (uint256 price) {
     (uint256 controlVariable, , uint256 minimumPrice, , , ) = bondGovernor
-      .getPolicy(address(asset));
+      .getPolicy(address(reserve));
     price = (controlVariable * debtRatio() + RAD) / RAY;
     if (price < minimumPrice) {
       price = minimumPrice;
