@@ -57,7 +57,7 @@ const whenDeployed = deployments.createFixture(
     const StabilizingBondDepository = await ethers.getContractAt(
       "StabilizingBondDepository",
       (
-        await deployments.get("StabilizingBondDepository")
+        await deployments.get("StabilizingBondDepositoryImpl")
       ).address,
       deployer
     );

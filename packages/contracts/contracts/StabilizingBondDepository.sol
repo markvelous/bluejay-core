@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./external/IUniswapV2Pair.sol";
@@ -44,7 +47,12 @@ interface ITreasury {
   ) external;
 }
 
-contract StabilizingBondDepository is BaseBondDepository {
+contract StabilizingBondDepository is
+  Initializable,
+  OwnableUpgradeable,
+  UUPSUpgradeable,
+  BaseBondDepository
+{
   using SafeERC20 for IERC20;
   using SafeERC20 for IMintableBurnableERC20;
 
@@ -68,33 +76,36 @@ contract StabilizingBondDepository is BaseBondDepository {
   bool public reserveIsToken0; // cache for swap directions
 
   // Bond quote
-  uint256 public tolerance = WAD / 100; // [wad]
-  uint256 public maxRewardFactor = (WAD * 15) / 10; // [wad]
-  uint256 public controlVariable = 5; // [wei]
+  uint256 public tolerance; // [wad]
+  uint256 public maxRewardFactor; // [wad]
+  uint256 public controlVariable; // [wei]
 
   // Security note: vesting period should be much higher than the oracle period
   // This allow oracle to be updated before more bonds are purchased leading to overcorection
-  constructor(
+  function initialize(
     address _blu,
     address _reserve,
     address _stablecoin,
     address _treasury,
-    // uint256 _tolerance,
     address _bluTwapOracle,
     address _stablecoinTwapOracle,
     address _stablecoinOracle,
     address _pool,
     uint256 _vestingPeriod
-  ) {
+  ) public initializer {
+    __Ownable_init();
+    __UUPSUpgradeable_init();
+
     BLU = IERC20(_blu);
     reserve = IERC20(_reserve);
     stablecoin = IMintableBurnableERC20(_stablecoin);
+
     treasury = ITreasury(_treasury);
-    // tolerance = _tolerance;
     bluTwapOracle = ITwapOracle(_bluTwapOracle);
     stablecoinTwapOracle = ITwapOracle(_stablecoinTwapOracle);
     stablecoinOracle = IPriceFeedOracle(_stablecoinOracle);
     pool = IUniswapV2Pair(_pool);
+
     vestingPeriod = _vestingPeriod;
 
     (address token0, ) = UniswapV2Library.sortTokens(_stablecoin, _reserve);
@@ -261,6 +272,30 @@ contract StabilizingBondDepository is BaseBondDepository {
       BLU.safeTransfer(recipient, payout);
     }
   }
+
+  // Admin function
+  function setTolerance(uint256 _tolerance) public onlyOwner {
+    require(_tolerance <= WAD, "Tolerance greater than 1");
+    tolerance = _tolerance;
+  }
+
+  function setMaxRewardFactor(uint256 _maxRewardFactor) public onlyOwner {
+    require(_maxRewardFactor >= WAD, "Reward factor less than 1");
+    maxRewardFactor = _maxRewardFactor;
+  }
+
+  function setControlVariable(uint256 _controlVariable) public onlyOwner {
+    require(_controlVariable >= 1, "Control variable less than 1");
+    require(_controlVariable < 1000, "Control variable too high");
+    controlVariable = _controlVariable;
+  }
+
+  // Required overrides
+  function _authorizeUpgrade(address newImplementation)
+    internal
+    override
+    onlyOwner
+  {}
 
   // Math
   function rpow(
