@@ -531,4 +531,24 @@ describe("StablecoinEngine", () => {
     expect(reserves.reserveReserve).to.eq(exp(18).mul(100000));
     expect(reserves.stablecoinReserve).to.eq(exp(18).mul(140000));
   });
+
+  it("should not have stray tokens", async () => {
+    const {
+      StablecoinEngine,
+      UniswapPool,
+      ReserveToken,
+      Treasury,
+      StablecoinToken,
+    } = await whenDeployedWithLiquidity();
+    await StablecoinEngine.swap(
+      UniswapPool.address,
+      exp(18).mul(1000),
+      exp(18).mul(1350),
+      false
+    );
+    expect(await ReserveToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+
+    expect(await StablecoinToken.balanceOf(Treasury.address)).to.eq(0);
+  });
 });

@@ -636,5 +636,79 @@ describe("StabilizingBondDepository", () => {
         )
       ).to.revertedWith("Overcorrection");
     });
+    it("should not have stray tokens", async () => {
+      const deployment = await whenDeployed();
+      const {
+        BluejayToken,
+        BluReservePool,
+        BluTwapOracle,
+        StabilizingBondDepository,
+        MockChainlinkAggregator,
+        Treasury,
+        Pool,
+        TwapOracle,
+        UniswapFactory,
+        PriceFeedOracle,
+        ReserveToken,
+        StablecoinToken,
+        user1,
+      } = deployment;
+
+      await ReserveToken.mint(user1.address, exp(18).mul(2000));
+      await ReserveToken.connect(user1).approve(
+        StabilizingBondDepository.address,
+        constants.MaxUint256
+      );
+
+      // Price is higher on LP, selling expansionary bond
+      await MockChainlinkAggregator.setPrice(exp(18).mul(1500).div(1000));
+
+      // Buy expansionary bond
+      await StabilizingBondDepository.connect(user1).purchase(
+        exp(18).mul(1000),
+        0,
+        user1.address
+      );
+
+      expect(await ReserveToken.balanceOf(BluTwapOracle.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(BluTwapOracle.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(BluTwapOracle.address)).to.eq(0);
+
+      expect(
+        await ReserveToken.balanceOf(StabilizingBondDepository.address)
+      ).to.eq(0);
+      expect(
+        await StablecoinToken.balanceOf(StabilizingBondDepository.address)
+      ).to.eq(0);
+
+      expect(
+        await ReserveToken.balanceOf(MockChainlinkAggregator.address)
+      ).to.eq(0);
+      expect(
+        await StablecoinToken.balanceOf(MockChainlinkAggregator.address)
+      ).to.eq(0);
+      expect(
+        await BluejayToken.balanceOf(MockChainlinkAggregator.address)
+      ).to.eq(0);
+
+      expect(await StablecoinToken.balanceOf(Treasury.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(Treasury.address)).to.eq(0);
+
+      expect(await StablecoinToken.balanceOf(BluReservePool.address)).to.eq(0);
+
+      expect(await BluejayToken.balanceOf(Pool.address)).to.eq(0);
+
+      expect(await ReserveToken.balanceOf(TwapOracle.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(TwapOracle.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(TwapOracle.address)).to.eq(0);
+
+      expect(await ReserveToken.balanceOf(UniswapFactory.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(UniswapFactory.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(UniswapFactory.address)).to.eq(0);
+
+      expect(await ReserveToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
+    });
   });
 });

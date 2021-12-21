@@ -29,7 +29,8 @@ interface IBondGovernor {
 // Assumptions
 // - Reserve assets / LP tokens will have 1e18 decimal place (untrue for USDC)
 //   - Can potentially add scaling factor in purchase to add decimals to `amount`
-
+// TODO
+// - Add auto stake function
 contract BondDepository is
   Initializable,
   OwnableUpgradeable,

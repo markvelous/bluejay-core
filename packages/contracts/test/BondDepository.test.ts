@@ -326,4 +326,22 @@ describe("BondDepository", () => {
     expect(usersBond.length).to.eq(1);
     expect(usersBond[0]).to.eq(2);
   });
+  it("should not have stray tokens", async () => {
+    const { BondDepository, Treasury, user1, BluejayToken, MockReserveToken } =
+      await whenDeployed();
+
+    const amountPaid = exp(18).mul(1000);
+    await BondDepository.connect(user1).purchase(
+      amountPaid,
+      exp(18).mul(10),
+      user1.address
+    );
+
+    await increaseTime(24 * 60 * 60, ethers.provider);
+
+    await BondDepository.connect(user1).redeem(1, user1.address);
+
+    expect(await BluejayToken.balanceOf(Treasury.address)).to.eq(0);
+    expect(await MockReserveToken.balanceOf(BondDepository.address)).to.eq(0);
+  });
 });
