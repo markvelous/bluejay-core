@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+import "./interface/ITwapOracle.sol";
+
 import "./external/IUniswapV2Pair.sol";
 import "./external/UniswapV2OracleLibrary.sol";
 
 // Security note: consider having a maximum skew as additional defense against
 // price manipulations
 
-contract TwapOracle {
+contract TwapOracle is ITwapOracle {
   uint256 public immutable period;
   IUniswapV2Pair immutable pair;
   address public immutable token0;
@@ -39,7 +41,7 @@ contract TwapOracle {
     return uint144(num >> 112);
   }
 
-  function update() public {
+  function update() public override {
     (
       uint256 price0Cumulative,
       uint256 price1Cumulative,
@@ -66,6 +68,7 @@ contract TwapOracle {
   function consult(address token, uint256 amountIn)
     public
     view
+    override
     returns (uint256 amountOut)
   {
     if (token == token0) {
@@ -77,7 +80,7 @@ contract TwapOracle {
     require(amountOut > 0, "Invalid price");
   }
 
-  function tryUpdate() public {
+  function tryUpdate() public override {
     if (
       UniswapV2OracleLibrary.currentBlockTimestamp() - blockTimestampLast >=
       period
@@ -88,6 +91,7 @@ contract TwapOracle {
 
   function updateAndConsult(address token, uint256 amountIn)
     public
+    override
     returns (uint256 amountOut)
   {
     tryUpdate();
