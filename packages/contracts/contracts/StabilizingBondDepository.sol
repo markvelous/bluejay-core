@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./interface/IStabilizingBondDepository.sol";
 import "./interface/IPriceFeedOracle.sol";
 import "./interface/IStablecoinEngine.sol";
 import "./interface/ITwapOracle.sol";
@@ -27,7 +28,8 @@ contract StabilizingBondDepository is
   Initializable,
   OwnableUpgradeable,
   UUPSUpgradeable,
-  BaseBondDepository
+  BaseBondDepository,
+  IStabilizingBondDepository
 {
   using SafeERC20 for IERC20;
   using SafeERC20 for IMintableBurnableERC20;
@@ -88,7 +90,7 @@ contract StabilizingBondDepository is
     reserveIsToken0 = _reserve == token0;
   }
 
-  function getReward(uint256 degree) public view returns (uint256) {
+  function getReward(uint256 degree) public view override returns (uint256) {
     if (degree <= tolerance) return WAD;
 
     uint256 factor = (WAD + degree);
@@ -100,14 +102,15 @@ contract StabilizingBondDepository is
     return rewardFactor;
   }
 
-  function getCurrentReward() public view returns (uint256) {
-    (uint256 degree, , ) = getDeviation();
+  function getCurrentReward() public view override returns (uint256) {
+    (uint256 degree, , ) = getTwapDeviation();
     return getReward(degree);
   }
 
-  function getDeviation()
+  function getTwapDeviation()
     public
     view
+    override
     returns (
       uint256 degree,
       bool isExpansionary,
@@ -129,6 +132,7 @@ contract StabilizingBondDepository is
   function getSpotDeviation()
     public
     view
+    override
     returns (
       uint256 degree,
       bool isExpansionary,
@@ -156,7 +160,7 @@ contract StabilizingBondDepository is
     uint256 amount,
     uint256 maxPrice,
     address recipient
-  ) public returns (uint256 bondId) {
+  ) public override returns (uint256 bondId) {
     // TODO
     // Security note: enforce maxPrice to prevent frontrunning attacks
     // Update oracle
@@ -164,7 +168,7 @@ contract StabilizingBondDepository is
     bluTwapOracle.tryUpdate();
 
     // Check that stabilizing bond is available
-    (uint256 degree, bool isExpansionary, ) = getDeviation();
+    (uint256 degree, bool isExpansionary, ) = getTwapDeviation();
     require(degree > tolerance, "Price deviation within tolerance");
 
     // Collect payments
@@ -231,7 +235,7 @@ contract StabilizingBondDepository is
     bondId = _mint(recipient, amountWithReward);
   }
 
-  function redeem(uint256 bondId, address recipient) public {
+  function redeem(uint256 bondId, address recipient) public override {
     require(bondOwners[bondId] == msg.sender, "Not owner of bond");
     Bond memory bond = bonds[bondId];
     if (bond.lastRedeemed + bond.vestingPeriod <= block.timestamp) {
@@ -252,17 +256,25 @@ contract StabilizingBondDepository is
   }
 
   // Admin function
-  function setTolerance(uint256 _tolerance) public onlyOwner {
+  function setTolerance(uint256 _tolerance) public override onlyOwner {
     require(_tolerance <= WAD, "Tolerance greater than 1");
     tolerance = _tolerance;
   }
 
-  function setMaxRewardFactor(uint256 _maxRewardFactor) public onlyOwner {
+  function setMaxRewardFactor(uint256 _maxRewardFactor)
+    public
+    override
+    onlyOwner
+  {
     require(_maxRewardFactor >= WAD, "Reward factor less than 1");
     maxRewardFactor = _maxRewardFactor;
   }
 
-  function setControlVariable(uint256 _controlVariable) public onlyOwner {
+  function setControlVariable(uint256 _controlVariable)
+    public
+    override
+    onlyOwner
+  {
     require(_controlVariable >= 1, "Control variable less than 1");
     require(_controlVariable < 1000, "Control variable too high");
     controlVariable = _controlVariable;
