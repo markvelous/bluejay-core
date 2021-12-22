@@ -3,8 +3,9 @@ pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "./interface/IBondGovernor.sol";
 
-contract BondGovernor is Ownable {
+contract BondGovernor is Ownable, IBondGovernor {
   uint256 constant WAD = 10**18;
   uint256 constant RAY = 10**27;
 
@@ -16,16 +17,6 @@ contract BondGovernor is Ownable {
   uint256 minimumSize; // [wad]
   uint256 maximumRatio; // [wad]
   uint256 fees; // [wad]
-
-  // Structs
-  struct Policy {
-    uint256 controlVariable; // [ray]
-    uint256 lastControlVariableUpdate; // [unix timestamp]
-    uint256 targetControlVariable; // [ray]
-    uint256 timeToTargetControlVariable; // [seconds]
-    uint256 totalDebtCeiling; // [wad]
-    uint256 minimumPrice; // [wad]
-  }
 
   modifier policyExist(address asset) {
     require(policies[asset].controlVariable != 0, "Policy not initialized");
@@ -45,7 +36,7 @@ contract BondGovernor is Ownable {
     uint256 controlVariable,
     uint256 totalDebtCeiling,
     uint256 minimumPrice
-  ) public onlyOwner {
+  ) public override onlyOwner {
     require(
       policies[asset].controlVariable == 0,
       "Policy has been initialized"
@@ -67,7 +58,7 @@ contract BondGovernor is Ownable {
     uint256 timeToTargetControlVariable,
     uint256 totalDebtCeiling,
     uint256 minimumPrice
-  ) public onlyOwner policyExist(asset) {
+  ) public override onlyOwner policyExist(asset) {
     require(
       targetControlVariable >= RAY,
       "Target control variable less than 1"
@@ -80,22 +71,26 @@ contract BondGovernor is Ownable {
     policies[asset].minimumPrice = minimumPrice;
   }
 
-  function setFees(uint256 _fees) public onlyOwner {
+  function setFees(uint256 _fees) public override onlyOwner {
     require(_fees <= WAD, "Fees greater than 100%");
     fees = _fees;
   }
 
-  function setMinimumSize(uint256 _minimumSize) public onlyOwner {
+  function setMinimumSize(uint256 _minimumSize) public override onlyOwner {
     minimumSize = _minimumSize;
   }
 
-  function setMaximumRatio(uint256 _maximumRatio) public onlyOwner {
+  function setMaximumRatio(uint256 _maximumRatio) public override onlyOwner {
     require(_maximumRatio <= WAD, "Maximum ratio greater than 100%");
     maximumRatio = _maximumRatio;
   }
 
   // Public Functions
-  function updateControlVariable(address asset) public policyExist(asset) {
+  function updateControlVariable(address asset)
+    public
+    override
+    policyExist(asset)
+  {
     uint256 currentControlVariable = getControlVariable(asset);
     policies[asset].controlVariable = currentControlVariable;
     policies[asset].lastControlVariableUpdate = block.timestamp;
@@ -105,6 +100,7 @@ contract BondGovernor is Ownable {
   function getControlVariable(address asset)
     public
     view
+    override
     policyExist(asset)
     returns (uint256)
   {
@@ -136,13 +132,19 @@ contract BondGovernor is Ownable {
     }
   }
 
-  function maximumBondSize() public view returns (uint256 maximumSize) {
+  function maximumBondSize()
+    public
+    view
+    override
+    returns (uint256 maximumSize)
+  {
     maximumSize = (BLU.totalSupply() * maximumRatio) / WAD;
   }
 
   function getPolicy(address asset)
     public
     view
+    override
     policyExist(asset)
     returns (
       uint256,

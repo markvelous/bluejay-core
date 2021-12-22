@@ -7,23 +7,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseBondDepository.sol";
+import "./interface/IBondGovernor.sol";
 
 interface ITreasury {
   function mint(address to, uint256 amount) external;
-}
-
-interface IBondGovernor {
-  function getPolicy(address reserve)
-    external
-    view
-    returns (
-      uint256 controlVariable,
-      uint256 totalDebtCeiling,
-      uint256 minimumPrice,
-      uint256 minimumSize,
-      uint256 maximumSize,
-      uint256 fees
-    );
 }
 
 // Assumptions
