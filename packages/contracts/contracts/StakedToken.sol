@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./interface/IStakedToken.sol";
 import "./interface/ITreasury.sol";
 
 // TODO lock for staking and withdrawing
-contract StakedToken is Ownable, IERC20 {
+contract StakedToken is Ownable, IStakedToken {
   using SafeERC20 for IERC20;
   uint256 constant WAD = 10**18;
   uint256 constant RAY = 10**27;
@@ -51,7 +51,11 @@ contract StakedToken is Ownable, IERC20 {
     minimumNormalizedBalance = WAD / 10**3; // 1/1000th of a BLU
   }
 
-  function stake(uint256 amount, address recipient) public returns (bool) {
+  function stake(uint256 amount, address recipient)
+    public
+    override
+    returns (bool)
+  {
     rebase();
     require(recipient != address(0), "Staking to the zero address");
     BLU.safeTransferFrom(msg.sender, address(this), amount);
@@ -59,7 +63,11 @@ contract StakedToken is Ownable, IERC20 {
     return true;
   }
 
-  function unstake(uint256 amount, address recipient) public returns (bool) {
+  function unstake(uint256 amount, address recipient)
+    public
+    override
+    returns (bool)
+  {
     rebase();
     require(recipient != address(0), "Unstaking to the zero address");
     _burn(recipient, normalize(amount));
@@ -230,52 +238,56 @@ contract StakedToken is Ownable, IERC20 {
     _zeroMinimumBalances(sender);
   }
 
-  function updateAccumulatedRate() public {
+  function updateAccumulatedRate() public override returns (uint256) {
     accumulatedRates = currentAccumulatedRate();
     lastInterestRateUpdate = block.timestamp;
+    return accumulatedRates;
   }
 
-  function rebase() public {
+  function rebase() public override returns (uint256 mintedTokens) {
     updateAccumulatedRate();
     uint256 mappedTokens = denormalize(normalizedTotalSupply);
     uint256 tokenBalance = BLU.balanceOf(address(this));
     if (tokenBalance < mappedTokens) {
-      treasury.mint(address(this), mappedTokens - tokenBalance);
+      mintedTokens = mappedTokens - tokenBalance;
+      treasury.mint(address(this), mintedTokens);
     }
   }
 
   // View functions
-  function currentAccumulatedRate() public view returns (uint256) {
+  function currentAccumulatedRate() public view override returns (uint256) {
     require(block.timestamp >= lastInterestRateUpdate, "Invalid timestamp");
     return
       (compoundedInterest(block.timestamp - lastInterestRateUpdate) *
         accumulatedRates) / RAY;
   }
 
-  function denormalize(uint256 amount) public view returns (uint256) {
+  function denormalize(uint256 amount) public view override returns (uint256) {
     return (amount * currentAccumulatedRate()) / RAY;
   }
 
-  function normalize(uint256 amount) public view returns (uint256) {
+  function normalize(uint256 amount) public view override returns (uint256) {
     return (amount * RAY) / currentAccumulatedRate();
   }
 
   function compoundedInterest(uint256 timePeriod)
     public
     view
+    override
     returns (uint256)
   {
     return rpow(interestRate, timePeriod, RAY);
   }
 
   // Admin functions
-  function setInterestRate(uint256 _interestRate) public onlyOwner {
+  function setInterestRate(uint256 _interestRate) public override onlyOwner {
     require(_interestRate >= RAY, "Interest rate less than 1");
     interestRate = _interestRate;
   }
 
   function setMinimumNormalizedBalance(uint256 _minimumNormalizedBalance)
     public
+    override
     onlyOwner
   {
     require(_minimumNormalizedBalance <= WAD, "Minimum balance greater than 1");
