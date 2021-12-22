@@ -20,6 +20,13 @@ Finally, since most project depends on the `contract` dependency, build the proj
 
 >You may encounter errors on project dependency that prompt you to resolve the issues individually. Do not attempt to fix errors independently in the monorepo as it may lead to other errors. Instead, go to [@bluejayfinance/app-vault](packages/app-vault), and copy the .env.example into a new .env file in app-vault. This will enable you to skip the preflight check. 
 
+>You should see the following message for a successful build:
+```
+lerna success run Ran npm script 'build' in 2 packages in 51.6s:
+lerna success - @bluejayfinance/app-vault
+lerna success - @bluejayfinance/contracts
+```
+
 Now that you've setup the dependencies for the project, you can add start developing in the different packages. 
 
 ## Establish a local blockchain using Hardhat
