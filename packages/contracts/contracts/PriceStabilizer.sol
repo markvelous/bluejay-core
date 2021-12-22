@@ -2,6 +2,7 @@
 pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./interface/IPriceFeedOracle.sol";
 import "./external/UniswapV2Library.sol";
 
 interface IStablecoinEngine {
@@ -25,10 +26,6 @@ interface IStablecoinEngine {
     uint256 minAmountOut,
     bool reserveForStablecoin
   ) external;
-}
-
-interface IPriceFeedOracle {
-  function getPrice() external view returns (uint256 price);
 }
 
 contract PriceStabilizer is AccessControl {

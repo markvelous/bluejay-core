@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
-import "./external/AggregatorV3Interface.sol";
+import "./interface/IPriceFeedOracle.sol";
 
-contract PriceFeedOracle {
+contract PriceFeedOracle is IPriceFeedOracle{
   uint8 constant decimals = 18;
   uint256 constant ONE = 10**decimals;
   Feed[] public path;
-
-  struct Feed {
-    AggregatorV3Interface aggregator;
-    uint8 decimals;
-    bool invert;
-  }
 
   constructor(address[] memory aggregators, bool[] memory inverts) {
     require(aggregators.length == inverts.length, "Mismatched arrays");
@@ -29,7 +23,7 @@ contract PriceFeedOracle {
 
   // TODO Consider if there is a need for stale data protection
   // Note: Quotes as number of stablecoin per reserve
-  function getPrice() public view returns (uint256 price) {
+  function getPrice() override public view returns (uint256 price) {
     price = ONE;
     for (uint256 i = 0; i < path.length; i++) {
       Feed memory feed = path[i];
