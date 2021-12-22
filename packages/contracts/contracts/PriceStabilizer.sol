@@ -4,29 +4,7 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interface/IPriceFeedOracle.sol";
 import "./external/UniswapV2Library.sol";
-
-interface IStablecoinEngine {
-  function poolsInfo(address _pool)
-    external
-    view
-    returns (
-      address reserve,
-      address stablecoin,
-      address pool
-    );
-
-  function getReserves(address poolAddr)
-    external
-    view
-    returns (uint256 stablecoinReserve, uint256 reserveReserve);
-
-  function swap(
-    address poolAddr,
-    uint256 amountIn,
-    uint256 minAmountOut,
-    bool reserveForStablecoin
-  ) external;
-}
+import "./interface/IStablecoinEngine.sol";
 
 contract PriceStabilizer is AccessControl {
   uint256 constant ONE = 10**18;
