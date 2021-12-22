@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./BaseBondDepository.sol";
 
+import "./interface/ITreasuryBondDepository.sol";
 import "./interface/IBondGovernor.sol";
 import "./interface/ITreasury.sol";
 
@@ -21,7 +22,8 @@ contract TreasuryBondDepository is
   Initializable,
   OwnableUpgradeable,
   UUPSUpgradeable,
-  BaseBondDepository
+  BaseBondDepository,
+  ITreasuryBondDepository
 {
   using SafeERC20 for IERC20;
 
@@ -63,7 +65,7 @@ contract TreasuryBondDepository is
     uint256 amount,
     uint256 maxPrice,
     address recipient
-  ) public returns (uint256 bondId) {
+  ) public override returns (uint256 bondId) {
     (
       ,
       uint256 totalDebtCeiling,
@@ -97,15 +99,21 @@ contract TreasuryBondDepository is
     require(totalDebt <= totalDebtCeiling, "Exceeds debt ceiling");
   }
 
-  function redeem(uint256 bondId, address recipient) public {
+  function redeem(uint256 bondId, address recipient)
+    public
+    override
+    returns (uint256 payout)
+  {
     require(bondOwners[bondId] == msg.sender, "Not owner of bond");
     Bond memory bond = bonds[bondId];
     if (bond.lastRedeemed + bond.vestingPeriod <= block.timestamp) {
       _burn(bondId);
+      payout = bond.principal;
       BLU.safeTransfer(recipient, bond.principal);
     } else {
-      uint256 payout = (bond.principal *
-        (block.timestamp - bond.lastRedeemed)) / bond.vestingPeriod;
+      payout =
+        (bond.principal * (block.timestamp - bond.lastRedeemed)) /
+        bond.vestingPeriod;
       bonds[bondId] = Bond({
         id: bond.id,
         principal: bond.principal - payout,
@@ -123,11 +131,11 @@ contract TreasuryBondDepository is
   }
 
   // View functions
-  function currentDebt() public view returns (uint256) {
+  function currentDebt() public view override returns (uint256) {
     return totalDebt - debtDecay();
   }
 
-  function debtDecay() public view returns (uint256 decay) {
+  function debtDecay() public view override returns (uint256 decay) {
     uint256 blocksSinceLast = block.timestamp - lastDecay;
     decay = (totalDebt * blocksSinceLast) / vestingPeriod;
     if (decay > totalDebt) {
@@ -135,11 +143,11 @@ contract TreasuryBondDepository is
     }
   }
 
-  function debtRatio() public view returns (uint256 ratio) {
+  function debtRatio() public view override returns (uint256 ratio) {
     ratio = (currentDebt() * WAD) / BLU.totalSupply();
   }
 
-  function bondPrice() public view returns (uint256 price) {
+  function bondPrice() public view override returns (uint256 price) {
     (uint256 controlVariable, , uint256 minimumPrice, , , ) = bondGovernor
       .getPolicy(address(reserve));
     price = (controlVariable * debtRatio() + RAD) / RAY;
@@ -149,7 +157,7 @@ contract TreasuryBondDepository is
   }
 
   // Admin functions
-  function setBondGovernor(address _bondGovernor) public onlyOwner {
+  function setBondGovernor(address _bondGovernor) public override onlyOwner {
     bondGovernor = IBondGovernor(_bondGovernor);
   }
 
