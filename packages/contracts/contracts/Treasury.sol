@@ -7,11 +7,18 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./interface/ITreasury.sol";
+
 interface IERC20Mintable is IERC20 {
   function mint(address to, uint256 amount) external;
 }
 
-contract Treasury is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+contract Treasury is
+  ITreasury,
+  Initializable,
+  AccessControlUpgradeable,
+  UUPSUpgradeable
+{
   using SafeERC20 for IERC20;
 
   IERC20Mintable public BLU;
@@ -31,7 +38,11 @@ contract Treasury is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     BLU.mint(to, amount);
   }
 
-  function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+  function mint(address to, uint256 amount)
+    public
+    override
+    onlyRole(MINTER_ROLE)
+  {
     _mint(to, amount);
   }
 
@@ -39,7 +50,7 @@ contract Treasury is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     address token,
     address to,
     uint256 amount
-  ) public onlyRole(TREASURER_ROLE) {
+  ) public override onlyRole(TREASURER_ROLE) {
     IERC20(token).safeTransfer(to, amount);
   }
 

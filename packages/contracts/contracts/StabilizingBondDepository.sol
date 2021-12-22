@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interface/IPriceFeedOracle.sol";
 import "./interface/IStablecoinEngine.sol";
 import "./interface/ITwapOracle.sol";
+import "./interface/ITreasury.sol";
 
 import "./external/IUniswapV2Pair.sol";
 import "./external/UniswapV2Library.sol";
@@ -20,16 +21,6 @@ interface IMintableBurnableERC20 is IERC20 {
   function mint(address _to, uint256 _amount) external;
 
   function burn(uint256 amount) external;
-}
-
-interface ITreasury {
-  function mint(address to, uint256 amount) external;
-
-  function withdraw(
-    address _token,
-    address _to,
-    uint256 _amount
-  ) external;
 }
 
 contract StabilizingBondDepository is
