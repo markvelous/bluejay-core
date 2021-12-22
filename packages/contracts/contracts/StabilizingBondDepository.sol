@@ -181,6 +181,8 @@ contract StabilizingBondDepository is
     uint256 maxPrice,
     address recipient
   ) public returns (uint256 bondId) {
+    // TODO
+    // Security note: enforce maxPrice to prevent frontrunning attacks
     // Update oracle
     stablecoinTwapOracle.tryUpdate();
     bluTwapOracle.tryUpdate();
