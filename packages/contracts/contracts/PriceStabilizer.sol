@@ -1,50 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+
+import "./interface/IPriceStabilizer.sol";
+import "./interface/IPriceFeedOracle.sol";
+import "./interface/IStablecoinEngine.sol";
+
 import "./external/UniswapV2Library.sol";
 
-interface IStablecoinEngine {
-  function poolsInfo(address _pool)
-    external
-    view
-    returns (
-      address reserve,
-      address stablecoin,
-      address pool
-    );
-
-  function getReserves(address poolAddr)
-    external
-    view
-    returns (uint256 stablecoinReserve, uint256 reserveReserve);
-
-  function swap(
-    address poolAddr,
-    uint256 amountIn,
-    uint256 minAmountOut,
-    bool reserveForStablecoin
-  ) external;
-}
-
-interface IPriceFeedOracle {
-  function getPrice() external view returns (uint256 price);
-}
-
-contract PriceStabilizer is AccessControl {
+contract PriceStabilizer is AccessControl, IPriceStabilizer {
   uint256 constant ONE = 10**18;
   bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
   IStablecoinEngine immutable stablecoinEngine;
   mapping(address => PoolInfo) public poolInfos;
-
-  struct PoolInfo {
-    address reserve;
-    address stablecoin;
-    address pool;
-    address oracle;
-  }
 
   modifier ifPoolExists(address pool) {
     require(
@@ -61,10 +32,13 @@ contract PriceStabilizer is AccessControl {
 
   function initializePool(address pool, address oracle)
     public
+    override
     onlyRole(MANAGER_ROLE)
   {
     require(poolInfos[pool].reserve == address(0), "Pool has been initialized");
-    (address reserve, address stablecoin, ) = stablecoinEngine.poolsInfo(pool);
+    (address reserve, address stablecoin, , ) = stablecoinEngine.poolsInfo(
+      pool
+    );
     poolInfos[pool] = PoolInfo({
       reserve: reserve,
       stablecoin: stablecoin,
@@ -75,10 +49,13 @@ contract PriceStabilizer is AccessControl {
 
   function updateOracle(address pool, address oracle)
     public
+    override
     ifPoolExists(pool)
     onlyRole(MANAGER_ROLE)
   {
+    require(oracle != address(0), "Address cannot be 0");
     poolInfos[pool].oracle = oracle;
+    emit UpdatedOracle(pool, oracle);
   }
 
   // oracle quotes the price as number of stablecoin for reserve
@@ -87,13 +64,21 @@ contract PriceStabilizer is AccessControl {
     uint256 amountIn,
     uint256 minAmountOut,
     bool stablecoinForReserve
-  ) public ifPoolExists(pool) onlyRole(OPERATOR_ROLE) {
+  )
+    public
+    override
+    ifPoolExists(pool)
+    onlyRole(OPERATOR_ROLE)
+    returns (uint256 poolPrice, uint256 oraclePrice)
+  {
     (uint256 stablecoinReserve, uint256 reserveReserve) = stablecoinEngine
       .getReserves(pool);
-    uint256 price = (stablecoinReserve * ONE) / reserveReserve;
-    uint256 oraclePrice = IPriceFeedOracle(poolInfos[pool].oracle).getPrice();
+    poolPrice = (stablecoinReserve * ONE) / reserveReserve;
+    oraclePrice = IPriceFeedOracle(poolInfos[pool].oracle).getPrice();
     require(
-      stablecoinForReserve ? oraclePrice >= price : oraclePrice <= price,
+      stablecoinForReserve
+        ? oraclePrice >= poolPrice
+        : oraclePrice <= poolPrice,
       "Swap direction is incorrect"
     );
 
@@ -101,10 +86,14 @@ contract PriceStabilizer is AccessControl {
     stablecoinEngine.swap(pool, amountIn, minAmountOut, stablecoinForReserve);
 
     (stablecoinReserve, reserveReserve) = stablecoinEngine.getReserves(pool);
-    price = (stablecoinReserve * ONE) / reserveReserve;
+    poolPrice = (stablecoinReserve * ONE) / reserveReserve;
     require(
-      stablecoinForReserve ? oraclePrice >= price : oraclePrice <= price,
+      stablecoinForReserve
+        ? oraclePrice >= poolPrice
+        : oraclePrice <= poolPrice,
       "Excessive swap amount"
     );
+
+    emit UpdatePrice(pool, amountIn, minAmountOut, stablecoinForReserve);
   }
 }

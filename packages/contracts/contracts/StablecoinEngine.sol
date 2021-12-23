@@ -1,33 +1,25 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "./interface/IStablecoinEngine.sol";
+import "./interface/IMintableBurnableERC20.sol";
+import "./interface/ITreasury.sol";
+
 import "./external/IUniswapV2Factory.sol";
 import "./external/IUniswapV2Pair.sol";
 import "./external/UniswapV2Library.sol";
 
-interface ITreasury {
-  function withdraw(
-    address _token,
-    address _to,
-    uint256 _amount
-  ) external;
-}
-
-interface IMintableBurnableERC20 is IERC20 {
-  function mint(address _to, uint256 _amount) external;
-
-  function burn(uint256 amount) external;
-}
-
 contract StablecoinEngine is
   Initializable,
   AccessControlUpgradeable,
-  UUPSUpgradeable
+  UUPSUpgradeable,
+  IStablecoinEngine
 {
   using SafeERC20 for IERC20;
   using SafeERC20 for IMintableBurnableERC20;
@@ -40,32 +32,8 @@ contract StablecoinEngine is
   ITreasury public treasury;
   IUniswapV2Factory public poolFactory;
 
-  mapping(address => mapping(address => address)) public pools; // pools[reserve][stablecoin] = liquidityPoolAddress
-  mapping(address => StablecoinPoolInfo) public poolsInfo; // poolsInfo[liquidityPoolAddress] = StablecoinPoolInfo
-
-  struct StablecoinPoolInfo {
-    address reserve;
-    address stablecoin;
-    address pool;
-  }
-
-  event PoolAdded(
-    address indexed reserve,
-    address indexed stablecoin,
-    address indexed pool
-  );
-  event LiquidityAdded(
-    address indexed pool,
-    uint256 liquidity,
-    uint256 reserve,
-    uint256 stablecoin
-  );
-  event LiquidityRemoved(
-    address indexed pool,
-    uint256 liquidity,
-    uint256 reserve,
-    uint256 stablecoin
-  );
+  mapping(address => mapping(address => address)) public override pools; // pools[reserve][stablecoin] = liquidityPoolAddress
+  mapping(address => StablecoinPoolInfo) public override poolsInfo; // poolsInfo[liquidityPoolAddress] = StablecoinPoolInfo
 
   modifier ifPoolExists(address pool) {
     require(poolsInfo[pool].reserve != address(0), "Pool has not been added");
@@ -86,13 +54,14 @@ contract StablecoinEngine is
     address stablecoin,
     address pool
   ) internal {
+    (address token0, ) = UniswapV2Library.sortTokens(stablecoin, reserve);
     pools[reserve][stablecoin] = pool;
     poolsInfo[pool] = StablecoinPoolInfo({
       reserve: reserve,
       stablecoin: stablecoin,
-      pool: pool
+      pool: pool,
+      stablecoinIsToken0: token0 == stablecoin
     });
-
     emit PoolAdded(reserve, stablecoin, pool);
   }
 
@@ -133,15 +102,9 @@ contract StablecoinEngine is
     address stablecoin,
     uint256 initialReserveAmount,
     uint256 initialStablecoinAmount
-  ) public onlyRole(MANAGER_ROLE) returns (address poolAddress) {
-    require(
-      pools[reserve][stablecoin] == address(0),
-      "Pool already initialized"
-    );
-    require(
-      poolFactory.getPair(reserve, stablecoin) == address(0),
-      "Pool already created"
-    );
+  ) public override onlyRole(MANAGER_ROLE) returns (address poolAddress) {
+    require(pools[reserve][stablecoin] == address(0));
+    require(poolFactory.getPair(reserve, stablecoin) == address(0));
     poolAddress = poolFactory.createPair(reserve, stablecoin);
     _storePoolInfo(reserve, stablecoin, poolAddress);
     _addLiquidity(poolAddress, initialReserveAmount, initialStablecoinAmount);
@@ -149,11 +112,11 @@ contract StablecoinEngine is
 
   function initializeExistingPool(address reserve, address stablecoin)
     public
+    override
     onlyRole(MANAGER_ROLE)
   {
     // Used in cases where pool has been created by someone else
     address pool = poolFactory.getPair(reserve, stablecoin);
-    require(pool != address(0), "Pool not created");
     _storePoolInfo(reserve, stablecoin, pool);
   }
 
@@ -163,7 +126,13 @@ contract StablecoinEngine is
     uint256 stablecoinAmountDesired,
     uint256 reserveAmountMin,
     uint256 stablecoinAmountMin
-  ) public onlyRole(MANAGER_ROLE) ifPoolExists(pool) {
+  )
+    public
+    override
+    onlyRole(MANAGER_ROLE)
+    ifPoolExists(pool)
+    returns (uint256)
+  {
     (uint256 reserveAmount, uint256 stablecoinAmount) = calculateAmounts(
       pool,
       reserveAmountDesired,
@@ -171,15 +140,27 @@ contract StablecoinEngine is
       reserveAmountMin,
       stablecoinAmountMin
     );
-    _addLiquidity(pool, reserveAmount, stablecoinAmount);
+    return _addLiquidity(pool, reserveAmount, stablecoinAmount);
   }
 
-  function removeLiquidity(address pool, uint256 liquidity)
+  function removeLiquidity(
+    address pool,
+    uint256 liquidity,
+    uint256 minimumReserveAmount,
+    uint256 minimumStablecoinAmount
+  )
     public
+    override
     onlyRole(MANAGER_ROLE)
     ifPoolExists(pool)
+    returns (uint256 reserveAmount, uint256 stablecoinAmount)
   {
-    _removeLiquidity(pool, liquidity);
+    (reserveAmount, stablecoinAmount) = _removeLiquidity(pool, liquidity);
+    require(reserveAmount >= minimumReserveAmount, "Insufficient reserve");
+    require(
+      stablecoinAmount >= minimumStablecoinAmount,
+      "Insufficient stablecoin"
+    );
   }
 
   // Operator functions
@@ -188,16 +169,18 @@ contract StablecoinEngine is
     uint256 amountIn,
     uint256 minAmountOut,
     bool stablecoinForReserve
-  ) public onlyRole(OPERATOR_ROLE) ifPoolExists(poolAddr) {
+  )
+    public
+    override
+    onlyRole(OPERATOR_ROLE)
+    ifPoolExists(poolAddr)
+    returns (uint256 amountOut)
+  {
     StablecoinPoolInfo memory info = poolsInfo[poolAddr];
     IUniswapV2Pair pool = IUniswapV2Pair(poolAddr);
     (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
-    (address token0, ) = UniswapV2Library.sortTokens(
-      info.stablecoin,
-      info.reserve
-    );
-    bool zeroForOne = stablecoinForReserve == (token0 == info.stablecoin);
-    uint256 amountOut = UniswapV2Library.getAmountOut(
+    bool zeroForOne = stablecoinForReserve == info.stablecoinIsToken0;
+    amountOut = UniswapV2Library.getAmountOut(
       amountIn,
       zeroForOne ? reserve0 : reserve1,
       zeroForOne ? reserve1 : reserve0
@@ -219,17 +202,16 @@ contract StablecoinEngine is
     if (!stablecoinForReserve) {
       IMintableBurnableERC20(info.stablecoin).burn(amountOut);
     }
+    emit Swap(poolAddr, amountIn, amountOut, stablecoinForReserve);
   }
 
   function mint(
     address stablecoin,
     address to,
     uint256 amount
-  ) public onlyRole(MINTER_ROLE) {
+  ) public override onlyRole(MINTER_ROLE) {
     IMintableBurnableERC20(stablecoin).mint(to, amount);
   }
-
-  // TODO: sweep stray tokens to Treasury
 
   // View functions
   function calculateAmounts(
@@ -238,7 +220,12 @@ contract StablecoinEngine is
     uint256 stablecoinAmountDesired,
     uint256 reserveAmountMin,
     uint256 stablecoinAmountMin
-  ) public view returns (uint256 reserveAmount, uint256 stablecoinAmount) {
+  )
+    public
+    view
+    override
+    returns (uint256 reserveAmount, uint256 stablecoinAmount)
+  {
     IUniswapV2Pair pool = IUniswapV2Pair(poolAddr);
     (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
 
@@ -249,11 +236,7 @@ contract StablecoinEngine is
       );
     } else {
       StablecoinPoolInfo memory info = poolsInfo[poolAddr];
-      (address token0, ) = UniswapV2Library.sortTokens(
-        info.stablecoin,
-        info.reserve
-      );
-      uint256 stablecoinAmountOptimal = token0 == info.stablecoin
+      uint256 stablecoinAmountOptimal = info.stablecoinIsToken0
         ? (reserveAmountDesired * reserve0) / reserve1
         : (reserveAmountDesired * reserve1) / reserve0;
 
@@ -267,7 +250,7 @@ contract StablecoinEngine is
           stablecoinAmountOptimal
         );
       } else {
-        uint256 reserveAmountOptimal = token0 == info.stablecoin
+        uint256 reserveAmountOptimal = info.stablecoinIsToken0
           ? (stablecoinAmountDesired * reserve1) / reserve0
           : (stablecoinAmountDesired * reserve0) / reserve1;
         require(
@@ -289,16 +272,13 @@ contract StablecoinEngine is
   function getReserves(address poolAddr)
     public
     view
+    override
     returns (uint256 stablecoinReserve, uint256 reserveReserve)
   {
     IUniswapV2Pair pool = IUniswapV2Pair(poolAddr);
     StablecoinPoolInfo memory info = poolsInfo[poolAddr];
     (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
-    (address token0, ) = UniswapV2Library.sortTokens(
-      info.stablecoin,
-      info.reserve
-    );
-    if (poolsInfo[poolAddr].stablecoin == token0) {
+    if (info.stablecoinIsToken0) {
       (stablecoinReserve, reserveReserve) = (reserve0, reserve1);
     } else {
       (stablecoinReserve, reserveReserve) = (reserve1, reserve0);

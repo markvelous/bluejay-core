@@ -118,12 +118,14 @@ describe("PriceStabilizer", () => {
     );
     const initialStablecoinSupply = await StablecoinToken.totalSupply();
 
-    await PriceStabilizer.updatePrice(
+    const updatePriceTx = await PriceStabilizer.updatePrice(
       poolAddress,
       exp(18).mul(2500), // About 2601 to get to back to peg
       exp(18).mul(2500).mul(133).div(100),
       false
     );
+
+    await expect(updatePriceTx).to.emit(PriceStabilizer, "UpdatePrice");
 
     // LP: 1.333 SGD = 1 DAI
     const updatedPrice = await getPrice(StablecoinEngine, poolAddress);
@@ -324,6 +326,60 @@ describe("PriceStabilizer", () => {
       )
     ).to.revertedWith(
       "AccessControl: account 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 is missing role 0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929"
+    );
+  });
+  it("should not have stray tokens", async () => {
+    const {
+      ChainlinkAggregator,
+      PriceStabilizer,
+      StablecoinEngine,
+      poolAddress,
+      ReserveToken,
+      Treasury,
+      StablecoinToken,
+    } = await whenDeployed();
+
+    await ChainlinkAggregator.setPrice(exp(18).mul(133).div(100));
+
+    await PriceStabilizer.updatePrice(
+      poolAddress,
+      exp(18).mul(2500), // About 2601 to get to back to peg
+      exp(18).mul(2500).mul(133).div(100),
+      false
+    );
+
+    expect(await ReserveToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+
+    expect(await ReserveToken.balanceOf(PriceStabilizer.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(PriceStabilizer.address)).to.eq(0);
+
+    expect(await StablecoinToken.balanceOf(Treasury.address)).to.eq(0);
+
+    expect(await ReserveToken.balanceOf(ChainlinkAggregator.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(ChainlinkAggregator.address)).to.eq(
+      0
+    );
+
+    await ChainlinkAggregator.setPrice(exp(18).mul(145).div(100));
+    await PriceStabilizer.updatePrice(
+      poolAddress,
+      exp(18).mul(2000),
+      exp(18).mul(2000).mul(100).div(145),
+      true
+    );
+
+    expect(await ReserveToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+
+    expect(await ReserveToken.balanceOf(PriceStabilizer.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(PriceStabilizer.address)).to.eq(0);
+
+    expect(await StablecoinToken.balanceOf(Treasury.address)).to.eq(0);
+
+    expect(await ReserveToken.balanceOf(ChainlinkAggregator.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(ChainlinkAggregator.address)).to.eq(
+      0
     );
   });
 });

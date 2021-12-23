@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+// SPDX-License-Identifier: GPL-3.0-or-later
+// https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2Library.sol
+pragma solidity ^0.8.4;
 
 import "./IUniswapV2Pair.sol";
 

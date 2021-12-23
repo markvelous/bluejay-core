@@ -503,7 +503,9 @@ describe("StablecoinEngine", () => {
     await expect(
       StablecoinEngine.connect(user1).removeLiquidity(
         UniswapPool.address,
-        exp(18).mul(1)
+        exp(18).mul(1),
+        100,
+        100
       )
     ).to.be.revertedWith(
       "is missing role 0x241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08"
@@ -530,5 +532,25 @@ describe("StablecoinEngine", () => {
     const reserves = await StablecoinEngine.getReserves(UniswapPool.address);
     expect(reserves.reserveReserve).to.eq(exp(18).mul(100000));
     expect(reserves.stablecoinReserve).to.eq(exp(18).mul(140000));
+  });
+
+  it("should not have stray tokens", async () => {
+    const {
+      StablecoinEngine,
+      UniswapPool,
+      ReserveToken,
+      Treasury,
+      StablecoinToken,
+    } = await whenDeployedWithLiquidity();
+    await StablecoinEngine.swap(
+      UniswapPool.address,
+      exp(18).mul(1000),
+      exp(18).mul(1350),
+      false
+    );
+    expect(await ReserveToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+    expect(await StablecoinToken.balanceOf(StablecoinEngine.address)).to.eq(0);
+
+    expect(await StablecoinToken.balanceOf(Treasury.address)).to.eq(0);
   });
 });

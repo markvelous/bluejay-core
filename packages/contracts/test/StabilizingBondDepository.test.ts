@@ -57,7 +57,7 @@ const whenDeployed = deployments.createFixture(
     const StabilizingBondDepository = await ethers.getContractAt(
       "StabilizingBondDepository",
       (
-        await deployments.get("StabilizingBondDepository")
+        await deployments.get("StabilizingBondDepositoryImpl")
       ).address,
       deployer
     );
@@ -158,7 +158,7 @@ const getSpotPrice = async ({
 };
 
 describe("StabilizingBondDepository", () => {
-  describe("getDeviation", () => {
+  describe("getTwapDeviation", () => {
     it("should quote contractionary deviations correctly", async () => {
       const {
         StabilizingBondDepository,
@@ -185,7 +185,7 @@ describe("StabilizingBondDepository", () => {
       // Assert that the stablecoin is more expensive on pool
       expect(priceExt).lt(priceInt);
 
-      const deviation = await StabilizingBondDepository.getDeviation();
+      const deviation = await StabilizingBondDepository.getTwapDeviation();
 
       // Approx 2.94% positive deviation
       expect(deviation.isExpansionary).to.eq(false);
@@ -221,7 +221,7 @@ describe("StabilizingBondDepository", () => {
       // Assert that the stablecoin is more expensive on external market
       expect(priceExt).gt(priceInt);
 
-      const deviation = await StabilizingBondDepository.getDeviation();
+      const deviation = await StabilizingBondDepository.getTwapDeviation();
 
       // Approx 3.57% negative deviation
       expect(deviation.isExpansionary).to.eq(true);
@@ -237,7 +237,7 @@ describe("StabilizingBondDepository", () => {
 
       // Negative deviation
       await MockChainlinkAggregator.setPrice(exp(18).mul(1401).div(1000));
-      const deviation = await StabilizingBondDepository.getDeviation();
+      const deviation = await StabilizingBondDepository.getTwapDeviation();
       expect(deviation.degree).to.lt(exp(18).div(100));
       expect(deviation.isExpansionary).to.eq(true);
       const discount = await StabilizingBondDepository.getCurrentReward();
@@ -245,7 +245,7 @@ describe("StabilizingBondDepository", () => {
 
       // Positive deviation
       await MockChainlinkAggregator.setPrice(exp(18).mul(1399).div(1000));
-      const deviation2 = await StabilizingBondDepository.getDeviation();
+      const deviation2 = await StabilizingBondDepository.getTwapDeviation();
       expect(deviation2.degree).to.lt(exp(18).div(100));
       expect(deviation2.isExpansionary).to.eq(false);
       const discount2 = await StabilizingBondDepository.getCurrentReward();
@@ -257,7 +257,7 @@ describe("StabilizingBondDepository", () => {
 
       // 1.45% deviation -> x1.07
       await MockChainlinkAggregator.setPrice(exp(18).mul(1380).div(1000));
-      const deviation1 = await StabilizingBondDepository.getDeviation();
+      const deviation1 = await StabilizingBondDepository.getTwapDeviation();
       const discount1 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation1.degree).to.gt(exp(18).mul(145).div(10000));
       expect(deviation1.degree).to.lt(exp(18).mul(146).div(10000));
@@ -266,7 +266,7 @@ describe("StabilizingBondDepository", () => {
 
       // 2.19% deviation -> x1.11
       await MockChainlinkAggregator.setPrice(exp(18).mul(1370).div(1000));
-      const deviation2 = await StabilizingBondDepository.getDeviation();
+      const deviation2 = await StabilizingBondDepository.getTwapDeviation();
       const discount2 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation2.degree).to.gt(exp(18).mul(219).div(10000));
       expect(deviation2.degree).to.lt(exp(18).mul(220).div(10000));
@@ -275,7 +275,7 @@ describe("StabilizingBondDepository", () => {
 
       // 3.70% deviation -> x1.1995
       await MockChainlinkAggregator.setPrice(exp(18).mul(1350).div(1000));
-      const deviation3 = await StabilizingBondDepository.getDeviation();
+      const deviation3 = await StabilizingBondDepository.getTwapDeviation();
       const discount3 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation3.degree).to.gt(exp(18).mul(370).div(10000));
       expect(deviation3.degree).to.lt(exp(18).mul(371).div(10000));
@@ -284,7 +284,7 @@ describe("StabilizingBondDepository", () => {
 
       // 7.69% deviation -> x1.448
       await MockChainlinkAggregator.setPrice(exp(18).mul(1300).div(1000));
-      const deviation4 = await StabilizingBondDepository.getDeviation();
+      const deviation4 = await StabilizingBondDepository.getTwapDeviation();
       const discount4 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation4.degree).to.gt(exp(18).mul(769).div(10000));
       expect(deviation4.degree).to.lt(exp(18).mul(770).div(10000));
@@ -297,7 +297,7 @@ describe("StabilizingBondDepository", () => {
 
       // 1.41% deviation -> x1.07
       await MockChainlinkAggregator.setPrice(exp(18).mul(1420).div(1000));
-      const deviation1 = await StabilizingBondDepository.getDeviation();
+      const deviation1 = await StabilizingBondDepository.getTwapDeviation();
       const discount1 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation1.degree).to.gt(exp(18).mul(140).div(10000));
       expect(deviation1.degree).to.lt(exp(18).mul(141).div(10000));
@@ -306,7 +306,7 @@ describe("StabilizingBondDepository", () => {
 
       // 2.43% deviation -> x1.127
       await MockChainlinkAggregator.setPrice(exp(18).mul(1435).div(1000));
-      const deviation2 = await StabilizingBondDepository.getDeviation();
+      const deviation2 = await StabilizingBondDepository.getTwapDeviation();
       const discount2 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation2.degree).to.gt(exp(18).mul(243).div(10000));
       expect(deviation2.degree).to.lt(exp(18).mul(244).div(10000));
@@ -315,7 +315,7 @@ describe("StabilizingBondDepository", () => {
 
       // // 3.44% deviation -> x1.184
       await MockChainlinkAggregator.setPrice(exp(18).mul(1450).div(1000));
-      const deviation3 = await StabilizingBondDepository.getDeviation();
+      const deviation3 = await StabilizingBondDepository.getTwapDeviation();
       const discount3 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation3.degree).to.gt(exp(18).mul(344).div(10000));
       expect(deviation3.degree).to.lt(exp(18).mul(345).div(10000));
@@ -324,7 +324,7 @@ describe("StabilizingBondDepository", () => {
 
       // 6.66% deviation -> x1.308
       await MockChainlinkAggregator.setPrice(exp(18).mul(1500).div(1000));
-      const deviation4 = await StabilizingBondDepository.getDeviation();
+      const deviation4 = await StabilizingBondDepository.getTwapDeviation();
       const discount4 = await StabilizingBondDepository.getCurrentReward();
       expect(deviation4.degree).to.gt(exp(18).mul(666).div(10000));
       expect(deviation4.degree).to.lt(exp(18).mul(667).div(10000));
@@ -336,7 +336,7 @@ describe("StabilizingBondDepository", () => {
         await whenDeployed();
 
       await MockChainlinkAggregator.setPrice(exp(18).mul(1680).div(1000));
-      const deviation = await StabilizingBondDepository.getDeviation();
+      const deviation = await StabilizingBondDepository.getTwapDeviation();
       const discount = await StabilizingBondDepository.getCurrentReward();
       expect(deviation.degree).to.gt(exp(18).mul(1666).div(10000));
       expect(deviation.degree).to.lt(exp(18).mul(1667).div(10000));
@@ -375,7 +375,7 @@ describe("StabilizingBondDepository", () => {
       await (
         await StabilizingBondDepository.connect(user1).purchase(
           amountIn,
-          0,
+          exp(18).mul(11),
           user1.address
         )
       ).wait();
@@ -430,7 +430,7 @@ describe("StabilizingBondDepository", () => {
       await (
         await StabilizingBondDepository.connect(user1).purchase(
           amountIn,
-          0,
+          exp(18).mul(11),
           user1.address
         )
       ).wait();
@@ -481,7 +481,7 @@ describe("StabilizingBondDepository", () => {
       await (
         await StabilizingBondDepository.connect(user1).purchase(
           amountIn,
-          0,
+          exp(18).mul(11),
           user1.address
         )
       ).wait();
@@ -502,7 +502,7 @@ describe("StabilizingBondDepository", () => {
       expect(bondsList[0].id).to.eq(1);
       expect(bondsList[0].vestingPeriod).to.eq(60 * 60 * 6);
       expect(bondsList[0].principal).to.closeTo(
-        reward.mul(amountIn).div(exp(18)),
+        reward.mul(amountIn).div(exp(18).mul(10)),
         100000
       );
     });
@@ -542,7 +542,7 @@ describe("StabilizingBondDepository", () => {
       await (
         await StabilizingBondDepository.connect(user1).purchase(
           amountIn,
-          0,
+          exp(18).mul(11),
           user1.address
         )
       ).wait();
@@ -550,7 +550,7 @@ describe("StabilizingBondDepository", () => {
       await (
         await StabilizingBondDepository.connect(deployer).purchase(
           amountIn,
-          0,
+          exp(18).mul(11),
           deployer.address
         )
       ).wait();
@@ -558,7 +558,7 @@ describe("StabilizingBondDepository", () => {
       await (
         await StabilizingBondDepository.connect(user1).purchase(
           amountIn,
-          0,
+          exp(18).mul(11),
           user1.address
         )
       ).wait();
@@ -579,7 +579,7 @@ describe("StabilizingBondDepository", () => {
       expect(bondsList[0].id).to.eq(1);
       expect(bondsList[0].vestingPeriod).to.eq(60 * 60 * 6);
       expect(bondsList[0].principal).to.closeTo(
-        reward.mul(amountIn).div(exp(18)),
+        reward.mul(amountIn).div(exp(18).mul(10)),
         100000
       );
 
@@ -587,12 +587,14 @@ describe("StabilizingBondDepository", () => {
       expect(ownedBonds[1]).to.eq(3);
       expect(bondsList[1].id).to.eq(3);
       expect(bondsList[1].vestingPeriod).to.eq(60 * 60 * 6);
-      expect(bondsList[1].principal).to.lt(reward.mul(amountIn).div(exp(18)));
+      expect(bondsList[1].principal).to.lt(
+        reward.mul(amountIn).div(exp(18).mul(10))
+      );
 
       // Bond #1 should be about 1/3 vested (2 hours/6 hours)
       await StabilizingBondDepository.connect(user1).redeem(1, user1.address);
       const bluBalance = await BluejayToken.balanceOf(user1.address);
-      const principal = reward.mul(amountIn).div(exp(18));
+      const principal = reward.mul(amountIn).div(exp(18).mul(10));
       expect(bluBalance).to.gt(principal.mul(33).div(100));
       expect(bluBalance).to.lt(principal.mul(34).div(100));
 
@@ -608,6 +610,33 @@ describe("StabilizingBondDepository", () => {
       expect(
         (await StabilizingBondDepository.listBondIds(user1.address)).length
       ).to.eq(1);
+    });
+    it("should not allow purchase with excessive slippages", async () => {
+      const deployment = await whenDeployed();
+      const {
+        StabilizingBondDepository,
+        MockChainlinkAggregator,
+        ReserveToken,
+        user1,
+      } = deployment;
+
+      // Price is higher on LP, selling expansionary bond
+      const targetPrice = exp(18).mul(1500).div(1000);
+      const amountIn = exp(18).mul(1000);
+      await MockChainlinkAggregator.setPrice(targetPrice);
+      await ReserveToken.mint(user1.address, amountIn);
+      await ReserveToken.connect(user1).approve(
+        StabilizingBondDepository.address,
+        constants.MaxUint256
+      );
+
+      await expect(
+        StabilizingBondDepository.connect(user1).purchase(
+          amountIn,
+          exp(18).div(2),
+          user1.address
+        )
+      ).to.revertedWith("Price too high");
     });
     it("should not allow purchase to bring price past the peg", async () => {
       const deployment = await whenDeployed();
@@ -631,10 +660,84 @@ describe("StabilizingBondDepository", () => {
       await expect(
         StabilizingBondDepository.connect(user1).purchase(
           amountIn,
-          0,
+          exp(18).mul(2),
           user1.address
         )
       ).to.revertedWith("Overcorrection");
+    });
+    it("should not have stray tokens", async () => {
+      const deployment = await whenDeployed();
+      const {
+        BluejayToken,
+        BluReservePool,
+        BluTwapOracle,
+        StabilizingBondDepository,
+        MockChainlinkAggregator,
+        Treasury,
+        Pool,
+        TwapOracle,
+        UniswapFactory,
+        PriceFeedOracle,
+        ReserveToken,
+        StablecoinToken,
+        user1,
+      } = deployment;
+
+      await ReserveToken.mint(user1.address, exp(18).mul(2000));
+      await ReserveToken.connect(user1).approve(
+        StabilizingBondDepository.address,
+        constants.MaxUint256
+      );
+
+      // Price is higher on LP, selling expansionary bond
+      await MockChainlinkAggregator.setPrice(exp(18).mul(1500).div(1000));
+
+      // Buy expansionary bond
+      await StabilizingBondDepository.connect(user1).purchase(
+        exp(18).mul(1000),
+        exp(18).mul(11),
+        user1.address
+      );
+
+      expect(await ReserveToken.balanceOf(BluTwapOracle.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(BluTwapOracle.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(BluTwapOracle.address)).to.eq(0);
+
+      expect(
+        await ReserveToken.balanceOf(StabilizingBondDepository.address)
+      ).to.eq(0);
+      expect(
+        await StablecoinToken.balanceOf(StabilizingBondDepository.address)
+      ).to.eq(0);
+
+      expect(
+        await ReserveToken.balanceOf(MockChainlinkAggregator.address)
+      ).to.eq(0);
+      expect(
+        await StablecoinToken.balanceOf(MockChainlinkAggregator.address)
+      ).to.eq(0);
+      expect(
+        await BluejayToken.balanceOf(MockChainlinkAggregator.address)
+      ).to.eq(0);
+
+      expect(await StablecoinToken.balanceOf(Treasury.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(Treasury.address)).to.eq(0);
+
+      expect(await StablecoinToken.balanceOf(BluReservePool.address)).to.eq(0);
+
+      expect(await BluejayToken.balanceOf(Pool.address)).to.eq(0);
+
+      expect(await ReserveToken.balanceOf(TwapOracle.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(TwapOracle.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(TwapOracle.address)).to.eq(0);
+
+      expect(await ReserveToken.balanceOf(UniswapFactory.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(UniswapFactory.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(UniswapFactory.address)).to.eq(0);
+
+      expect(await ReserveToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
+      expect(await StablecoinToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
+      expect(await BluejayToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
     });
   });
 });

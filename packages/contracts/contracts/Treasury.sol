@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -7,11 +7,18 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./interface/ITreasury.sol";
+
 interface IERC20Mintable is IERC20 {
   function mint(address to, uint256 amount) external;
 }
 
-contract Treasury is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+contract Treasury is
+  ITreasury,
+  Initializable,
+  AccessControlUpgradeable,
+  UUPSUpgradeable
+{
   using SafeERC20 for IERC20;
 
   IERC20Mintable public BLU;
@@ -27,20 +34,22 @@ contract Treasury is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     BLU = IERC20Mintable(_BLU);
   }
 
-  function _mint(address to, uint256 amount) internal {
+  function mint(address to, uint256 amount)
+    public
+    override
+    onlyRole(MINTER_ROLE)
+  {
     BLU.mint(to, amount);
-  }
-
-  function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
-    _mint(to, amount);
+    emit Mint(to, amount);
   }
 
   function withdraw(
     address token,
     address to,
     uint256 amount
-  ) public onlyRole(TREASURER_ROLE) {
+  ) public override onlyRole(TREASURER_ROLE) {
     IERC20(token).safeTransfer(to, amount);
+    emit Withdraw(token, to, amount);
   }
 
   function _authorizeUpgrade(address newImplementation)

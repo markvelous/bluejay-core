@@ -18,7 +18,7 @@ const deploymentScript: DeployFunction = async (hre) => {
   const { address: treasuryAddress } = await get("TreasuryProxy");
 
   const { address: bondDepositoryProxyAddress } = await deployUupsProxy({
-    factory: "BondDepository",
+    factory: "TreasuryBondDepository",
     hre,
     from: deployer,
     args: [
@@ -41,12 +41,11 @@ const deploymentScript: DeployFunction = async (hre) => {
   );
 };
 
-deploymentScript.tags = ["BondDepositoryMocked"];
+deploymentScript.tags = ["TreasuryBondDepositoryMocked"];
 deploymentScript.dependencies = [
   "MockReserveToken",
   "BluejayToken",
   "Treasury",
-  "StakedToken",
   "BondGovernorMocked",
 ];
 export default deploymentScript;

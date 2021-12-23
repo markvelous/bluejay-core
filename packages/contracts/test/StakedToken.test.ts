@@ -16,7 +16,7 @@ const whenDeployed = deployments.createFixture(
     const user1 = await ethers.getSigner(user1Address);
 
     const { address: governanceTokenAddress } = await deployments.get(
-      "BluejayTokenProxy"
+      "BluejayTokenImpl"
     );
     const BluejayToken = await ethers.getContractAt(
       "BluejayToken",
@@ -25,7 +25,7 @@ const whenDeployed = deployments.createFixture(
     );
 
     const { address: stakedBluejayTokenAddress } = await deployments.get(
-      "StakedTokenProxy"
+      "StakedToken"
     );
     const StakedToken = await ethers.getContractAt(
       "StakedToken",
@@ -124,10 +124,14 @@ describe("StakedToken", () => {
       StakedToken.address,
       ethers.constants.MaxUint256
     );
-    await StakedToken.connect(user1).stake(
+    const stakeTx = await StakedToken.connect(user1).stake(
       ethers.utils.parseEther("10"),
       user1.address
     );
+
+    await expect(stakeTx)
+      .to.emit(StakedToken, "Stake")
+      .withArgs(user1.address, ethers.utils.parseEther("10"));
 
     expect(await StakedToken.balanceOf(user1.address)).closeTo(
       ethers.utils.parseEther("10"),
@@ -147,10 +151,11 @@ describe("StakedToken", () => {
     );
 
     // Unstake tokens
-    await StakedToken.connect(user1).unstake(
+    const unstakeTx = await StakedToken.connect(user1).unstake(
       ethers.utils.parseEther("500"),
       user1.address
     );
+    await expect(unstakeTx).to.emit(StakedToken, "Unstake");
     expect(await BluejayToken.balanceOf(user1.address)).closeTo(
       ethers.utils.parseEther("500"),
       100

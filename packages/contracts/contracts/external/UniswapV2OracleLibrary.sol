@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+// SPDX-License-Identifier: GPL-3.0-or-later
+// https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/FixedPoint.sol
+pragma solidity ^0.8.4;
 
 import "./IUniswapV2Pair.sol";
 
@@ -7,9 +8,6 @@ import "./IUniswapV2Pair.sol";
 // https://github.com/fei-protocol/fei-protocol-core/blob/develop/contracts/external/UniswapV2OracleLibrary.sol
 // https://github.com/Uniswap/solidity-lib/blob/master/contracts/libraries/FullMath.sol
 // https://medium.com/coinmonks/math-in-solidity-part-3-percents-and-proportions-4db014e080b1
-
-// Securirty Notes
-// Does FullMath need the unchecked blocks to allow phantom overflow?
 
 library FullMath {
   uint256 constant MAX_256 = type(uint256).max;

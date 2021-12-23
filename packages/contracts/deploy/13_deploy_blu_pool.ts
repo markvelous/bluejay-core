@@ -55,7 +55,7 @@ const deploymentScript: DeployFunction = async (hre) => {
     { from: deployer, log: true },
     "mint",
     poolAddr,
-    exp(18).mul(10000)
+    exp(18).mul(100000)
   );
   await execute(
     "BluReservePair",

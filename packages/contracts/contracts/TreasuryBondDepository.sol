@@ -1,40 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "./BaseBondDepository.sol";
 
-interface ITreasury {
-  function mint(address to, uint256 amount) external;
-}
-
-interface IBondGovernor {
-  function getPolicy(address asset)
-    external
-    view
-    returns (
-      uint256 controlVariable,
-      uint256 totalDebtCeiling,
-      uint256 minimumPrice,
-      uint256 minimumSize,
-      uint256 maximumSize,
-      uint256 fees
-    );
-}
+import "./interface/ITreasuryBondDepository.sol";
+import "./interface/IBondGovernor.sol";
+import "./interface/ITreasury.sol";
 
 // Assumptions
-// - Reserve assets / LP tokens will have 1e18 decimal place (untrue for USDC)
-//   - Can potentially add scaling factor in purchase to add decimals to `amount`
-
-contract BondDepository is
+// - Reserve reserves / LP tokens will have 1e18 decimal place (untrue for USDC)
+//   - TODO Can potentially add scaling factor in purchase to adjust bondPrice
+contract TreasuryBondDepository is
   Initializable,
   OwnableUpgradeable,
   UUPSUpgradeable,
-  BaseBondDepository
+  BaseBondDepository,
+  ITreasuryBondDepository
 {
   using SafeERC20 for IERC20;
 
@@ -44,9 +31,9 @@ contract BondDepository is
 
   // Immutables - set in initializer only
   IERC20 public BLU;
-  IERC20 public asset;
+  IERC20 public reserve;
   ITreasury public treasury;
-  address public dao;
+  address public feeCollector;
 
   // Global states
   IBondGovernor public bondGovernor;
@@ -55,28 +42,30 @@ contract BondDepository is
 
   function initialize(
     address _bondGovernor,
-    address _asset,
+    address _reserve,
     address _BLU,
     address _treasury,
-    address _dao,
+    address _feeCollector,
     uint256 _vestingPeriod
   ) public initializer {
     __Ownable_init();
     __UUPSUpgradeable_init();
 
     bondGovernor = IBondGovernor(_bondGovernor);
-    asset = IERC20(_asset);
+    reserve = IERC20(_reserve);
     BLU = IERC20(_BLU);
     treasury = ITreasury(_treasury);
-    dao = _dao;
+    feeCollector = _feeCollector;
     vestingPeriod = _vestingPeriod;
+
+    emit UpdatedBondGovernor(_bondGovernor);
   }
 
   function purchase(
     uint256 amount,
     uint256 maxPrice,
     address recipient
-  ) public returns (uint256 bondId) {
+  ) public override returns (uint256 bondId) {
     (
       ,
       uint256 totalDebtCeiling,
@@ -84,7 +73,7 @@ contract BondDepository is
       uint256 minimumSize,
       uint256 maximumSize,
       uint256 fees
-    ) = bondGovernor.getPolicy(address(asset));
+    ) = bondGovernor.getPolicy(address(reserve));
     require(recipient != address(0), "Invalid address");
 
     decayDebt();
@@ -96,37 +85,48 @@ contract BondDepository is
     require(payout >= minimumSize, "Bond size too small");
     require(payout <= maximumSize, "Bond size too big");
 
-    uint256 revenue = (payout * fees) / WAD;
-    asset.safeTransferFrom(msg.sender, address(this), amount);
-    asset.safeTransfer(address(treasury), amount);
-    treasury.mint(address(this), payout + revenue);
+    uint256 feeCollected = (payout * fees) / WAD;
+    reserve.safeTransferFrom(msg.sender, address(this), amount);
+    reserve.safeTransfer(address(treasury), amount);
+    treasury.mint(address(this), payout + feeCollected);
 
-    if (revenue > 0) {
-      BLU.safeTransfer(dao, revenue);
+    if (feeCollected > 0) {
+      BLU.safeTransfer(feeCollector, feeCollected);
     }
 
     bondId = _mint(recipient, payout);
     totalDebt += payout;
     require(totalDebt <= totalDebtCeiling, "Exceeds debt ceiling");
+
+    emit BondPurchased(bondId, recipient, amount, payout, price);
   }
 
-  function redeem(uint256 bondId, address recipient) public {
+  function redeem(uint256 bondId, address recipient)
+    public
+    override
+    returns (uint256 payout)
+  {
     require(bondOwners[bondId] == msg.sender, "Not owner of bond");
     Bond memory bond = bonds[bondId];
     if (bond.lastRedeemed + bond.vestingPeriod <= block.timestamp) {
       _burn(bondId);
+      payout = bond.principal;
       BLU.safeTransfer(recipient, bond.principal);
+      emit BondRedeemed(bondId, recipient, true, payout, 0);
     } else {
-      uint256 payout = (bond.principal *
-        (block.timestamp - bond.lastRedeemed)) / bond.vestingPeriod;
+      payout =
+        (bond.principal * (block.timestamp - bond.lastRedeemed)) /
+        bond.vestingPeriod;
+      uint256 principal = bond.principal - payout;
       bonds[bondId] = Bond({
         id: bond.id,
-        principal: bond.principal - payout,
+        principal: principal,
         vestingPeriod: bond.vestingPeriod -
           (block.timestamp - bond.lastRedeemed),
         lastRedeemed: block.timestamp
       });
       BLU.safeTransfer(recipient, payout);
+      emit BondRedeemed(bondId, recipient, false, payout, principal);
     }
   }
 
@@ -136,11 +136,11 @@ contract BondDepository is
   }
 
   // View functions
-  function currentDebt() public view returns (uint256) {
+  function currentDebt() public view override returns (uint256) {
     return totalDebt - debtDecay();
   }
 
-  function debtDecay() public view returns (uint256 decay) {
+  function debtDecay() public view override returns (uint256 decay) {
     uint256 blocksSinceLast = block.timestamp - lastDecay;
     decay = (totalDebt * blocksSinceLast) / vestingPeriod;
     if (decay > totalDebt) {
@@ -148,13 +148,13 @@ contract BondDepository is
     }
   }
 
-  function debtRatio() public view returns (uint256 ratio) {
+  function debtRatio() public view override returns (uint256 ratio) {
     ratio = (currentDebt() * WAD) / BLU.totalSupply();
   }
 
-  function bondPrice() public view returns (uint256 price) {
+  function bondPrice() public view override returns (uint256 price) {
     (uint256 controlVariable, , uint256 minimumPrice, , , ) = bondGovernor
-      .getPolicy(address(asset));
+      .getPolicy(address(reserve));
     price = (controlVariable * debtRatio() + RAD) / RAY;
     if (price < minimumPrice) {
       price = minimumPrice;
@@ -162,8 +162,14 @@ contract BondDepository is
   }
 
   // Admin functions
-  function setBondGovernor(address _bondGovernor) public onlyOwner {
+  function setBondGovernor(address _bondGovernor) public override onlyOwner {
     bondGovernor = IBondGovernor(_bondGovernor);
+    emit UpdatedBondGovernor(_bondGovernor);
+  }
+
+  function setFeeCollector(address _feeCollector) public override onlyOwner {
+    feeCollector = _feeCollector;
+    emit UpdatedFeeCollector(_feeCollector);
   }
 
   // Required overrides

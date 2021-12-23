@@ -1,50 +1,31 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "./interface/IStabilizingBondDepository.sol";
+import "./interface/IMintableBurnableERC20.sol";
+import "./interface/IPriceFeedOracle.sol";
+import "./interface/IStablecoinEngine.sol";
+import "./interface/ITwapOracle.sol";
+import "./interface/ITreasury.sol";
+
 import "./external/IUniswapV2Pair.sol";
 import "./external/UniswapV2Library.sol";
+
 import "./BaseBondDepository.sol";
 
-interface ITwapOracle {
-  function tryUpdate() external;
-
-  function consult(address token, uint256 amountIn)
-    external
-    view
-    returns (uint256 amountOut);
-}
-
-interface IMintableBurnableERC20 is IERC20 {
-  function mint(address _to, uint256 _amount) external;
-
-  function burn(uint256 amount) external;
-}
-
-interface IPriceFeedOracle {
-  function getPrice() external view returns (uint256);
-}
-
-interface IStablecoinEngine {
-  function mint(
-    address stablecoin,
-    address to,
-    uint256 amount
-  ) external;
-}
-
-interface ITreasury {
-  function mint(address to, uint256 amount) external;
-
-  function withdraw(
-    address _token,
-    address _to,
-    uint256 _amount
-  ) external;
-}
-
-contract StabilizingBondDepository is BaseBondDepository {
+contract StabilizingBondDepository is
+  Initializable,
+  OwnableUpgradeable,
+  UUPSUpgradeable,
+  BaseBondDepository,
+  IStabilizingBondDepository
+{
   using SafeERC20 for IERC20;
   using SafeERC20 for IMintableBurnableERC20;
 
@@ -68,40 +49,45 @@ contract StabilizingBondDepository is BaseBondDepository {
   bool public reserveIsToken0; // cache for swap directions
 
   // Bond quote
-  uint256 public tolerance = WAD / 100; // [wad]
-  uint256 public maxRewardFactor = (WAD * 15) / 10; // [wad]
-  uint256 public controlVariable = 5; // [wei]
+  uint256 public tolerance; // [wad]
+  uint256 public maxRewardFactor; // [wad]
+  uint256 public controlVariable; // [wei]
 
   // Security note: vesting period should be much higher than the oracle period
   // This allow oracle to be updated before more bonds are purchased leading to overcorection
-  constructor(
+  function initialize(
     address _blu,
     address _reserve,
     address _stablecoin,
     address _treasury,
-    // uint256 _tolerance,
+    address _stablecoinEngine,
     address _bluTwapOracle,
     address _stablecoinTwapOracle,
     address _stablecoinOracle,
     address _pool,
     uint256 _vestingPeriod
-  ) {
+  ) public initializer {
+    __Ownable_init();
+    __UUPSUpgradeable_init();
+
     BLU = IERC20(_blu);
     reserve = IERC20(_reserve);
     stablecoin = IMintableBurnableERC20(_stablecoin);
+
     treasury = ITreasury(_treasury);
-    // tolerance = _tolerance;
+    stablecoinEngine = IStablecoinEngine(_stablecoinEngine);
     bluTwapOracle = ITwapOracle(_bluTwapOracle);
     stablecoinTwapOracle = ITwapOracle(_stablecoinTwapOracle);
     stablecoinOracle = IPriceFeedOracle(_stablecoinOracle);
     pool = IUniswapV2Pair(_pool);
+
     vestingPeriod = _vestingPeriod;
 
     (address token0, ) = UniswapV2Library.sortTokens(_stablecoin, _reserve);
     reserveIsToken0 = _reserve == token0;
   }
 
-  function getReward(uint256 degree) public view returns (uint256) {
+  function getReward(uint256 degree) public view override returns (uint256) {
     if (degree <= tolerance) return WAD;
 
     uint256 factor = (WAD + degree);
@@ -113,14 +99,15 @@ contract StabilizingBondDepository is BaseBondDepository {
     return rewardFactor;
   }
 
-  function getCurrentReward() public view returns (uint256) {
-    (uint256 degree, , ) = getDeviation();
+  function getCurrentReward() public view override returns (uint256) {
+    (uint256 degree, , ) = getTwapDeviation();
     return getReward(degree);
   }
 
-  function getDeviation()
+  function getTwapDeviation()
     public
     view
+    override
     returns (
       uint256 degree,
       bool isExpansionary,
@@ -142,6 +129,7 @@ contract StabilizingBondDepository is BaseBondDepository {
   function getSpotDeviation()
     public
     view
+    override
     returns (
       uint256 degree,
       bool isExpansionary,
@@ -169,14 +157,14 @@ contract StabilizingBondDepository is BaseBondDepository {
     uint256 amount,
     uint256 maxPrice,
     address recipient
-  ) public returns (uint256 bondId) {
+  ) public override returns (uint256 bondId) {
     // Update oracle
     stablecoinTwapOracle.tryUpdate();
     bluTwapOracle.tryUpdate();
 
     // Check that stabilizing bond is available
-    (uint256 degree, bool isExpansionary, ) = getDeviation();
-    require(degree > tolerance, "Price deviation within tolerance");
+    (uint256 degree, bool isExpansionary, ) = getTwapDeviation();
+    require(degree > tolerance, "Insufficient deviation");
 
     // Collect payments
     reserve.safeTransferFrom(msg.sender, address(this), amount);
@@ -189,7 +177,11 @@ contract StabilizingBondDepository is BaseBondDepository {
       // - swap stablecoin for reserve
       reserve.safeTransfer(address(treasury), amount);
       uint256 stablecoinToMint = (amount * stablecoinOracle.getPrice()) / WAD;
-      stablecoin.mint(address(pool), stablecoinToMint);
+      stablecoinEngine.mint(
+        address(stablecoin),
+        address(pool),
+        stablecoinToMint
+      );
       (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
 
       uint256 amountOut = UniswapV2Library.getAmountOut(
@@ -229,28 +221,36 @@ contract StabilizingBondDepository is BaseBondDepository {
       // Check for overcorrection
       (uint256 degreeFinal, bool isExpansionaryFinal, ) = getSpotDeviation();
       require(isExpansionary == isExpansionaryFinal, "Overcorrection");
-      require(degreeFinal < degree, "Greater deviation after swap");
+      require(degreeFinal < degree, "Bad swap");
     }
 
-    // Calculate discount using bluTwapOracle and percentage deviation
-    uint256 rewardFactor = getReward(degree);
-    uint256 marketSwapAmount = bluTwapOracle.consult(address(reserve), amount);
-    uint256 amountWithReward = (rewardFactor * marketSwapAmount) / WAD;
+    // Check if user is overpaying
+    uint256 price = bondPrice();
+    require(price < maxPrice, "Price too high");
+
+    uint256 payout = (amount * WAD) / price;
 
     // Finally issue bonds
-    treasury.mint(address(this), amountWithReward);
-    bondId = _mint(recipient, amountWithReward);
+    treasury.mint(address(this), payout);
+    bondId = _mint(recipient, payout);
+
+    emit BondPurchased(bondId, recipient, amount, payout, price);
   }
 
-  function redeem(uint256 bondId, address recipient) public {
+  function redeem(uint256 bondId, address recipient)
+    public
+    override
+    returns (uint256 payout)
+  {
     require(bondOwners[bondId] == msg.sender, "Not owner of bond");
     Bond memory bond = bonds[bondId];
     if (bond.lastRedeemed + bond.vestingPeriod <= block.timestamp) {
       _burn(bondId);
       BLU.safeTransfer(recipient, bond.principal);
     } else {
-      uint256 payout = (bond.principal *
-        (block.timestamp - bond.lastRedeemed)) / bond.vestingPeriod;
+      payout =
+        (bond.principal * (block.timestamp - bond.lastRedeemed)) /
+        bond.vestingPeriod;
       bonds[bondId] = Bond({
         id: bond.id,
         principal: bond.principal - payout,
@@ -261,6 +261,65 @@ contract StabilizingBondDepository is BaseBondDepository {
       BLU.safeTransfer(recipient, payout);
     }
   }
+
+  function bondPrice() public view override returns (uint256 price) {
+    (uint256 degree, , ) = getTwapDeviation();
+    uint256 rewardFactor = getReward(degree);
+    uint256 marketSwapAmount = bluTwapOracle.consult(address(BLU), WAD);
+    price = (marketSwapAmount * WAD) / rewardFactor;
+  }
+
+  // Admin function
+  function setTolerance(uint256 _tolerance) public override onlyOwner {
+    require(_tolerance <= WAD);
+    tolerance = _tolerance;
+  }
+
+  function setMaxRewardFactor(uint256 _maxRewardFactor)
+    public
+    override
+    onlyOwner
+  {
+    require(_maxRewardFactor >= WAD);
+    maxRewardFactor = _maxRewardFactor;
+  }
+
+  function setControlVariable(uint256 _controlVariable)
+    public
+    override
+    onlyOwner
+  {
+    require(_controlVariable >= 1);
+    require(_controlVariable < 1000);
+    controlVariable = _controlVariable;
+  }
+
+  function setBluTwapOracle(address _bluTwapOracle) public override onlyOwner {
+    bluTwapOracle = ITwapOracle(_bluTwapOracle);
+  }
+
+  function setStablecoinTwapOracle(address _stablecoinTwapOracle)
+    public
+    override
+    onlyOwner
+  {
+    stablecoinTwapOracle = ITwapOracle(_stablecoinTwapOracle);
+  }
+
+  function setStablecoinOracle(address _stablecoinOracle)
+    public
+    override
+    onlyOwner
+  {
+    stablecoinOracle = IPriceFeedOracle(_stablecoinOracle);
+  }
+
+  // Required overrides
+  function _authorizeUpgrade(address newImplementation)
+    internal
+    override
+    onlyOwner
+  {}
 
   // Math
   function rpow(
