@@ -7,6 +7,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./library/ExponentMath.sol";
+import "./BaseBondDepository.sol";
+
 import "./interface/IStabilizingBondDepository.sol";
 import "./interface/IMintableBurnableERC20.sol";
 import "./interface/IPriceFeedOracle.sol";
@@ -16,8 +19,6 @@ import "./interface/ITreasury.sol";
 
 import "./external/IUniswapV2Pair.sol";
 import "./external/UniswapV2Library.sol";
-
-import "./BaseBondDepository.sol";
 
 contract StabilizingBondDepository is
   Initializable,
@@ -39,6 +40,7 @@ contract StabilizingBondDepository is
   ITreasury public treasury;
   IStablecoinEngine public stablecoinEngine;
 
+  // Oracles
   ITwapOracle public bluTwapOracle; // BLU/Reserve
   ITwapOracle public stablecoinTwapOracle; // Stablecoin/Reserve
   IPriceFeedOracle public stablecoinOracle; // Stablecoin/Reserve (quoted as stablecoins per reserve token)
@@ -89,72 +91,7 @@ contract StabilizingBondDepository is
     reserveIsToken0 = _reserve == token0;
   }
 
-  function getReward(uint256 degree) public view override returns (uint256) {
-    if (degree <= tolerance) return WAD;
-
-    uint256 factor = (WAD + degree);
-    uint256 rewardFactor = rpow(factor, controlVariable, WAD);
-
-    if (rewardFactor > maxRewardFactor) {
-      return maxRewardFactor;
-    }
-    return rewardFactor;
-  }
-
-  function getCurrentReward() public view override returns (uint256) {
-    (uint256 degree, , ) = getTwapDeviation();
-    return getReward(degree);
-  }
-
-  function getTwapDeviation()
-    public
-    view
-    override
-    returns (
-      uint256 degree,
-      bool isExpansionary,
-      uint256 stablecoinOut
-    )
-  {
-    uint256 stablecoinIn = WAD;
-    uint256 reserveOut = (stablecoinIn * WAD) / stablecoinOracle.getPrice();
-    stablecoinOut = stablecoinTwapOracle.consult(address(reserve), reserveOut);
-    if (stablecoinOut >= stablecoinIn) {
-      degree = stablecoinOut - stablecoinIn;
-      isExpansionary = false;
-    } else {
-      degree = stablecoinIn - stablecoinOut;
-      isExpansionary = true;
-    }
-  }
-
-  function getSpotDeviation()
-    public
-    view
-    override
-    returns (
-      uint256 degree,
-      bool isExpansionary,
-      uint256 stablecoinOut
-    )
-  {
-    uint256 stablecoinIn = WAD;
-    uint256 reserveOut = (stablecoinIn * WAD) / stablecoinOracle.getPrice();
-    (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
-    stablecoinOut = UniswapV2Library.getAmountOut(
-      reserveOut,
-      reserveIsToken0 ? reserve0 : reserve1, // reserveIn
-      reserveIsToken0 ? reserve1 : reserve0 // reserveOut
-    );
-    if (stablecoinOut >= stablecoinIn) {
-      degree = stablecoinOut - stablecoinIn;
-      isExpansionary = false;
-    } else {
-      degree = stablecoinIn - stablecoinOut;
-      isExpansionary = true;
-    }
-  }
-
+  // Public functions
   function purchase(
     uint256 amount,
     uint256 maxPrice,
@@ -273,14 +210,7 @@ contract StabilizingBondDepository is
     emit BondRedeemed(bondId, recipient, fullyRedeemed, payout, principal);
   }
 
-  function bondPrice() public view override returns (uint256 price) {
-    (uint256 degree, , ) = getTwapDeviation();
-    uint256 rewardFactor = getReward(degree);
-    uint256 marketSwapAmount = bluTwapOracle.consult(address(BLU), WAD);
-    price = (marketSwapAmount * WAD) / rewardFactor;
-  }
-
-  // Admin function
+  // Admin functions
   function setTolerance(uint256 _tolerance) public override onlyOwner {
     tolerance = _tolerance;
   }
@@ -329,66 +259,84 @@ contract StabilizingBondDepository is
     stablecoinOracle = IPriceFeedOracle(_stablecoinOracle);
   }
 
+  // View functions
+  function getReward(uint256 degree) public view override returns (uint256) {
+    if (degree <= tolerance) return WAD;
+
+    uint256 factor = (WAD + degree);
+    uint256 rewardFactor = ExponentMath.rpow(factor, controlVariable, WAD);
+
+    if (rewardFactor > maxRewardFactor) {
+      return maxRewardFactor;
+    }
+    return rewardFactor;
+  }
+
+  function getCurrentReward() public view override returns (uint256) {
+    (uint256 degree, , ) = getTwapDeviation();
+    return getReward(degree);
+  }
+
+  function getTwapDeviation()
+    public
+    view
+    override
+    returns (
+      uint256 degree,
+      bool isExpansionary,
+      uint256 stablecoinOut
+    )
+  {
+    uint256 stablecoinIn = WAD;
+    uint256 reserveOut = (stablecoinIn * WAD) / stablecoinOracle.getPrice();
+    stablecoinOut = stablecoinTwapOracle.consult(address(reserve), reserveOut);
+    if (stablecoinOut >= stablecoinIn) {
+      degree = stablecoinOut - stablecoinIn;
+      isExpansionary = false;
+    } else {
+      degree = stablecoinIn - stablecoinOut;
+      isExpansionary = true;
+    }
+  }
+
+  function getSpotDeviation()
+    public
+    view
+    override
+    returns (
+      uint256 degree,
+      bool isExpansionary,
+      uint256 stablecoinOut
+    )
+  {
+    uint256 stablecoinIn = WAD;
+    uint256 reserveOut = (stablecoinIn * WAD) / stablecoinOracle.getPrice();
+    (uint256 reserve0, uint256 reserve1, ) = pool.getReserves();
+    stablecoinOut = UniswapV2Library.getAmountOut(
+      reserveOut,
+      reserveIsToken0 ? reserve0 : reserve1, // reserveIn
+      reserveIsToken0 ? reserve1 : reserve0 // reserveOut
+    );
+    if (stablecoinOut >= stablecoinIn) {
+      degree = stablecoinOut - stablecoinIn;
+      isExpansionary = false;
+    } else {
+      degree = stablecoinIn - stablecoinOut;
+      isExpansionary = true;
+    }
+  }
+
+  function bondPrice() public view override returns (uint256 price) {
+    (uint256 degree, , ) = getTwapDeviation();
+    uint256 rewardFactor = getReward(degree);
+    uint256 marketSwapAmount = bluTwapOracle.consult(address(BLU), WAD);
+    price = (marketSwapAmount * WAD) / rewardFactor;
+  }
+
   // Required overrides
   function _authorizeUpgrade(address newImplementation)
     internal
     override
     onlyOwner
   {}
-
-  // Math
-  function rpow(
-    uint256 x,
-    uint256 n,
-    uint256 base
-  ) internal pure returns (uint256 z) {
-    assembly {
-      switch x
-      case 0 {
-        switch n
-        case 0 {
-          z := base
-        }
-        default {
-          z := 0
-        }
-      }
-      default {
-        switch mod(n, 2)
-        case 0 {
-          z := base
-        }
-        default {
-          z := x
-        }
-        let half := div(base, 2) // for rounding.
-        for {
-          n := div(n, 2)
-        } n {
-          n := div(n, 2)
-        } {
-          let xx := mul(x, x)
-          if iszero(eq(div(xx, x), x)) {
-            revert(0, 0)
-          }
-          let xxRound := add(xx, half)
-          if lt(xxRound, xx) {
-            revert(0, 0)
-          }
-          x := div(xxRound, base)
-          if mod(n, 2) {
-            let zx := mul(z, x)
-            if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) {
-              revert(0, 0)
-            }
-            let zxRound := add(zx, half)
-            if lt(zxRound, zx) {
-              revert(0, 0)
-            }
-            z := div(zxRound, base)
-          }
-        }
-      }
-    }
-  }
 }

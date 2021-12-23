@@ -60,6 +60,13 @@ contract TreasuryBondDepository is
     emit UpdatedBondGovernor(_bondGovernor);
   }
 
+  // Internal functions
+  function _decayDebt() internal {
+    totalDebt = totalDebt - debtDecay();
+    lastDecay = block.timestamp;
+  }
+
+  // Public functions
   function purchase(
     uint256 amount,
     uint256 maxPrice,
@@ -76,7 +83,7 @@ contract TreasuryBondDepository is
     ) = bondGovernor.getPolicy(address(reserve));
     require(recipient != address(0), "Invalid address");
 
-    decayDebt();
+    _decayDebt();
 
     uint256 price = bondPrice();
     require(price <= maxPrice, "Price too high");
@@ -131,9 +138,23 @@ contract TreasuryBondDepository is
     }
   }
 
-  function decayDebt() internal {
-    totalDebt = totalDebt - debtDecay();
-    lastDecay = block.timestamp;
+  // Admin functions
+  function setBondGovernor(address _bondGovernor) public override onlyOwner {
+    bondGovernor = IBondGovernor(_bondGovernor);
+    emit UpdatedBondGovernor(_bondGovernor);
+  }
+
+  function setFeeCollector(address _feeCollector) public override onlyOwner {
+    feeCollector = _feeCollector;
+    emit UpdatedFeeCollector(_feeCollector);
+  }
+
+  function setIsRedeemPaused(bool pause) public override onlyOwner {
+    isRedeemPaused = pause;
+  }
+
+  function setIsPurchasePaused(bool pause) public override onlyOwner {
+    isPurchasePaused = pause;
   }
 
   // View functions
@@ -160,25 +181,6 @@ contract TreasuryBondDepository is
     if (price < minimumPrice) {
       price = minimumPrice;
     }
-  }
-
-  // Admin functions
-  function setBondGovernor(address _bondGovernor) public override onlyOwner {
-    bondGovernor = IBondGovernor(_bondGovernor);
-    emit UpdatedBondGovernor(_bondGovernor);
-  }
-
-  function setFeeCollector(address _feeCollector) public override onlyOwner {
-    feeCollector = _feeCollector;
-    emit UpdatedFeeCollector(_feeCollector);
-  }
-
-  function setIsRedeemPaused(bool pause) public override onlyOwner {
-    isRedeemPaused = pause;
-  }
-
-  function setIsPurchasePaused(bool pause) public override onlyOwner {
-    isPurchasePaused = pause;
   }
 
   // Required overrides

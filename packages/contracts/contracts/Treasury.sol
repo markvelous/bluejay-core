@@ -14,17 +14,18 @@ interface IERC20Mintable is IERC20 {
 }
 
 contract Treasury is
-  ITreasury,
   Initializable,
   AccessControlUpgradeable,
-  UUPSUpgradeable
+  UUPSUpgradeable,
+  ITreasury
 {
   using SafeERC20 for IERC20;
 
-  IERC20Mintable public BLU;
   bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
   bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
   bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE");
+
+  IERC20Mintable public BLU;
 
   function initialize(address _BLU) public initializer {
     __AccessControl_init();

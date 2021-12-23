@@ -10,7 +10,7 @@ import "./interface/IStablecoinEngine.sol";
 import "./external/UniswapV2Library.sol";
 
 contract PriceStabilizer is AccessControl, IPriceStabilizer {
-  uint256 constant ONE = 10**18;
+  uint256 constant WAD = 10**18;
   bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
@@ -58,7 +58,7 @@ contract PriceStabilizer is AccessControl, IPriceStabilizer {
     emit UpdatedOracle(pool, oracle);
   }
 
-  // oracle quotes the price as number of stablecoin for reserve
+  // oracle should quote the price as number of stablecoin for reserve
   function updatePrice(
     address pool,
     uint256 amountIn,
@@ -73,7 +73,7 @@ contract PriceStabilizer is AccessControl, IPriceStabilizer {
   {
     (uint256 stablecoinReserve, uint256 reserveReserve) = stablecoinEngine
       .getReserves(pool);
-    poolPrice = (stablecoinReserve * ONE) / reserveReserve;
+    poolPrice = (stablecoinReserve * WAD) / reserveReserve;
     oraclePrice = IPriceFeedOracle(poolInfos[pool].oracle).getPrice();
     require(
       stablecoinForReserve
@@ -82,16 +82,15 @@ contract PriceStabilizer is AccessControl, IPriceStabilizer {
       "Swap direction is incorrect"
     );
 
-    // Optimistically perform the swap, with slippage protection
     stablecoinEngine.swap(pool, amountIn, minAmountOut, stablecoinForReserve);
 
     (stablecoinReserve, reserveReserve) = stablecoinEngine.getReserves(pool);
-    poolPrice = (stablecoinReserve * ONE) / reserveReserve;
+    poolPrice = (stablecoinReserve * WAD) / reserveReserve;
     require(
       stablecoinForReserve
         ? oraclePrice >= poolPrice
         : oraclePrice <= poolPrice,
-      "Excessive swap amount"
+      "Overcorrection"
     );
 
     emit UpdatePrice(pool, amountIn, minAmountOut, stablecoinForReserve);

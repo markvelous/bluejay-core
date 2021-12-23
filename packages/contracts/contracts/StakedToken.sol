@@ -3,6 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./library/ExponentMath.sol";
 
 import "./interface/IStakedToken.sol";
 import "./interface/ITreasury.sol";
@@ -28,9 +29,9 @@ contract StakedToken is Ownable, IStakedToken {
   bool public isUnstakePaused;
 
   // Normalized states
-  mapping(address => uint256) public normalizedBalances;
   uint256 public normalizedTotalSupply;
   uint256 public minimumNormalizedBalance;
+  mapping(address => uint256) public normalizedBalances;
 
   // Denormalized states
   mapping(address => mapping(address => uint256)) private allowances;
@@ -56,108 +57,7 @@ contract StakedToken is Ownable, IStakedToken {
     emit UpdatedMinimumNormalizedBalance(minimumNormalizedBalance);
   }
 
-  function stake(uint256 amount, address recipient)
-    public
-    override
-    returns (bool)
-  {
-    require(!isStakePaused, "Staking paused");
-    rebase();
-    require(recipient != address(0), "Staking to the zero address");
-    BLU.safeTransferFrom(msg.sender, address(this), amount);
-    _mint(recipient, normalize(amount));
-    emit Stake(recipient, amount);
-    return true;
-  }
-
-  function unstake(uint256 amount, address recipient)
-    public
-    override
-    returns (bool)
-  {
-    require(!isUnstakePaused, "Unstaking paused");
-    rebase();
-    require(recipient != address(0), "Unstaking to the zero address");
-    _burn(recipient, normalize(amount));
-    BLU.safeTransfer(recipient, amount);
-    emit Unstake(recipient, amount);
-    return true;
-  }
-
-  function totalSupply() public view override returns (uint256) {
-    return denormalize(normalizedTotalSupply);
-  }
-
-  function balanceOf(address account) public view override returns (uint256) {
-    return denormalize(normalizedBalances[account]);
-  }
-
-  function transfer(address recipient, uint256 amount)
-    public
-    override
-    returns (bool)
-  {
-    _transfer(msg.sender, recipient, normalize(amount));
-    return true;
-  }
-
-  function allowance(address owner, address spender)
-    public
-    view
-    override
-    returns (uint256)
-  {
-    return allowances[owner][spender];
-  }
-
-  function approve(address spender, uint256 amount)
-    public
-    override
-    returns (bool)
-  {
-    _approve(msg.sender, spender, amount);
-    return true;
-  }
-
-  function transferFrom(
-    address sender,
-    address recipient,
-    uint256 amount
-  ) public override returns (bool) {
-    _transfer(sender, recipient, normalize(amount));
-
-    uint256 currentAllowance = allowances[sender][msg.sender];
-    require(
-      currentAllowance >= amount,
-      "ERC20: transfer amount exceeds allowance"
-    );
-    _approve(sender, msg.sender, currentAllowance - amount);
-
-    return true;
-  }
-
-  function increaseAllowance(address spender, uint256 addedValue)
-    public
-    returns (bool)
-  {
-    _approve(msg.sender, spender, allowances[msg.sender][spender] + addedValue);
-    return true;
-  }
-
-  function decreaseAllowance(address spender, uint256 subtractedValue)
-    public
-    returns (bool)
-  {
-    uint256 currentAllowance = allowances[msg.sender][spender];
-    require(
-      currentAllowance >= subtractedValue,
-      "ERC20: decreased allowance below zero"
-    );
-    _approve(msg.sender, spender, currentAllowance - subtractedValue);
-
-    return true;
-  }
-
+  // Internal functions
   function _transfer(
     address sender,
     address recipient,
@@ -247,6 +147,101 @@ contract StakedToken is Ownable, IStakedToken {
     _zeroMinimumBalances(sender);
   }
 
+  // Public functions
+  function stake(uint256 amount, address recipient)
+    public
+    override
+    returns (bool)
+  {
+    require(!isStakePaused, "Staking paused");
+    rebase();
+    require(recipient != address(0), "Staking to the zero address");
+    BLU.safeTransferFrom(msg.sender, address(this), amount);
+    _mint(recipient, normalize(amount));
+    emit Stake(recipient, amount);
+    return true;
+  }
+
+  function unstake(uint256 amount, address recipient)
+    public
+    override
+    returns (bool)
+  {
+    require(!isUnstakePaused, "Unstaking paused");
+    rebase();
+    require(recipient != address(0), "Unstaking to the zero address");
+    _burn(recipient, normalize(amount));
+    BLU.safeTransfer(recipient, amount);
+    emit Unstake(recipient, amount);
+    return true;
+  }
+
+  function transfer(address recipient, uint256 amount)
+    public
+    override
+    returns (bool)
+  {
+    _transfer(msg.sender, recipient, normalize(amount));
+    return true;
+  }
+
+  function allowance(address owner, address spender)
+    public
+    view
+    override
+    returns (uint256)
+  {
+    return allowances[owner][spender];
+  }
+
+  function approve(address spender, uint256 amount)
+    public
+    override
+    returns (bool)
+  {
+    _approve(msg.sender, spender, amount);
+    return true;
+  }
+
+  function transferFrom(
+    address sender,
+    address recipient,
+    uint256 amount
+  ) public override returns (bool) {
+    _transfer(sender, recipient, normalize(amount));
+
+    uint256 currentAllowance = allowances[sender][msg.sender];
+    require(
+      currentAllowance >= amount,
+      "ERC20: transfer amount exceeds allowance"
+    );
+    _approve(sender, msg.sender, currentAllowance - amount);
+
+    return true;
+  }
+
+  function increaseAllowance(address spender, uint256 addedValue)
+    public
+    returns (bool)
+  {
+    _approve(msg.sender, spender, allowances[msg.sender][spender] + addedValue);
+    return true;
+  }
+
+  function decreaseAllowance(address spender, uint256 subtractedValue)
+    public
+    returns (bool)
+  {
+    uint256 currentAllowance = allowances[msg.sender][spender];
+    require(
+      currentAllowance >= subtractedValue,
+      "ERC20: decreased allowance below zero"
+    );
+    _approve(msg.sender, spender, currentAllowance - subtractedValue);
+
+    return true;
+  }
+
   function updateAccumulatedRate() public override returns (uint256) {
     accumulatedRates = currentAccumulatedRate();
     lastInterestRateUpdate = block.timestamp;
@@ -261,31 +256,6 @@ contract StakedToken is Ownable, IStakedToken {
       mintedTokens = mappedTokens - tokenBalance;
       treasury.mint(address(this), mintedTokens);
     }
-  }
-
-  // View functions
-  function currentAccumulatedRate() public view override returns (uint256) {
-    require(block.timestamp >= lastInterestRateUpdate, "Invalid timestamp");
-    return
-      (compoundedInterest(block.timestamp - lastInterestRateUpdate) *
-        accumulatedRates) / RAY;
-  }
-
-  function denormalize(uint256 amount) public view override returns (uint256) {
-    return (amount * currentAccumulatedRate()) / RAY;
-  }
-
-  function normalize(uint256 amount) public view override returns (uint256) {
-    return (amount * RAY) / currentAccumulatedRate();
-  }
-
-  function compoundedInterest(uint256 timePeriod)
-    public
-    view
-    override
-    returns (uint256)
-  {
-    return rpow(interestRate, timePeriod, RAY);
   }
 
   // Admin functions
@@ -313,59 +283,36 @@ contract StakedToken is Ownable, IStakedToken {
     isUnstakePaused = pause;
   }
 
-  // Math
-  function rpow(
-    uint256 x,
-    uint256 n,
-    uint256 base
-  ) internal pure returns (uint256 z) {
-    assembly {
-      switch x
-      case 0 {
-        switch n
-        case 0 {
-          z := base
-        }
-        default {
-          z := 0
-        }
-      }
-      default {
-        switch mod(n, 2)
-        case 0 {
-          z := base
-        }
-        default {
-          z := x
-        }
-        let half := div(base, 2) // for rounding.
-        for {
-          n := div(n, 2)
-        } n {
-          n := div(n, 2)
-        } {
-          let xx := mul(x, x)
-          if iszero(eq(div(xx, x), x)) {
-            revert(0, 0)
-          }
-          let xxRound := add(xx, half)
-          if lt(xxRound, xx) {
-            revert(0, 0)
-          }
-          x := div(xxRound, base)
-          if mod(n, 2) {
-            let zx := mul(z, x)
-            if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) {
-              revert(0, 0)
-            }
-            let zxRound := add(zx, half)
-            if lt(zxRound, zx) {
-              revert(0, 0)
-            }
-            z := div(zxRound, base)
-          }
-        }
-      }
-    }
+  // View functions
+  function totalSupply() public view override returns (uint256) {
+    return denormalize(normalizedTotalSupply);
+  }
+
+  function balanceOf(address account) public view override returns (uint256) {
+    return denormalize(normalizedBalances[account]);
+  }
+
+  function currentAccumulatedRate() public view override returns (uint256) {
+    require(block.timestamp >= lastInterestRateUpdate, "Invalid timestamp");
+    return
+      (compoundedInterest(block.timestamp - lastInterestRateUpdate) *
+        accumulatedRates) / RAY;
+  }
+
+  function denormalize(uint256 amount) public view override returns (uint256) {
+    return (amount * currentAccumulatedRate()) / RAY;
+  }
+
+  function normalize(uint256 amount) public view override returns (uint256) {
+    return (amount * RAY) / currentAccumulatedRate();
+  }
+
+  function compoundedInterest(uint256 timePeriod)
+    public
+    view
+    override
+    returns (uint256)
+  {
+    return ExponentMath.rpow(interestRate, timePeriod, RAY);
   }
 }

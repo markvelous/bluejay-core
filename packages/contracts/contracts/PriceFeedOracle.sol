@@ -5,7 +5,8 @@ import "./interface/IPriceFeedOracle.sol";
 
 contract PriceFeedOracle is IPriceFeedOracle {
   uint8 constant decimals = 18;
-  uint256 constant ONE = 10**decimals;
+  uint256 constant WAD = 10**decimals;
+
   Feed[] public path;
 
   constructor(address[] memory aggregators, bool[] memory inverts) {
@@ -21,9 +22,8 @@ contract PriceFeedOracle is IPriceFeedOracle {
     }
   }
 
-  // Note: Quotes as number of stablecoin per reserve
   function getPrice() public view override returns (uint256 price) {
-    price = ONE;
+    price = WAD;
     for (uint256 i = 0; i < path.length; i++) {
       Feed memory feed = path[i];
       (, int256 feedPrice, , , ) = feed.aggregator.latestRoundData();
@@ -31,20 +31,20 @@ contract PriceFeedOracle is IPriceFeedOracle {
         scalePrice(feedPrice, feed.decimals, decimals)
       );
       price = feed.invert
-        ? (ONE * price) / scaledPrice
-        : (scaledPrice * price) / ONE;
+        ? (WAD * price) / scaledPrice
+        : (scaledPrice * price) / WAD;
     }
   }
 
   function scalePrice(
     int256 _price,
     uint8 _priceDecimals,
-    uint8 _decimals
+    uint8 _targetDecimals
   ) internal pure returns (int256) {
-    if (_priceDecimals < _decimals) {
-      return _price * int256(10**uint256(_decimals - _priceDecimals));
-    } else if (_priceDecimals > _decimals) {
-      return _price / int256(10**uint256(_priceDecimals - _decimals));
+    if (_priceDecimals < _targetDecimals) {
+      return _price * int256(10**uint256(_targetDecimals - _priceDecimals));
+    } else if (_priceDecimals > _targetDecimals) {
+      return _price / int256(10**uint256(_priceDecimals - _targetDecimals));
     }
     return _price;
   }

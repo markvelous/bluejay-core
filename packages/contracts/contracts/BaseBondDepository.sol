@@ -5,14 +5,13 @@ import "./interface/IBaseBondDepository.sol";
 
 contract BaseBondDepository is IBaseBondDepository {
   uint256 public vestingPeriod; // [seconds]
-
-  // Bonds states
   uint256 public bondsCount;
   mapping(uint256 => Bond) public bonds;
   mapping(uint256 => address) public bondOwners;
   mapping(address => uint256[]) public ownedBonds;
   mapping(address => mapping(uint256 => uint256)) public ownedBondsIndex;
 
+  // Internal functions
   function _mint(address to, uint256 payout) internal returns (uint256 bondId) {
     bondId = ++bondsCount;
     bonds[bondId] = Bond({
@@ -22,30 +21,21 @@ contract BaseBondDepository is IBaseBondDepository {
       lastRedeemed: block.timestamp
     });
     bondOwners[bondId] = to;
-
-    // Operations for enumeration
     ownedBondsIndex[to][bondId] = ownedBonds[to].length;
     ownedBonds[to].push(bondId);
   }
 
   function _burn(uint256 bondId) internal {
-    // Operations for enumeration
     address bondOwner = bondOwners[bondId];
-
     uint256 lastBondIndex = ownedBonds[bondOwner].length - 1;
     uint256 bondIndex = ownedBondsIndex[bondOwner][bondId];
-
     if (bondIndex != lastBondIndex) {
       uint256 lastBondId = ownedBonds[bondOwner][lastBondIndex];
-
       ownedBonds[bondOwner][bondIndex] = lastBondId;
       ownedBondsIndex[bondOwner][lastBondId] = bondIndex;
     }
-
     ownedBonds[bondOwner].pop();
     delete ownedBondsIndex[bondOwner][bondId];
-
-    // Deletion of bond
     delete bonds[bondId];
     delete bondOwners[bondId];
   }

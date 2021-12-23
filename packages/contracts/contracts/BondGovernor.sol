@@ -12,12 +12,11 @@ contract BondGovernor is Ownable, IBondGovernor {
 
   IERC20 immutable BLU;
 
-  mapping(address => Policy) public policies;
-
-  // Global Parameters
   uint256 minimumSize; // [wad]
   uint256 maximumRatio; // [wad]
   uint256 fees; // [wad]
+
+  mapping(address => Policy) public policies;
 
   modifier policyExist(address asset) {
     require(policies[asset].controlVariable != 0, "Policy not initialized");
@@ -29,6 +28,17 @@ contract BondGovernor is Ownable, IBondGovernor {
     minimumSize = WAD / 1000; // 1 thousandth of the token [wad]
     maximumRatio = WAD / 100; // 1% of total token supply [wad]
     fees = WAD / 5; // 20% of sale proceeds [wad]
+  }
+
+  // Public Functions
+  function updateControlVariable(address asset)
+    public
+    override
+    policyExist(asset)
+  {
+    uint256 currentControlVariable = getControlVariable(asset);
+    policies[asset].controlVariable = currentControlVariable;
+    policies[asset].lastControlVariableUpdate = block.timestamp;
   }
 
   // Admin Functions
@@ -95,17 +105,6 @@ contract BondGovernor is Ownable, IBondGovernor {
     require(_maximumRatio <= WAD, "Maximum ratio greater than 100%");
     maximumRatio = _maximumRatio;
     emit UpdatedMaximumRatio(maximumRatio);
-  }
-
-  // Public Functions
-  function updateControlVariable(address asset)
-    public
-    override
-    policyExist(asset)
-  {
-    uint256 currentControlVariable = getControlVariable(asset);
-    policies[asset].controlVariable = currentControlVariable;
-    policies[asset].lastControlVariableUpdate = block.timestamp;
   }
 
   // View Functions

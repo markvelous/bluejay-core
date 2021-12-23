@@ -23,8 +23,8 @@ contract StablecoinEngine is
 {
   using SafeERC20 for IERC20;
   using SafeERC20 for IMintableBurnableERC20;
-  uint256 constant WAD = 10**18;
 
+  uint256 constant WAD = 10**18;
   bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
   bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -49,6 +49,7 @@ contract StablecoinEngine is
     poolFactory = IUniswapV2Factory(factory);
   }
 
+  // Internal functions
   function _storePoolInfo(
     address reserve,
     address stablecoin,
@@ -205,6 +206,7 @@ contract StablecoinEngine is
     emit Swap(poolAddr, amountIn, amountOut, stablecoinForReserve);
   }
 
+  // Minter functions
   function mint(
     address stablecoin,
     address to,

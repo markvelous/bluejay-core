@@ -33,11 +33,12 @@ contract TwapOracle is ITwapOracle {
     require(reserve0 != 0 && reserve1 != 0, "No liquidity in pool"); // ensure that there's liquidity in the pair
   }
 
-  // decode a UQ144x112 into a uint144 by truncating after the radix point
-  function decode144(uint256 num) internal pure returns (uint144) {
+  // Internal functions
+  function _decode144(uint256 num) internal pure returns (uint144) {
     return uint144(num >> 112);
   }
 
+  // Public functions
   function update() public override {
     (
       uint256 price0Cumulative,
@@ -66,21 +67,6 @@ contract TwapOracle is ITwapOracle {
     );
   }
 
-  function consult(address token, uint256 amountIn)
-    public
-    view
-    override
-    returns (uint256 amountOut)
-  {
-    if (token == token0) {
-      amountOut = decode144(price0Average * amountIn);
-    } else {
-      require(token == token1, "Invalid swap");
-      amountOut = decode144(price1Average * amountIn);
-    }
-    require(amountOut > 0, "Invalid price");
-  }
-
   function tryUpdate() public override {
     if (
       UniswapV2OracleLibrary.currentBlockTimestamp() - blockTimestampLast >=
@@ -97,5 +83,22 @@ contract TwapOracle is ITwapOracle {
   {
     tryUpdate();
     return consult(token, amountIn);
+  }
+
+  // View functions
+
+  function consult(address token, uint256 amountIn)
+    public
+    view
+    override
+    returns (uint256 amountOut)
+  {
+    if (token == token0) {
+      amountOut = _decode144(price0Average * amountIn);
+    } else {
+      require(token == token1, "Invalid swap");
+      amountOut = _decode144(price1Average * amountIn);
+    }
+    require(amountOut > 0, "Invalid price");
   }
 }

@@ -199,7 +199,7 @@ describe("PriceStabilizer", () => {
       exp(18).mul(2000)
     );
   });
-  it("should not allow excessive swaps from stablecoin to reserve", async () => {
+  it("should not allow overcorrection on swap from stablecoin to reserve", async () => {
     const { ChainlinkAggregator, PriceStabilizer, poolAddress } =
       await whenDeployed();
     // Oracle: 1.45 SGD = 1 DAI
@@ -221,9 +221,9 @@ describe("PriceStabilizer", () => {
         exp(18).mul(2000).mul(100).div(145),
         true
       )
-    ).to.revertedWith("Excessive swap amount");
+    ).to.revertedWith("Overcorrection");
   });
-  it("should not allow excessive swaps from reserve to stablecoin", async () => {
+  it("should not allow overcorrection on swap from reserve to stablecoin", async () => {
     const { ChainlinkAggregator, PriceStabilizer, poolAddress } =
       await whenDeployed();
     // Oracle: 1.3 SGD = 1 DAI
@@ -245,7 +245,7 @@ describe("PriceStabilizer", () => {
         exp(18).mul(2000).mul(13).div(10),
         false
       )
-    ).to.revertedWith("Excessive swap amount");
+    ).to.revertedWith("Overcorrection");
   });
   it("should not allow excessive slippage from reserve to stablecoin", async () => {
     const { ChainlinkAggregator, PriceStabilizer, poolAddress } =
