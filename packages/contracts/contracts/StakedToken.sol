@@ -24,6 +24,9 @@ contract StakedToken is Ownable, IStakedToken {
   string public name;
   string public symbol;
 
+  bool public isStakePaused;
+  bool public isUnstakePaused;
+
   // Normalized states
   mapping(address => uint256) public normalizedBalances;
   uint256 public normalizedTotalSupply;
@@ -58,6 +61,7 @@ contract StakedToken is Ownable, IStakedToken {
     override
     returns (bool)
   {
+    require(!isStakePaused, "Staking paused");
     rebase();
     require(recipient != address(0), "Staking to the zero address");
     BLU.safeTransferFrom(msg.sender, address(this), amount);
@@ -71,6 +75,7 @@ contract StakedToken is Ownable, IStakedToken {
     override
     returns (bool)
   {
+    require(!isUnstakePaused, "Unstaking paused");
     rebase();
     require(recipient != address(0), "Unstaking to the zero address");
     _burn(recipient, normalize(amount));
@@ -298,6 +303,14 @@ contract StakedToken is Ownable, IStakedToken {
     require(_minimumNormalizedBalance <= WAD, "Minimum balance greater than 1");
     minimumNormalizedBalance = _minimumNormalizedBalance;
     emit UpdatedMinimumNormalizedBalance(_minimumNormalizedBalance);
+  }
+
+  function setIsStakePaused(bool pause) public override onlyOwner {
+    isStakePaused = pause;
+  }
+
+  function setIsUnstakePaused(bool pause) public override onlyOwner {
+    isUnstakePaused = pause;
   }
 
   // Math

@@ -24,6 +24,10 @@ interface ITreasuryBondDepository {
 
   function setFeeCollector(address dao) external;
 
+  function setIsRedeemPaused(bool pause) external;
+
+  function setIsPurchasePaused(bool pause) external;
+
   event UpdatedBondGovernor(address bondGovernor);
   event UpdatedFeeCollector(address dao);
 

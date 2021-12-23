@@ -48,6 +48,10 @@ interface IStabilizingBondDepository {
 
   function setStablecoinOracle(address _stablecoinOracle) external;
 
+  function setIsRedeemPaused(bool pause) external;
+
+  function setIsPurchasePaused(bool pause) external;
+
   event BondPurchased(
     uint256 indexed bondId,
     address indexed recipient,

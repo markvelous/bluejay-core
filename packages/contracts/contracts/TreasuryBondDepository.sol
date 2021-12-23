@@ -13,9 +13,7 @@ import "./interface/ITreasuryBondDepository.sol";
 import "./interface/IBondGovernor.sol";
 import "./interface/ITreasury.sol";
 
-// Assumptions
-// - Reserve reserves / LP tokens will have 1e18 decimal place (untrue for USDC)
-//   - TODO Can potentially add scaling factor in purchase to adjust bondPrice
+// Note: Can only be used for assets with 18 decimals
 contract TreasuryBondDepository is
   Initializable,
   OwnableUpgradeable,
@@ -29,14 +27,15 @@ contract TreasuryBondDepository is
   uint256 constant RAY = 10**27;
   uint256 constant RAD = 10**45;
 
-  // Immutables - set in initializer only
   IERC20 public BLU;
   IERC20 public reserve;
   ITreasury public treasury;
+  IBondGovernor public bondGovernor;
   address public feeCollector;
 
-  // Global states
-  IBondGovernor public bondGovernor;
+  bool public isPurchasePaused;
+  bool public isRedeemPaused;
+
   uint256 public totalDebt; // [WAD]
   uint256 public lastDecay; // [unix timestamp]
 
@@ -66,6 +65,7 @@ contract TreasuryBondDepository is
     uint256 maxPrice,
     address recipient
   ) public override returns (uint256 bondId) {
+    require(!isPurchasePaused, "Purchase paused");
     (
       ,
       uint256 totalDebtCeiling,
@@ -106,7 +106,8 @@ contract TreasuryBondDepository is
     override
     returns (uint256 payout)
   {
-    require(bondOwners[bondId] == msg.sender, "Not owner of bond");
+    require(!isRedeemPaused, "Redeem paused");
+    require(bondOwners[bondId] == msg.sender, "Not bond owner");
     Bond memory bond = bonds[bondId];
     if (bond.lastRedeemed + bond.vestingPeriod <= block.timestamp) {
       _burn(bondId);
@@ -170,6 +171,14 @@ contract TreasuryBondDepository is
   function setFeeCollector(address _feeCollector) public override onlyOwner {
     feeCollector = _feeCollector;
     emit UpdatedFeeCollector(_feeCollector);
+  }
+
+  function setIsRedeemPaused(bool pause) public override onlyOwner {
+    isRedeemPaused = pause;
+  }
+
+  function setIsPurchasePaused(bool pause) public override onlyOwner {
+    isPurchasePaused = pause;
   }
 
   // Required overrides

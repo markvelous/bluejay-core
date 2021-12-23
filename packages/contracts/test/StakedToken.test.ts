@@ -162,6 +162,63 @@ describe("StakedToken", () => {
     );
     expect(await StakedToken.balanceOf(user1.address)).eq(0);
   });
+  it("should allow stake to be paused & unpaused", async () => {
+    const { BluejayToken, StakedToken, Treasury, user1 } = await whenDeployed();
+    await Treasury.mint(user1.address, ethers.utils.parseEther("10"));
+
+    // Stake tokens
+    await BluejayToken.connect(user1).approve(
+      StakedToken.address,
+      ethers.constants.MaxUint256
+    );
+    await StakedToken.setIsStakePaused(true);
+    await expect(
+      StakedToken.connect(user1).stake(
+        ethers.utils.parseEther("10"),
+        user1.address
+      )
+    ).to.revertedWith("Staking paused");
+    await StakedToken.setIsStakePaused(false);
+    await expect(
+      StakedToken.connect(user1).stake(
+        ethers.utils.parseEther("10"),
+        user1.address
+      )
+    ).not.to.be.reverted;
+  });
+  it("should allow unstake to be paused & unpaused", async () => {
+    const { BluejayToken, StakedToken, Treasury, user1 } = await whenDeployed();
+    await Treasury.mint(user1.address, ethers.utils.parseEther("10"));
+
+    // Stake tokens
+    await BluejayToken.connect(user1).approve(
+      StakedToken.address,
+      ethers.constants.MaxUint256
+    );
+    await StakedToken.connect(user1).stake(
+      ethers.utils.parseEther("10"),
+      user1.address
+    );
+
+    // Wait for 1 year to pass
+    await increaseTime(365 * 24 * 60 * 60, ethers.provider);
+
+    // Unstake tokens
+    await StakedToken.setIsUnstakePaused(true);
+    await expect(
+      StakedToken.connect(user1).unstake(
+        ethers.utils.parseEther("500"),
+        user1.address
+      )
+    ).to.revertedWith("Unstaking paused");
+    await StakedToken.setIsUnstakePaused(false);
+    await expect(
+      StakedToken.connect(user1).unstake(
+        ethers.utils.parseEther("500"),
+        user1.address
+      )
+    ).not.to.reverted;
+  });
   it("should zero accounts with balances that are too small", async () => {
     const { StakedToken, BluejayToken, Treasury, deployer, user1 } =
       await whenDeployed();

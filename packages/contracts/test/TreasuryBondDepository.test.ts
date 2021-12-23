@@ -181,7 +181,6 @@ describe("TreasuryBondDepository", () => {
 
     expect(await TreasuryBondDepository.bondPrice()).to.eq(exp(18));
 
-    // eslint-disable-next-line no-await-in-loop
     await TreasuryBondDepository.connect(user1).purchase(
       amountPaid,
       exp(18).mul(10),
@@ -355,5 +354,59 @@ describe("TreasuryBondDepository", () => {
     expect(
       await MockReserveToken.balanceOf(TreasuryBondDepository.address)
     ).to.eq(0);
+  });
+  it("should allow pausing and unpausing of purchase", async () => {
+    const { TreasuryBondDepository, user1 } = await whenDeployed();
+
+    const amountPaid = exp(18).mul(1000);
+
+    expect(await TreasuryBondDepository.bondPrice()).to.eq(exp(18));
+
+    await TreasuryBondDepository.setIsPurchasePaused(true);
+
+    await expect(
+      TreasuryBondDepository.connect(user1).purchase(
+        amountPaid,
+        exp(18).mul(10),
+        user1.address
+      )
+    ).to.be.revertedWith("Purchase paused");
+
+    await TreasuryBondDepository.setIsPurchasePaused(false);
+
+    await expect(
+      TreasuryBondDepository.connect(user1).purchase(
+        amountPaid,
+        exp(18).mul(10),
+        user1.address
+      )
+    ).not.to.be.reverted;
+  });
+  it("should allow pausing and unpausing of redeem", async () => {
+    const { TreasuryBondDepository, user1 } = await whenDeployed();
+
+    const amountPaid = exp(18).mul(1000);
+
+    expect(await TreasuryBondDepository.bondPrice()).to.eq(exp(18));
+
+    await TreasuryBondDepository.connect(user1).purchase(
+      amountPaid,
+      exp(18).mul(10),
+      user1.address
+    );
+
+    // After one day
+    await increaseTime(24 * 60 * 60, ethers.provider);
+
+    await TreasuryBondDepository.setIsRedeemPaused(true);
+
+    await expect(
+      TreasuryBondDepository.connect(user1).redeem(1, user1.address)
+    ).to.be.revertedWith("Redeem paused");
+
+    await TreasuryBondDepository.setIsRedeemPaused(false);
+
+    await expect(TreasuryBondDepository.connect(user1).redeem(1, user1.address))
+      .not.to.be.reverted;
   });
 });

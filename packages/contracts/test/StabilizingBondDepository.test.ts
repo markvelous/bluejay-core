@@ -454,6 +454,44 @@ describe("StabilizingBondDepository", () => {
 
       // TODO: bond should be created and issued
     });
+    it("can be paused & unpaused", async () => {
+      const deployment = await whenDeployed();
+      const {
+        StabilizingBondDepository,
+        MockChainlinkAggregator,
+        ReserveToken,
+        user1,
+      } = deployment;
+
+      // Price is lower on LP, selling contractionary bond
+      const targetPrice = exp(18).mul(1300).div(1000);
+      const amountIn = exp(18).mul(1000);
+      await MockChainlinkAggregator.setPrice(targetPrice);
+      await ReserveToken.mint(user1.address, amountIn);
+      await ReserveToken.connect(user1).approve(
+        StabilizingBondDepository.address,
+        constants.MaxUint256
+      );
+      await StabilizingBondDepository.setIsPurchasePaused(true);
+
+      await expect(
+        StabilizingBondDepository.connect(user1).purchase(
+          amountIn,
+          exp(18).mul(11),
+          user1.address
+        )
+      ).to.be.reverted;
+
+      await StabilizingBondDepository.setIsPurchasePaused(false);
+
+      await expect(
+        StabilizingBondDepository.connect(user1).purchase(
+          amountIn,
+          exp(18).mul(11),
+          user1.address
+        )
+      ).not.to.be.reverted;
+    });
     it("should issue bond on purchase", async () => {
       const deployment = await whenDeployed();
       const {
@@ -636,7 +674,7 @@ describe("StabilizingBondDepository", () => {
           exp(18).div(2),
           user1.address
         )
-      ).to.revertedWith("Price too high");
+      ).to.revertedWith("Slippage");
     });
     it("should not allow purchase to bring price past the peg", async () => {
       const deployment = await whenDeployed();
@@ -738,6 +776,55 @@ describe("StabilizingBondDepository", () => {
       expect(await ReserveToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
       expect(await StablecoinToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
       expect(await BluejayToken.balanceOf(PriceFeedOracle.address)).to.eq(0);
+    });
+  });
+
+  describe("redeem", () => {
+    it("can be paused & unpaused", async () => {
+      const deployment = await whenDeployed();
+      const {
+        StabilizingBondDepository,
+        MockChainlinkAggregator,
+        ReserveToken,
+        deployer,
+        user1,
+      } = deployment;
+
+      // Price is higher on LP, selling expansionary bond
+      const targetPrice = exp(18).mul(1500).div(1000);
+      const amountIn = exp(18).mul(1000);
+      await MockChainlinkAggregator.setPrice(targetPrice);
+      await ReserveToken.mint(user1.address, amountIn);
+      await ReserveToken.mint(user1.address, amountIn);
+      await ReserveToken.mint(deployer.address, amountIn);
+      await ReserveToken.connect(user1).approve(
+        StabilizingBondDepository.address,
+        constants.MaxUint256
+      );
+
+      await ReserveToken.connect(deployer).approve(
+        StabilizingBondDepository.address,
+        constants.MaxUint256
+      );
+
+      await StabilizingBondDepository.setIsRedeemPaused(true);
+
+      await StabilizingBondDepository.connect(user1).purchase(
+        amountIn,
+        exp(18).mul(11),
+        user1.address
+      );
+      await increaseTime(60 * 60, ethers.provider);
+
+      await expect(
+        StabilizingBondDepository.connect(user1).redeem(1, user1.address)
+      ).to.be.reverted;
+
+      await StabilizingBondDepository.setIsRedeemPaused(false);
+
+      await expect(
+        StabilizingBondDepository.connect(user1).redeem(1, user1.address)
+      ).not.to.be.reverted;
     });
   });
 });

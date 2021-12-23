@@ -36,7 +36,6 @@ contract StabilizingBondDepository is
   IERC20 public BLU;
   IERC20 public reserve;
   IMintableBurnableERC20 public stablecoin;
-
   ITreasury public treasury;
   IStablecoinEngine public stablecoinEngine;
 
@@ -52,6 +51,9 @@ contract StabilizingBondDepository is
   uint256 public tolerance; // [wad]
   uint256 public maxRewardFactor; // [wad]
   uint256 public controlVariable; // [wei]
+
+  bool public isPurchasePaused;
+  bool public isRedeemPaused;
 
   // Security note: vesting period should be much higher than the oracle period
   // This allow oracle to be updated before more bonds are purchased leading to overcorection
@@ -118,10 +120,10 @@ contract StabilizingBondDepository is
     uint256 reserveOut = (stablecoinIn * WAD) / stablecoinOracle.getPrice();
     stablecoinOut = stablecoinTwapOracle.consult(address(reserve), reserveOut);
     if (stablecoinOut >= stablecoinIn) {
-      degree = ((stablecoinOut - stablecoinIn) * WAD) / stablecoinIn;
+      degree = stablecoinOut - stablecoinIn;
       isExpansionary = false;
     } else {
-      degree = ((stablecoinIn - stablecoinOut) * WAD) / stablecoinIn;
+      degree = stablecoinIn - stablecoinOut;
       isExpansionary = true;
     }
   }
@@ -145,10 +147,10 @@ contract StabilizingBondDepository is
       reserveIsToken0 ? reserve1 : reserve0 // reserveOut
     );
     if (stablecoinOut >= stablecoinIn) {
-      degree = ((stablecoinOut - stablecoinIn) * WAD) / stablecoinIn;
+      degree = stablecoinOut - stablecoinIn;
       isExpansionary = false;
     } else {
-      degree = ((stablecoinIn - stablecoinOut) * WAD) / stablecoinIn;
+      degree = stablecoinIn - stablecoinOut;
       isExpansionary = true;
     }
   }
@@ -158,13 +160,15 @@ contract StabilizingBondDepository is
     uint256 maxPrice,
     address recipient
   ) public override returns (uint256 bondId) {
+    require(!isPurchasePaused);
+
     // Update oracle
     stablecoinTwapOracle.tryUpdate();
     bluTwapOracle.tryUpdate();
 
     // Check that stabilizing bond is available
     (uint256 degree, bool isExpansionary, ) = getTwapDeviation();
-    require(degree > tolerance, "Insufficient deviation");
+    require(degree > tolerance);
 
     // Collect payments
     reserve.safeTransferFrom(msg.sender, address(this), amount);
@@ -221,12 +225,12 @@ contract StabilizingBondDepository is
       // Check for overcorrection
       (uint256 degreeFinal, bool isExpansionaryFinal, ) = getSpotDeviation();
       require(isExpansionary == isExpansionaryFinal, "Overcorrection");
-      require(degreeFinal < degree, "Bad swap");
+      require(degreeFinal < degree);
     }
 
     // Check if user is overpaying
     uint256 price = bondPrice();
-    require(price < maxPrice, "Price too high");
+    require(price < maxPrice, "Slippage");
 
     uint256 payout = (amount * WAD) / price;
 
@@ -242,24 +246,31 @@ contract StabilizingBondDepository is
     override
     returns (uint256 payout)
   {
-    require(bondOwners[bondId] == msg.sender, "Not owner of bond");
+    require(!isRedeemPaused);
+    require(bondOwners[bondId] == msg.sender);
     Bond memory bond = bonds[bondId];
+    bool fullyRedeemed;
+    uint256 principal;
     if (bond.lastRedeemed + bond.vestingPeriod <= block.timestamp) {
       _burn(bondId);
-      BLU.safeTransfer(recipient, bond.principal);
+      fullyRedeemed = true;
+      payout = bond.principal;
+      BLU.safeTransfer(recipient, payout);
     } else {
       payout =
         (bond.principal * (block.timestamp - bond.lastRedeemed)) /
         bond.vestingPeriod;
+      principal = bond.principal - payout;
       bonds[bondId] = Bond({
         id: bond.id,
-        principal: bond.principal - payout,
+        principal: principal,
         vestingPeriod: bond.vestingPeriod -
           (block.timestamp - bond.lastRedeemed),
         lastRedeemed: block.timestamp
       });
       BLU.safeTransfer(recipient, payout);
     }
+    emit BondRedeemed(bondId, recipient, fullyRedeemed, payout, principal);
   }
 
   function bondPrice() public view override returns (uint256 price) {
@@ -271,7 +282,6 @@ contract StabilizingBondDepository is
 
   // Admin function
   function setTolerance(uint256 _tolerance) public override onlyOwner {
-    require(_tolerance <= WAD);
     tolerance = _tolerance;
   }
 
@@ -280,7 +290,6 @@ contract StabilizingBondDepository is
     override
     onlyOwner
   {
-    require(_maxRewardFactor >= WAD);
     maxRewardFactor = _maxRewardFactor;
   }
 
@@ -289,8 +298,6 @@ contract StabilizingBondDepository is
     override
     onlyOwner
   {
-    require(_controlVariable >= 1);
-    require(_controlVariable < 1000);
     controlVariable = _controlVariable;
   }
 
@@ -304,6 +311,14 @@ contract StabilizingBondDepository is
     onlyOwner
   {
     stablecoinTwapOracle = ITwapOracle(_stablecoinTwapOracle);
+  }
+
+  function setIsRedeemPaused(bool pause) public override onlyOwner {
+    isRedeemPaused = pause;
+  }
+
+  function setIsPurchasePaused(bool pause) public override onlyOwner {
+    isPurchasePaused = pause;
   }
 
   function setStablecoinOracle(address _stablecoinOracle)

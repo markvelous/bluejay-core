@@ -28,6 +28,10 @@ interface IStakedToken is IERC20 {
   function setMinimumNormalizedBalance(uint256 _minimumNormalizedBalance)
     external;
 
+  function setIsStakePaused(bool pause) external;
+
+  function setIsUnstakePaused(bool pause) external;
+
   event Stake(address indexed recipient, uint256 amount);
   event Unstake(address indexed recipient, uint256 amount);
   event UpdatedInterestRate(uint256 interestRate);
